@@ -1,21 +1,35 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+"use client";
+
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyBFhnAlCJr9CFAotAdvce-x6aIGBwgLPYI",
+  authDomain: "generator-e88ff.firebaseapp.com",
+  projectId: "generator-e88ff",
+  storageBucket: "generator-e88ff.firebasestorage.app",
+  messagingSenderId: "434360409747",
+  appId: "1:434360409747:web:996bc32b48496e2e67b766"
 };
 
 // Initialize Firebase
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+let firebaseApp: FirebaseApp;
+let firebaseAuth: Auth;
+let firebaseDb: Firestore;
+let firebaseStorage: FirebaseStorage;
 
-export { app, auth, db, storage };
+try {
+  console.log("Attempting to initialize Firebase with config:", firebaseConfig);
+  firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  firebaseAuth = getAuth(firebaseApp);
+  firebaseDb = getFirestore(firebaseApp);
+  firebaseStorage = getStorage(firebaseApp);
+  console.log("Firebase initialized successfully");
+} catch (error) {
+  console.error("Error initializing Firebase:", error);
+  throw error; // Re-throw to prevent the app from running with uninitialized Firebase
+}
+
+export { firebaseApp as app, firebaseAuth as auth, firebaseDb as db, firebaseStorage as storage };
