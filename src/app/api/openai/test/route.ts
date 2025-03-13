@@ -3,11 +3,19 @@ import { NextResponse } from 'next/server';
 
 // Use environment variable for API key
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function GET() {
   try {
+    // Check if API key is available
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({
+        success: false,
+        error: 'OpenAI API key is not configured'
+      }, { status: 500 });
+    }
+    
     // Simple test to check if the API key works
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini", // Using a simpler model for testing

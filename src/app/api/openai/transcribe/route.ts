@@ -7,6 +7,14 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
+    // Check if API key is available
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: 'OpenAI API key is not configured' },
+        { status: 500 }
+      );
+    }
+    
     const formData = await req.formData();
     const audioFile = formData.get('file');
     

@@ -134,7 +134,7 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
   const { user } = useAuth();
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setLoading] = useState(true);
   const [workoutSchedule, setWorkoutSchedule] = useState<WorkoutDay[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -152,7 +152,20 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
         const data = await response.json();
         
         if (!response.ok) {
-          throw new Error(data.message || 'אירעה שגיאה ביצירת תוכנית האימונים');
+          // Check for specific API key errors
+          if (data.error && (
+              data.error.includes('API key') || 
+              data.error.includes('authentication') || 
+              data.message?.includes('API key') ||
+              data.message?.includes('authentication')
+            )) {
+            console.error('OpenAI API key error:', data);
+            toast.error('שגיאת אימות מול שרת ה-AI. אנא פנה למנהל המערכת.');
+            setLoading(false);
+            return;
+          }
+          
+          throw new Error(data.message || data.error || 'אירעה שגיאה ביצירת תוכנית האימונים');
         }
 
         if (!data.workouts || !Array.isArray(data.workouts)) {
@@ -165,7 +178,7 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
         setError(error.message || 'אירעה שגיאה ביצירת תוכנית האימונים');
         toast.error('לא ניתן ליצור תוכנית אימונים כרגע, אנא נסה שוב מאוחר יותר');
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 

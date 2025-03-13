@@ -145,7 +145,20 @@ export default function WorkoutDetails() {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to enhance workout details');
+      const errorData = await response.json();
+      
+      // Check for API key errors
+      if (errorData.error && (
+          errorData.error.includes('API key') || 
+          errorData.error.includes('authentication') || 
+          errorData.message?.includes('API key') ||
+          errorData.message?.includes('authentication')
+        )) {
+        console.error('OpenAI API key error:', errorData);
+        throw new Error('שגיאת אימות מול שרת ה-AI. אנא פנה למנהל המערכת.');
+      }
+      
+      throw new Error(errorData.message || errorData.error || 'Failed to enhance workout details');
     }
 
     return await response.json();
