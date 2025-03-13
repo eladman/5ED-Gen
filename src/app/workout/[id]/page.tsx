@@ -408,7 +408,7 @@ export default function WorkoutDetails() {
               <p className="font-medium">{getExperienceLabel(workout.userAnswers.experienceLevel)}</p>
             </div>
             <div>
-              <span className="text-gray-600">זמן ריצת 3 ק&quot;מ:</span>
+              <span className="text-gray-600">זמן ריצת 3 ק"מ:</span>
               <p className="font-medium">{workout.userAnswers.threeKmTime}</p>
             </div>
             <div>

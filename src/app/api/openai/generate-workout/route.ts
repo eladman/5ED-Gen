@@ -106,7 +106,7 @@ function generateWorkoutSchedule(frequency: 2 | 3 | 4 | 5) {
 }
 
 const openai = new OpenAI({
-  apiKey: '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'
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 export async function POST(req: Request) {

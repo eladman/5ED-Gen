@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
-import Image from 'next/image';
 
 export default function TrainingPage() {
   const { user, loading } = useAuth();
@@ -32,12 +31,10 @@ export default function TrainingPage() {
       <h1 className="text-3xl font-bold mb-6">תוכנית אימונים</h1>
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex items-center space-x-4 mb-6">
-          <Image
+          <img
             src={user.photoURL || ""}
             alt="תמונת פרופיל"
             className="w-12 h-12 rounded-full"
-            width={48}
-            height={48}
           />
           <div>
             <p className="font-semibold">{user.displayName}</p>

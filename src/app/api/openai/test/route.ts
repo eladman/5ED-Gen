@@ -1,9 +1,9 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 
-// Use the API key directly for testing
+// Use environment variable for API key
 const openai = new OpenAI({
-  apiKey: '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'
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 export async function GET() {
