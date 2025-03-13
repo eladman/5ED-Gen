@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import TrainingProgramForm from '../components/TrainingProgramForm';
+import Navbar from '../components/Navbar';
 
 export default function CreateProgram() {
   const { user } = useAuth();
@@ -21,8 +22,11 @@ export default function CreateProgram() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <TrainingProgramForm />
-    </div>
+    <main className="min-h-screen">
+      <Navbar />
+      <div className="container mx-auto pt-32 pb-16">
+        <TrainingProgramForm />
+      </div>
+    </main>
   );
 } 

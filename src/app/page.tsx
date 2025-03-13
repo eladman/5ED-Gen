@@ -2,7 +2,6 @@
 
 import Hero from './components/Hero'
 import Features from './components/Features'
-import CTA from './components/CTA'
 import Navbar from './components/Navbar'
 
 export default function Home() {
@@ -11,7 +10,6 @@ export default function Home() {
       <Navbar />
       <Hero />
       <Features />
-      <CTA />
     </main>
   )
 }

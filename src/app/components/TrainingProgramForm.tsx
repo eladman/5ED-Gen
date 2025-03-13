@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { FaMale, FaFemale, FaRunning, FaStopwatch } from 'react-icons/fa';
+import { FaMale, FaFemale, FaRunning, FaStopwatch, FaMedal, FaDumbbell } from 'react-icons/fa';
 import { IoPeople } from 'react-icons/io5';
-import { GiMuscleUp } from 'react-icons/gi';
+import { GiMuscleUp, GiHelmet, GiHeartBeats, GiWeightLiftingUp, GiStairsGoal, GiMilitaryAmbulance } from 'react-icons/gi';
 import WeeklyWorkoutTemplate from './WeeklyWorkoutTemplate';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { addDocument } from '@/lib/firebase/firebaseUtils';
+import toast from 'react-hot-toast';
 
 interface FormData {
   gender: 'male' | 'female';
@@ -12,19 +15,27 @@ interface FormData {
   experienceLevel: '0-4months' | 'upto1year' | '1-2years' | '2-3years' | '3plusYears';
   threeKmTime: string;
   pullUps: number;
+  goal: 'army' | 'aerobic' | 'strength' | 'other';
+  otherGoal?: string;
+  workoutFrequency: 2 | 3 | 4 | 5;
 }
 
 export default function TrainingProgramForm() {
+  const { user } = useAuth();
   const [formData, setFormData] = useState<FormData>({
     gender: 'male',
     group: 'youth',
     experienceLevel: '0-4months',
     threeKmTime: '',
-    pullUps: 0
+    pullUps: 0,
+    goal: 'army',
+    workoutFrequency: 4
   });
   const [currentStep, setCurrentStep] = useState<'basic' | 'metrics' | 'complete'>('basic');
   const [showError, setShowError] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [answersId, setAnswersId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const validateMetrics = () => {
     return formData.threeKmTime !== '' && formData.threeKmTime.includes(':');
@@ -32,20 +43,68 @@ export default function TrainingProgramForm() {
 
   const handleBasicSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.goal === 'other' && !formData.otherGoal?.trim()) {
+      toast.error('נא לפרט את המטרה שלך');
+      return;
+    }
     setCurrentStep('metrics');
   };
 
-  const handleMetricsSubmit = (e: React.FormEvent) => {
+  const handleMetricsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateMetrics()) {
-      setIsSubmitted(true);
-    } else {
+    if (!validateMetrics()) {
       setShowError(true);
+      return;
+    }
+
+    if (!user) {
+      toast.error('יש להתחבר כדי ליצור תוכנית');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Prepare data for Firebase by removing undefined fields
+      const cleanFormData = {
+        userId: user.uid,
+        createdAt: new Date().toISOString(),
+        gender: formData.gender,
+        group: formData.group,
+        experienceLevel: formData.experienceLevel,
+        threeKmTime: formData.threeKmTime,
+        pullUps: formData.pullUps,
+        goal: formData.goal,
+        workoutFrequency: formData.workoutFrequency,
+        ...(formData.goal === 'other' && formData.otherGoal ? { otherGoal: formData.otherGoal } : {})
+      };
+
+      // Save user answers to Firebase
+      const savedAnswers = await addDocument('userAnswers', cleanFormData);
+
+      setAnswersId(savedAnswers.id);
+      setIsSubmitted(true);
+      toast.success('הנתונים נשמרו בהצלחה!');
+    } catch (error) {
+      console.error('Error saving user answers:', error);
+      toast.error('אירעה שגיאה בשמירת הנתונים');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  if (isSubmitted) {
-    return <WeeklyWorkoutTemplate />;
+  if (isSubmitted && answersId) {
+    // Clean the form data before passing it to WeeklyWorkoutTemplate
+    const cleanUserAnswers = {
+      gender: formData.gender,
+      group: formData.group,
+      experienceLevel: formData.experienceLevel,
+      threeKmTime: formData.threeKmTime,
+      pullUps: formData.pullUps,
+      goal: formData.goal,
+      workoutFrequency: formData.workoutFrequency
+    };
+    
+    return <WeeklyWorkoutTemplate userAnswers={cleanUserAnswers} answersId={answersId} />;
   }
 
   if (currentStep === 'basic') {
@@ -147,6 +206,46 @@ export default function TrainingProgramForm() {
           </div>
         </div>
 
+        {/* Goal Selection */}
+        <div className="space-y-4">
+          <label className="block text-xl font-medium text-gray-700 text-center">מה המטרה שלך?</label>
+          <div className="grid grid-cols-2 gap-4 rtl">
+            {[
+              { value: 'army', label: 'הכנה לצבא', icon: GiMilitaryAmbulance },
+              { value: 'aerobic', label: 'שיפור אירובי', icon: GiHeartBeats },
+              { value: 'strength', label: 'שיפור כוח', icon: GiWeightLiftingUp },
+              { value: 'other', label: 'אחר', icon: GiStairsGoal }
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setFormData({ ...formData, goal: option.value as FormData['goal'], otherGoal: option.value === 'other' ? formData.otherGoal : undefined })}
+                className={`flex flex-col items-center p-6 rounded-xl transition-all ${
+                  formData.goal === option.value
+                    ? 'bg-[#fff5eb] border-2 border-[#ff8714] shadow-lg scale-105'
+                    : 'bg-white border-2 border-gray-200 hover:border-[#ff8714]'
+                }`}
+              >
+                <option.icon className={`w-16 h-16 ${
+                  formData.goal === option.value ? 'text-[#ff8714]' : 'text-gray-400'
+                }`} />
+                <span className="mt-2 text-lg font-medium">{option.label}</span>
+              </button>
+            ))}
+          </div>
+          {formData.goal === 'other' && (
+            <div className="mt-4">
+              <input
+                type="text"
+                value={formData.otherGoal || ''}
+                onChange={(e) => setFormData({ ...formData, otherGoal: e.target.value })}
+                placeholder="פרט/י את המטרה שלך"
+                className="w-full p-3 text-lg border-2 border-gray-300 rounded-xl focus:border-[#ff8714] focus:ring-1 focus:ring-[#ff8714] focus:outline-none transition-colors"
+              />
+            </div>
+          )}
+        </div>
+
         <button
           type="submit"
           className="w-full bg-[#ff8714] text-white py-3 px-6 rounded-xl text-lg font-medium hover:bg-[#e67200] focus:outline-none focus:ring-2 focus:ring-[#ff8714] focus:ring-offset-2 transition-colors"
@@ -237,6 +336,33 @@ export default function TrainingProgramForm() {
         </div>
       </div>
 
+      {/* Workout Frequency */}
+      <div className="space-y-4">
+        <label className="block text-xl font-medium text-gray-700 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <FaDumbbell className="w-6 h-6" />
+            <span>כמה פעמים בשבוע תרצה/י להתאמן?</span>
+          </div>
+        </label>
+        <div className="grid grid-cols-4 gap-4 rtl">
+          {[2, 3, 4, 5].map((frequency) => (
+            <button
+              key={frequency}
+              type="button"
+              onClick={() => setFormData({ ...formData, workoutFrequency: frequency as 2 | 3 | 4 | 5 })}
+              className={`flex flex-col items-center p-6 rounded-xl transition-all ${
+                formData.workoutFrequency === frequency
+                  ? 'bg-[#fff5eb] border-2 border-[#ff8714] shadow-lg scale-105'
+                  : 'bg-white border-2 border-gray-200 hover:border-[#ff8714]'
+              }`}
+            >
+              <span className="text-3xl font-bold mb-2">{frequency}</span>
+              <span className="text-sm text-gray-600">אימונים</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {showError && (
         <div className="text-red-500 text-center font-medium">
           יש למלא את כל המדדים לפני השמירה
@@ -247,15 +373,17 @@ export default function TrainingProgramForm() {
         <button
           type="button"
           onClick={() => setCurrentStep('basic')}
-          className="w-1/2 bg-gray-100 text-gray-700 py-3 px-6 rounded-xl text-lg font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-2 transition-colors"
+          disabled={isSaving}
+          className="w-1/2 bg-gray-100 text-gray-700 py-3 px-6 rounded-xl text-lg font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           חזרה
         </button>
         <button
           type="submit"
-          className="w-1/2 bg-[#ff8714] text-white py-3 px-6 rounded-xl text-lg font-medium hover:bg-[#e67200] focus:outline-none focus:ring-2 focus:ring-[#ff8714] focus:ring-offset-2 transition-colors"
+          disabled={isSaving}
+          className="w-1/2 bg-[#ff8714] text-white py-3 px-6 rounded-xl text-lg font-medium hover:bg-[#e67200] focus:outline-none focus:ring-2 focus:ring-[#ff8714] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          שמירה
+          {isSaving ? 'שומר...' : 'שמירה'}
         </button>
       </div>
     </form>

@@ -7,6 +7,7 @@ import { FaRunning, FaDumbbell, FaStopwatch, FaPlus, FaTrash } from "react-icons
 import { GiSittingDog } from "react-icons/gi";
 import toast from "react-hot-toast";
 import { addDocument, getDocuments, deleteDocument } from "@/lib/firebase/firebaseUtils";
+import MetricsFifaCard from "@/app/components/MetricsFifaCard";
 
 interface MetricsForm {
   run3000m: string;
@@ -16,7 +17,7 @@ interface MetricsForm {
   sitUps2min: string;
 }
 
-interface Metrics extends MetricsForm {
+export interface Metrics extends MetricsForm {
   id: string;
   userId: string;
   createdAt: string;
@@ -178,8 +179,9 @@ export default function MetricsPage() {
           </div>
 
           {!showForm && (
-            <div className="space-y-6">
-              <div className="flex justify-end mb-6">
+            <div className="space-y-8">
+              {/* Add New Metrics Button */}
+              <div className="flex justify-start">
                 <button
                   onClick={() => setShowForm(true)}
                   className="flex items-center gap-2 bg-[#ff8714] text-white py-3 px-6 rounded-xl text-lg font-medium hover:bg-[#e67200] focus:outline-none focus:ring-2 focus:ring-[#ff8714] focus:ring-offset-2 transition-colors"
@@ -194,55 +196,68 @@ export default function MetricsPage() {
                   <p className="text-gray-500 text-lg">עדיין לא נשמרו מדדים</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {previousMetrics.map((metric) => (
-                    <div key={metric.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-[#ff8714] transition-colors">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="text-sm text-gray-500">{formatDate(metric.createdAt)}</div>
-                        <button
-                          onClick={() => handleDelete(metric.id)}
-                          className="text-red-500 hover:text-red-600 transition-colors p-2"
-                          title="מחק מדד"
-                        >
-                          <FaTrash className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <FaRunning className="w-5 h-5" />
-                            <span>ריצת 3,000 מטר:</span>
-                            <span className="font-mono">{metric.run3000m}</span>
+                <>
+                  {/* FIFA Card for most recent metrics */}
+                  <div className="mb-12">
+                    <MetricsFifaCard metrics={previousMetrics[0]} />
+                  </div>
+
+                  <div className="space-y-8">
+                    {/* Historical metrics */}
+                    <div>
+                      <h2 className="text-2xl font-bold mb-6">היסטוריית מדדים</h2>
+                      <div className="space-y-4">
+                        {previousMetrics.map((metric) => (
+                          <div key={metric.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-[#ff8714] transition-colors">
+                            <div className="flex justify-between items-start mb-4">
+                              <div className="text-sm text-gray-500">{formatDate(metric.createdAt)}</div>
+                              <button
+                                onClick={() => handleDelete(metric.id)}
+                                className="text-red-500 hover:text-red-600 transition-colors p-2"
+                                title="מחק מדד"
+                              >
+                                <FaTrash className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <FaRunning className="w-5 h-5" />
+                                  <span>ריצת 3,000 מטר:</span>
+                                  <span className="font-mono">{metric.run3000m}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <FaRunning className="w-5 h-5" />
+                                  <span>ריצת 400 מטר:</span>
+                                  <span className="font-mono">{metric.run400m}</span>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <FaDumbbell className="w-5 h-5" />
+                                  <span>מתח:</span>
+                                  <span>{metric.pullUps}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <FaDumbbell className="w-5 h-5" />
+                                  <span>שכיבות סמיכה:</span>
+                                  <span>{metric.pushUps}</span>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <GiSittingDog className="w-5 h-5" />
+                                  <span>כפיפות בטן:</span>
+                                  <span>{metric.sitUps2min}</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <FaRunning className="w-5 h-5" />
-                            <span>ריצת 400 מטר:</span>
-                            <span className="font-mono">{metric.run400m}</span>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <FaDumbbell className="w-5 h-5" />
-                            <span>מתח:</span>
-                            <span>{metric.pullUps}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <FaDumbbell className="w-5 h-5" />
-                            <span>שכיבות סמיכה:</span>
-                            <span>{metric.pushUps}</span>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <GiSittingDog className="w-5 h-5" />
-                            <span>כפיפות בטן:</span>
-                            <span>{metric.sitUps2min}</span>
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -526,6 +541,13 @@ export default function MetricsPage() {
 
                 {/* Navigation Buttons */}
                 <div className="flex justify-between gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-xl text-lg font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-colors"
+                  >
+                    ביטול
+                  </button>
                   {currentStep > 1 && (
                     <button
                       type="button"

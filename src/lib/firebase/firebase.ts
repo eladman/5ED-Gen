@@ -9,7 +9,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyBFhnAlCJr9CFAotAdvce-x6aIGBwgLPYI",
   authDomain: "generator-e88ff.firebaseapp.com",
   projectId: "generator-e88ff",
-  storageBucket: "generator-e88ff.firebasestorage.app",
+  storageBucket: "generator-e88ff.appspot.com",
   messagingSenderId: "434360409747",
   appId: "1:434360409747:web:996bc32b48496e2e67b766"
 };
