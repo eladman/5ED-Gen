@@ -136,32 +136,59 @@ export default function WorkoutDetails() {
   }, [user, id, router]);
 
   const enhanceWorkout = async (workoutDay: WorkoutDay) => {
-    const response = await fetch('/api/openai/enhance-workout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ workout: workoutDay }),
-    });
+    try {
+      const response = await fetch('/api/openai/enhance-workout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ workout: workoutDay }),
+        // Add timeout to prevent hanging requests
+        signal: AbortSignal.timeout(30000) // 30 seconds timeout
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
+      // Handle timeout errors
+      if (response.status === 504) {
+        console.error('Request timed out');
+        throw new Error('בקשה לשרת נכשלה בגלל זמן תגובה ארוך.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        // Check for API key errors
+        if (errorData.error && (
+            errorData.error.includes('API key') || 
+            errorData.error.includes('authentication') || 
+            errorData.message?.includes('API key') ||
+            errorData.message?.includes('authentication')
+          )) {
+          console.error('OpenAI API key error:', errorData);
+          throw new Error('שגיאת אימות מול שרת ה-AI. אנא פנה למנהל המערכת.');
+        }
+        
+        throw new Error(errorData.message || errorData.error || 'Failed to enhance workout details');
+      }
+
+      const data = await response.json();
       
-      // Check for API key errors
-      if (errorData.error && (
-          errorData.error.includes('API key') || 
-          errorData.error.includes('authentication') || 
-          errorData.message?.includes('API key') ||
-          errorData.message?.includes('authentication')
-        )) {
-        console.error('OpenAI API key error:', errorData);
-        throw new Error('שגיאת אימות מול שרת ה-AI. אנא פנה למנהל המערכת.');
+      // Validate response structure
+      if (!data.workoutGoal || !data.enhancedExercises || !Array.isArray(data.enhancedExercises)) {
+        console.error('Invalid response format:', data);
+        throw new Error('התקבל פורמט לא תקין מהשרת');
       }
       
-      throw new Error(errorData.message || errorData.error || 'Failed to enhance workout details');
+      return data;
+    } catch (error: any) {
+      // Handle AbortError specifically
+      if (error.name === 'AbortError') {
+        console.error('Request aborted due to timeout');
+        throw new Error('בקשה לשרת נכשלה בגלל זמן תגובה ארוך.');
+      }
+      
+      // Re-throw the error to be handled by the caller
+      throw error;
     }
-
-    return await response.json();
   };
 
   const toggleVariation = (workoutIndex: number, exerciseName: string, variation: 'easy' | 'medium' | 'hard') => {

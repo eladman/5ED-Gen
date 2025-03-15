@@ -34,18 +34,37 @@ npm run dev
 
 ## Deploying to Vercel
 
-1. Create a Vercel account if you don't have one already
-2. Install the Vercel CLI: `npm i -g vercel`
-3. Run `vercel login` and follow the instructions
-4. Set up your environment variables in the Vercel dashboard:
-   - Go to your project settings
-   - Add the `OPENAI_API_KEY` environment variable
-5. Deploy using the Vercel CLI:
-```bash
-vercel
-```
+### Prerequisites
 
-Or connect your GitHub repository to Vercel for automatic deployments.
+- A Vercel account
+- An OpenAI API key
+
+### Environment Variables
+
+When deploying to Vercel, make sure to set the following environment variables:
+
+1. `OPENAI_API_KEY` - Your OpenAI API key
+2. `USE_FALLBACK_WORKOUTS` - Set to `true` to use fallback workouts if the OpenAI API fails
+
+### Deployment Steps
+
+1. Push your code to a GitHub repository
+2. Log in to your Vercel account
+3. Click "New Project"
+4. Import your GitHub repository
+5. Configure the project:
+   - Set the Framework Preset to "Next.js"
+   - Add the environment variables mentioned above
+6. Click "Deploy"
+
+### Troubleshooting API Issues
+
+If you encounter issues with the OpenAI API in production:
+
+1. Check that your OpenAI API key is correctly set in Vercel's environment variables
+2. Ensure your OpenAI API key has sufficient quota and is not rate-limited
+3. Set `USE_FALLBACK_WORKOUTS=true` in your environment variables to use predefined workouts instead of calling the OpenAI API
+4. Check Vercel logs for specific error messages
 
 ## Features
 - Personalized workout program generation

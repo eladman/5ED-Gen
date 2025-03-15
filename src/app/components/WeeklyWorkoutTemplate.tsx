@@ -147,12 +147,21 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ userAnswers }),
+          signal: AbortSignal.timeout(30000)
         });
+
+        if (!response.ok) {
+          if (response.status === 504) {
+            console.error('Request timed out');
+            toast.error('בקשה לשרת נכשלה בגלל זמן תגובה ארוך. אנא נסה שוב.');
+            setLoading(false);
+            return;
+          }
+        }
 
         const data = await response.json();
         
         if (!response.ok) {
-          // Check for specific API key errors
           if (data.error && (
               data.error.includes('API key') || 
               data.error.includes('authentication') || 
@@ -169,14 +178,20 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
         }
 
         if (!data.workouts || !Array.isArray(data.workouts)) {
+          console.error('Invalid response format:', data);
           throw new Error('התקבל פורמט לא תקין מהשרת');
         }
 
         setWorkoutSchedule(data.workouts);
       } catch (error: any) {
         console.error('Error:', error);
-        setError(error.message || 'אירעה שגיאה ביצירת תוכנית האימונים');
-        toast.error('לא ניתן ליצור תוכנית אימונים כרגע, אנא נסה שוב מאוחר יותר');
+        
+        if (error.name === 'AbortError') {
+          toast.error('בקשה לשרת נכשלה בגלל זמן תגובה ארוך. אנא נסה שוב.');
+        } else {
+          setError(error.message || 'אירעה שגיאה ביצירת תוכנית האימונים');
+          toast.error('לא ניתן ליצור תוכנית אימונים כרגע, אנא נסה שוב מאוחר יותר');
+        }
       } finally {
         setLoading(false);
       }
