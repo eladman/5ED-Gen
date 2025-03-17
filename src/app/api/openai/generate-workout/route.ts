@@ -206,7 +206,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const prompt = `Generate a personalized workout program using the Five Fingers Physical-Mental Training method based on the following user information:
+    const prompt = `Generate a personalized workout program ENTIRELY IN HEBREW using the Five Fingers Physical-Mental Training method based on the following user information:
     - Gender: ${userAnswers.gender || 'Not specified'}
     - Age Group: ${userAnswers.group || 'Not specified'}
     - Experience Level: ${userAnswers.experienceLevel || 'Not specified'}
@@ -215,6 +215,8 @@ export async function POST(req: Request) {
     - Training Goal: ${userAnswers.goal || 'Not specified'}
     - Weekly Workout Frequency: ${userAnswers.workoutFrequency || '3'} times
 
+    IMPORTANT: THE ENTIRE RESPONSE MUST BE IN HEBREW ONLY INCLUDING ALL FIELD NAMES AND VALUES.
+    
     Please generate a comprehensive weekly workout schedule following these guidelines:
     
     1. Each workout should be between 45-60 minutes and include:
@@ -264,21 +266,22 @@ export async function POST(req: Request) {
         {
           "workoutNumber": "number (workout number)",
           "type": "aerobic" or "strength",
-          "title": "string (clear, motivational title)",
-          "equipment": "string (equipment needed, if any)",
-          "exercises": ["array of detailed exercise descriptions with sets, reps, and form cues"],
+          "title": "string (clear, motivational title IN HEBREW)",
+          "equipment": "string (equipment needed, if any, IN HEBREW)",
+          "exercises": ["array of detailed exercise descriptions with sets, reps, and form cues IN HEBREW"],
           "duration": "string (in minutes, between 45-60 minutes)",
           "intensity": "קל" or "בינוני" or "גבוה",
-          "workoutGoal": "string describing the specific purpose, benefits, and expected outcomes",
+          "workoutGoal": "string describing the specific purpose, benefits, and expected outcomes IN HEBREW",
           "enhancedExercises": [
             {
-              "restingTime": "string (e.g., '30 seconds', '1 minute')"
+              "restingTime": "string (e.g., '30 seconds', '1 minute' IN HEBREW)"
             }
           ]
         }
       ]
     }
 
+    VERY IMPORTANT: ALL TEXT IN THE RESPONSE MUST BE IN HEBREW ONLY, INCLUDING ALL FIELD NAMES AND VALUES.
     Ensure the workouts are both physically demanding and mentally challenging, fostering resilience, focus, and self-improvement.`;
 
     console.log('Sending request to OpenAI');
@@ -290,11 +293,11 @@ export async function POST(req: Request) {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // Updated to gpt-4o-mini as requested
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: "אתה מאמן כושר עילית בעל מומחיות בשיטת האימון החמישי האצבעות הפיזי-מנטלי, פיזיולוגיה של אימון, מדעי הספורט, ואימון מותאם אישית. ההתמחות שלך היא ביצירת תוכניות אימון מקצועיות ומבוססות ראיות המותאמות לצרכים ויעדים אישיים המשלבות אתגר פיזי עם בניית חוסן מנטלי. כל תוכנית אימון שאתה יוצר מובנית בקפידה עם התקדמות נכונה, תקופתיות, והתאוששות, תוך שילוב אתגרים מנטליים המטפחים חוסן, מיקוד, ושיפור עצמי. יש לך ניסיון רב באימון הכנה צבאית, כולל דרישות כושר קרבי של צה״ל, מבחני כושר צבאיים, ואימון טקטי. זכור שהמשתמש גם עושה 2 אימוני צוות חמישי האצבעות אינטנסיביים בכל שבוע. הגב רק עם JSON תקין הכולל מערך 'workouts'."
+            content: "אתה מאמן כושר עילית בעל מומחיות בשיטת האימון החמישי האצבעות הפיזי-מנטלי, פיזיולוגיה של אימון, מדעי הספורט, ואימון מותאם אישית. ההתמחות שלך היא ביצירת תוכניות אימון מקצועיות ומבוססות ראיות המותאמות לצרכים ויעדים אישיים המשלבות אתגר פיזי עם בניית חוסן מנטלי. כל תוכנית אימון שאתה יוצר מובנית בקפידה עם התקדמות נכונה, תקופתיות, והתאוששות, תוך שילוב אתגרים מנטליים המטפחים חוסן, מיקוד, ושיפור עצמי. יש לך ניסיון רב באימון הכנה צבאית, כולל דרישות כושר קרבי של צה״ל, מבחני כושר צבאיים, ואימון טקטי. זכור שהמשתמש גם עושה 2 אימוני צוות חמישי האצבעות אינטנסיביים בכל שבוע. חשוב מאוד: אתה חייב להגיב רק בעברית, כולל כל שמות השדות והערכים ב-JSON. הגב רק עם JSON תקין הכולל מערך 'אימונים' או 'workouts'."
           },
           {
             role: "user",

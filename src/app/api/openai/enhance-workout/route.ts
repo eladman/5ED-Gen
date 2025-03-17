@@ -162,6 +162,8 @@ export async function POST(req: Request) {
     const prompt = `Enhance the following workout with professional, detailed information:
     - Workout: ${JSON.stringify(workout)}
     
+    IMPORTANT: THE ENTIRE RESPONSE MUST BE IN HEBREW ONLY INCLUDING ALL FIELD NAMES AND VALUES.
+
     Please provide the following comprehensive enhancements:
     
     1. A specific, evidence-based workout goal that explains:
@@ -187,25 +189,27 @@ export async function POST(req: Request) {
        - Recovery recommendations
        - Performance indicators to track progress
     
-    Format the response as a JSON object with the following structure:
+    Format the response as a JSON object with the following structure (ALL IN HEBREW):
     {
-      "workoutGoal": "detailed description of the workout's purpose, benefits, and expected outcomes",
+      "workoutGoal": "detailed description of the workout's purpose, benefits, and expected outcomes IN HEBREW",
       "enhancedExercises": [
         {
-          "name": "original exercise name",
-          "restingTime": "precise resting recommendation (e.g., '30-45 seconds for hypertrophy', '2-3 minutes for strength')",
-          "formCues": "detailed technique instructions and proper form guidelines",
-          "commonMistakes": "common errors and how to correct them",
-          "breathingPattern": "optimal breathing technique for this exercise",
-          "progressionMetrics": "how to measure improvement in this exercise",
+          "name": "original exercise name IN HEBREW",
+          "restingTime": "precise resting recommendation (e.g., '30-45 seconds for hypertrophy', '2-3 minutes for strength') IN HEBREW",
+          "formCues": "detailed technique instructions and proper form guidelines IN HEBREW",
+          "commonMistakes": "common errors and how to correct them IN HEBREW",
+          "breathingPattern": "optimal breathing technique for this exercise IN HEBREW",
+          "progressionMetrics": "how to measure improvement in this exercise IN HEBREW",
           "variations": {
-            "easy": "detailed description of easier variation with specific modifications",
-            "medium": "detailed description of standard variation with proper execution guidelines",
-            "hard": "detailed description of advanced variation with specific progression elements"
+            "easy": "detailed description of easier variation with specific modifications IN HEBREW",
+            "medium": "detailed description of standard variation with proper execution guidelines IN HEBREW",
+            "hard": "detailed description of advanced variation with specific progression elements IN HEBREW"
           }
         }
       ]
-    }`;
+    }
+    
+    VERY IMPORTANT: ALL TEXT IN THE RESPONSE MUST BE IN HEBREW ONLY, INCLUDING ALL FIELD NAMES AND VALUES.`;
 
     console.log('Sending request to OpenAI');
     
@@ -216,11 +220,11 @@ export async function POST(req: Request) {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // Updated to gpt-4o-mini as requested
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: "אתה מאמן כושר מקצועי ברמה עולמית המתמחה בתכנון אימונים מדויקים ומבוססי מדע. תפקידך הוא לספק הנחיות מפורטות ומקצועיות לכל תרגיל, כולל טכניקה נכונה, וריאציות מותאמות לרמות שונות, וטיפים מתקדמים. הקפד לענות בעברית מקצועית ומדויקת. הגב אך ורק ב-JSON תקין."
+            content: "אתה מאמן כושר מקצועי ברמה עולמית המתמחה בתכנון אימונים מדויקים ומבוססי מדע. תפקידך הוא לספק הנחיות מפורטות ומקצועיות לכל תרגיל, כולל טכניקה נכונה, וריאציות מותאמות לרמות שונות, וטיפים מתקדמים. חשוב מאוד: הקפד לענות בעברית מקצועית ומדויקת בלבד, כולל כל שמות השדות והערכים ב-JSON. הגב אך ורק ב-JSON תקין המכיל שדות בעברית בלבד."
           },
           {
             role: "user",
