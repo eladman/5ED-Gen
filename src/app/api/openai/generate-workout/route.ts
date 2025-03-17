@@ -218,10 +218,10 @@ export async function POST(req: Request) {
     }
 
     // Set a shorter timeout for production to avoid Vercel serverless function timeouts
-    const timeoutMs = process.env.NODE_ENV === 'production' ? 25000 : 40000; // 25 seconds in production, 40 in development
+    const timeoutMs = process.env.NODE_ENV === 'production' ? 50000 : 60000; // Increased timeout to 50 seconds in production
     console.log(`Setting OpenAI request timeout to ${timeoutMs}ms`);
 
-    const prompt = `Generate a personalized workout program using the Five Fingers Physical-Mental Training method based on the following user information:
+    const prompt = `Generate a personalized workout program in Hebrew (עברית) using the Five Fingers Physical-Mental Training method based on the following user information:
     - Gender: ${userAnswers.gender || 'Not specified'}
     - Age Group: ${userAnswers.group || 'Not specified'}
     - Experience Level: ${userAnswers.experienceLevel || 'Not specified'}
@@ -307,11 +307,11 @@ export async function POST(req: Request) {
       }, timeoutMs);
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo-1106", // Using a faster model in production to avoid timeouts
+        model: "gpt-4o", // Using GPT-4o for better quality responses
         messages: [
           {
             role: "system",
-            content: "You are an elite fitness coach with expertise in the Five Fingers Physical-Mental Training method, exercise physiology, sports science, and personalized training. Your specialty is creating professional, evidence-based workout programs tailored to individual needs and goals that combine physical challenge with mental resilience building. Each workout plan you create is meticulously structured with proper progression, periodization, and recovery, while also incorporating mental challenges that foster resilience, focus, and self-improvement. You have extensive experience in military preparation training, including IDF combat fitness requirements, military physical tests, and tactical conditioning. Keep in mind that the user is also doing 2 intense Five Fingers team workouts every week. Respond only with valid JSON that includes a 'workouts' array."
+            content: "You are an elite fitness coach with expertise in the Five Fingers Physical-Mental Training method, exercise physiology, sports science, and personalized training. Your specialty is creating professional, evidence-based workout programs tailored to individual needs and goals that combine physical challenge with mental resilience building. Each workout plan you create is meticulously structured with proper progression, periodization, and recovery, while also incorporating mental challenges that foster resilience, focus, and self-improvement. You have extensive experience in military preparation training, including IDF combat fitness requirements, military physical tests, and tactical conditioning. Keep in mind that the user is also doing 2 intense Five Fingers team workouts every week. IMPORTANT: Always respond in Hebrew (עברית) only. Respond only with valid JSON that includes a 'workouts' array."
           },
           {
             role: "user",
@@ -320,7 +320,7 @@ export async function POST(req: Request) {
         ],
         temperature: 0.7,
         response_format: { type: "json_object" },
-        max_tokens: 2000 // Limiting token count to speed up response
+        max_tokens: 4000 // Increased token limit for more detailed responses
       }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
