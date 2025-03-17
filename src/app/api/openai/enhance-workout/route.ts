@@ -159,57 +159,58 @@ export async function POST(req: Request) {
       );
     }
 
-    const prompt = `Enhance the following workout with professional, detailed information:
-    - Workout: ${JSON.stringify(workout)}
+    const prompt = `בקשה בעברית - פירוט אימון - יש להשיב בעברית בלבד!
+    שדרג את האימון הבא עם מידע מקצועי ומפורט:
+    - אימון: ${JSON.stringify(workout)}
     
-    IMPORTANT: THE ENTIRE RESPONSE MUST BE IN HEBREW ONLY INCLUDING ALL FIELD NAMES AND VALUES.
+    חשוב מאוד: התשובה כולה חייבת להיות בעברית בלבד כולל כל שמות השדות והערכים.
 
-    Please provide the following comprehensive enhancements:
+    נא לספק את השדרוגים המקיפים הבאים:
     
-    1. A specific, evidence-based workout goal that explains:
-       - The primary physiological purpose of this workout
-       - The specific fitness benefits and adaptations it targets
-       - How it contributes to overall athletic development
-       - Expected outcomes with consistent training
+    1. מטרת אימון ספציפית, מבוססת מדעית המסבירה:
+       - המטרה הפיזיולוגית העיקרית של אימון זה
+       - היתרונות והסתגלויות הכושר הספציפיים שהוא מכוון אליהם
+       - כיצד הוא תורם להתפתחות אתלטית כוללת
+       - תוצאות צפויות עם אימון עקבי
     
-    2. For each exercise, provide:
-       - Precise recommended resting time between sets (based on exercise intensity and type)
-       - Detailed form cues and technique instructions to ensure proper execution
-       - Common mistakes to avoid and how to correct them
-       - Progression metrics to track improvement
+    2. עבור כל תרגיל, ספק:
+       - זמן מנוחה מומלץ מדויק בין סטים (בהתבסס על עצימות וסוג התרגיל)
+       - הנחיות טכניקה מפורטות והוראות צורה להבטחת ביצוע נכון
+       - טעויות נפוצות שיש להימנע מהן וכיצד לתקן אותן
+       - מדדי התקדמות למעקב אחר שיפור
     
-    3. For each exercise, provide three distinct variations:
-       - Easy: A simplified version with specific modifications for beginners or those with limitations
-       - Medium: The standard version with proper form and execution guidelines
-       - Hard: An advanced variation with specific progression elements for experienced athletes
+    3. עבור כל תרגיל, ספק שלוש וריאציות נבדלות:
+       - קל: גרסה מפושטת עם התאמות ספציפיות למתחילים או בעלי מגבלות
+       - בינוני: הגרסה הסטנדרטית עם הנחיות צורה וביצוע נכונים
+       - קשה: וריאציה מתקדמת עם אלמנטי התקדמות ספציפיים לספורטאים מנוסים
     
-    4. Additional professional insights:
-       - Optimal breathing patterns for each exercise
-       - Mind-muscle connection cues
-       - Recovery recommendations
-       - Performance indicators to track progress
+    4. תובנות מקצועיות נוספות:
+       - דפוסי נשימה אופטימליים לכל תרגיל
+       - רמזי חיבור מוח-שריר
+       - המלצות התאוששות
+       - אינדיקטורים לביצוע למעקב אחר התקדמות
     
-    Format the response as a JSON object with the following structure (ALL IN HEBREW):
+    פרמט את התשובה כאובייקט JSON עם המבנה הבא (הכל בעברית):
     {
-      "workoutGoal": "detailed description of the workout's purpose, benefits, and expected outcomes IN HEBREW",
-      "enhancedExercises": [
+      "מטרת_אימון": "תיאור מפורט של מטרת האימון, היתרונות והתוצאות הצפויות",
+      "תרגילים_מורחבים": [
         {
-          "name": "original exercise name IN HEBREW",
-          "restingTime": "precise resting recommendation (e.g., '30-45 seconds for hypertrophy', '2-3 minutes for strength') IN HEBREW",
-          "formCues": "detailed technique instructions and proper form guidelines IN HEBREW",
-          "commonMistakes": "common errors and how to correct them IN HEBREW",
-          "breathingPattern": "optimal breathing technique for this exercise IN HEBREW",
-          "progressionMetrics": "how to measure improvement in this exercise IN HEBREW",
-          "variations": {
-            "easy": "detailed description of easier variation with specific modifications IN HEBREW",
-            "medium": "detailed description of standard variation with proper execution guidelines IN HEBREW",
-            "hard": "detailed description of advanced variation with specific progression elements IN HEBREW"
+          "שם": "שם התרגיל המקורי",
+          "זמן_מנוחה": "המלצת מנוחה מדויקת (למשל, '30-45 שניות להיפרטרופיה', '2-3 דקות לכוח')",
+          "הנחיות_צורה": "הוראות טכניקה מפורטות והנחיות צורה נכונה",
+          "טעויות_נפוצות": "טעויות נפוצות וכיצד לתקן אותן",
+          "דפוס_נשימה": "טכניקת נשימה אופטימלית לתרגיל זה",
+          "מדדי_התקדמות": "כיצד למדוד שיפור בתרגיל זה",
+          "וריאציות": {
+            "קל": "תיאור מפורט של וריאציה קלה יותר עם התאמות ספציפיות",
+            "בינוני": "תיאור מפורט של וריאציה סטנדרטית עם הנחיות ביצוע נכונות",
+            "קשה": "תיאור מפורט של וריאציה מתקדמת עם אלמנטי התקדמות ספציפיים"
           }
         }
       ]
     }
     
-    VERY IMPORTANT: ALL TEXT IN THE RESPONSE MUST BE IN HEBREW ONLY, INCLUDING ALL FIELD NAMES AND VALUES.`;
+    חשוב מאוד: כל הטקסט בתשובה חייב להיות בעברית בלבד, כולל כל שמות השדות והערכים.`;
 
     console.log('Sending request to OpenAI');
     
@@ -253,15 +254,66 @@ export async function POST(req: Request) {
         const enhancedWorkout = JSON.parse(content);
         console.log('Successfully parsed OpenAI response');
         
-        // Validate the response structure
-        if (!enhancedWorkout.workoutGoal || !enhancedWorkout.enhancedExercises || !Array.isArray(enhancedWorkout.enhancedExercises)) {
-          console.error('Invalid response structure from OpenAI:', enhancedWorkout);
-          throw new Error('Invalid response structure');
+        // Transform Hebrew field names if they're in English
+        const hebrewFieldMap = {
+          'workoutGoal': 'מטרת_אימון',
+          'enhancedExercises': 'תרגילים_מורחבים',
+          'name': 'שם',
+          'restingTime': 'זמן_מנוחה',
+          'formCues': 'הנחיות_צורה',
+          'commonMistakes': 'טעויות_נפוצות',
+          'breathingPattern': 'דפוס_נשימה',
+          'progressionMetrics': 'מדדי_התקדמות',
+          'variations': 'וריאציות',
+          'easy': 'קל',
+          'medium': 'בינוני',
+          'hard': 'קשה'
+        };
+        
+        // Process the workoutGoal field to ensure Hebrew
+        if (enhancedWorkout.workoutGoal && !enhancedWorkout.מטרת_אימון) {
+          enhancedWorkout.מטרת_אימון = enhancedWorkout.workoutGoal;
+          delete enhancedWorkout.workoutGoal;
         }
         
+        // Process the enhancedExercises array to ensure Hebrew field names
+        if (enhancedWorkout.enhancedExercises && !enhancedWorkout.תרגילים_מורחבים) {
+          enhancedWorkout.תרגילים_מורחבים = enhancedWorkout.enhancedExercises;
+          delete enhancedWorkout.enhancedExercises;
+        }
+        
+        // Process each exercise to ensure Hebrew fields
+        if (enhancedWorkout.תרגילים_מורחבים && Array.isArray(enhancedWorkout.תרגילים_מורחבים)) {
+          enhancedWorkout.תרגילים_מורחבים = enhancedWorkout.תרגילים_מורחבים.map((exercise: any) => {
+            const hebrewExercise: any = {};
+            
+            Object.entries(exercise).forEach(([key, value]) => {
+              const hebrewKey = hebrewFieldMap[key as keyof typeof hebrewFieldMap] || key;
+              
+              // If this is the variations object, process its fields too
+              if (key === 'variations' || key === 'וריאציות') {
+                const variations = value as Record<string, any>;
+                const hebrewVariations: Record<string, any> = {};
+                
+                Object.entries(variations).forEach(([varKey, varValue]) => {
+                  const hebrewVarKey = hebrewFieldMap[varKey as keyof typeof hebrewFieldMap] || varKey;
+                  hebrewVariations[hebrewVarKey] = varValue;
+                });
+                
+                hebrewExercise[hebrewKey] = hebrewVariations;
+              } else {
+                hebrewExercise[hebrewKey] = value;
+              }
+            });
+            
+            return hebrewExercise;
+          });
+        }
+        
+        console.log('Processed response to ensure Hebrew fields');
         return NextResponse.json(enhancedWorkout);
       } catch (jsonError) {
-        console.error('Error parsing OpenAI response:', jsonError, 'Content:', content);
+        console.error('Error parsing or processing OpenAI response:', jsonError, 'Content:', content);
         
         // Try to extract JSON from the response if it's wrapped in markdown or other text
         try {
