@@ -217,6 +217,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ workouts: fallbackWorkouts });
     }
 
+    // Set a shorter timeout for production to avoid Vercel serverless function timeouts
+    const timeoutMs = process.env.NODE_ENV === 'production' ? 25000 : 40000; // 25 seconds in production, 40 in development
+    console.log(`Setting OpenAI request timeout to ${timeoutMs}ms`);
+
     const prompt = `Generate a personalized workout program using the Five Fingers Physical-Mental Training method based on the following user information:
     - Gender: ${userAnswers.gender || 'Not specified'}
     - Age Group: ${userAnswers.group || 'Not specified'}
@@ -296,12 +300,14 @@ export async function POST(req: Request) {
     
     try {
       // Set a timeout for the OpenAI request
-      const timeoutMs = 40000; // Increased from 25000 to 40000 ms (40 seconds)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const timeoutId = setTimeout(() => {
+        console.log('OpenAI request timeout reached, aborting');
+        controller.abort();
+      }, timeoutMs);
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // Upgraded to GPT-4o for better workout generation
+        model: "gpt-3.5-turbo-1106", // Using a faster model in production to avoid timeouts
         messages: [
           {
             role: "system",
@@ -313,7 +319,8 @@ export async function POST(req: Request) {
           }
         ],
         temperature: 0.7,
-        response_format: { type: "json_object" }
+        response_format: { type: "json_object" },
+        max_tokens: 2000 // Limiting token count to speed up response
       }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
