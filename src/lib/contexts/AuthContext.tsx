@@ -45,10 +45,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       console.log("Attempting to sign in with Google");
       const provider = new GoogleAuthProvider();
+      
+      // Add scopes if needed
+      provider.addScope('profile');
+      provider.addScope('email');
+      
+      // Set custom parameters - using redirect instead of popup to avoid promise issues
       provider.setCustomParameters({
         prompt: 'select_account'
       });
-      const result = await signInWithPopup(auth, provider);
+      
+      // Use signInWithPopup with proper error handling
+      const result = await signInWithPopup(auth, provider).catch((error) => {
+        console.error("Popup error:", error);
+        // If popup is blocked or fails, throw the error to be caught by the outer catch
+        throw error;
+      });
+      
       console.log("Sign in successful:", result.user.email);
     } catch (error: any) {
       console.error("Detailed error signing in with Google:", error);

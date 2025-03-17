@@ -70,6 +70,56 @@ const defaultEnhancements = {
         }
       }
     ]
+  },
+  military: {
+    workoutGoal: "הכנה לדרישות הפיזיות של שירות קרבי, שיפור סיבולת, כוח וחוסן מנטלי",
+    enhancedExercises: [
+      {
+        name: "זחילה צבאית",
+        restingTime: "30-45 שניות",
+        variations: {
+          easy: "זחילה על הברכיים למרחק קצר",
+          medium: "זחילה צבאית סטנדרטית",
+          hard: "זחילה צבאית עם משקל נוסף או בשטח חולי"
+        }
+      },
+      {
+        name: "ריצת אינטרוולים",
+        restingTime: "20-30 שניות בין ספרינטים",
+        variations: {
+          easy: "ריצה 30 שניות, הליכה 30 שניות",
+          medium: "ספרינט 20 שניות, הליכה 40 שניות",
+          hard: "ספרינט 30 שניות, הליכה 30 שניות בשטח משתנה"
+        }
+      },
+      {
+        name: "ברפי",
+        restingTime: "30-45 שניות",
+        variations: {
+          easy: "ברפי ללא קפיצה",
+          medium: "ברפי סטנדרטי",
+          hard: "ברפי עם מחיאת כף ומשיכת ברכיים לחזה"
+        }
+      },
+      {
+        name: "אימון עם משקל",
+        restingTime: "45-60 שניות",
+        variations: {
+          easy: "הליכה עם תיק 5 ק\"ג",
+          medium: "ריצה קלה עם תיק 10 ק\"ג",
+          hard: "ריצה/הליכה מהירה עם תיק 15 ק\"ג"
+        }
+      },
+      {
+        name: "תרגילי כוח משולבים",
+        restingTime: "45-60 שניות",
+        variations: {
+          easy: "סדרה של 10 שכיבות שמיכה, 10 סקוואט, 10 כפיפות בטן",
+          medium: "סדרה של 15 שכיבות שמיכה, 15 סקוואט, 15 כפיפות בטן, 5 מתח",
+          hard: "סדרה של 20 שכיבות שמיכה, 20 סקוואט, 20 כפיפות בטן, 10 מתח, 10 ברפי"
+        }
+      }
+    ]
   }
 };
 
@@ -110,31 +160,65 @@ export async function POST(req: Request) {
     }
 
     // Use fallback enhancements if in production and we're having issues
-    if (process.env.NODE_ENV === 'production' && process.env.USE_FALLBACK_WORKOUTS === 'true') {
+    if (process.env.NODE_ENV === 'production' && process.env.USE_FALLBACK_ENHANCEMENTS === 'true') {
       console.log('Using fallback enhancements due to configuration');
-      const workoutType = workout.type || 'aerobic';
-      return NextResponse.json(defaultEnhancements[workoutType as 'aerobic' | 'strength']);
+      
+      // Determine workout type and use appropriate fallback
+      let workoutType = workout.type || 'aerobic';
+      
+      // Map 'military' type to the appropriate enhancement
+      if (workoutType === 'military') {
+        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.military } });
+      } else if (workoutType === 'strength') {
+        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.strength } });
+      } else {
+        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.aerobic } });
+      }
     }
     
-    const prompt = `Enhance the following workout with additional details:
+    const prompt = `Enhance the following workout with professional, detailed information:
     - Workout: ${JSON.stringify(workout)}
     
-    Please provide the following enhancements:
-    1. A specific workout goal that explains the purpose and benefits of this workout
-    2. Recommended resting time between exercises (for each exercise)
-    3. Easy, medium, and hard variations for each exercise (to allow users to adjust difficulty)
+    Please provide the following comprehensive enhancements:
+    
+    1. A specific, evidence-based workout goal that explains:
+       - The primary physiological purpose of this workout
+       - The specific fitness benefits and adaptations it targets
+       - How it contributes to overall athletic development
+       - Expected outcomes with consistent training
+    
+    2. For each exercise, provide:
+       - Precise recommended resting time between sets (based on exercise intensity and type)
+       - Detailed form cues and technique instructions to ensure proper execution
+       - Common mistakes to avoid and how to correct them
+       - Progression metrics to track improvement
+    
+    3. For each exercise, provide three distinct variations:
+       - Easy: A simplified version with specific modifications for beginners or those with limitations
+       - Medium: The standard version with proper form and execution guidelines
+       - Hard: An advanced variation with specific progression elements for experienced athletes
+    
+    4. Additional professional insights:
+       - Optimal breathing patterns for each exercise
+       - Mind-muscle connection cues
+       - Recovery recommendations
+       - Performance indicators to track progress
     
     Format the response as a JSON object with the following structure:
     {
-      "workoutGoal": "string describing the purpose and benefits of this workout",
+      "workoutGoal": "detailed description of the workout's purpose, benefits, and expected outcomes",
       "enhancedExercises": [
         {
           "name": "original exercise name",
-          "restingTime": "string (e.g., '30 seconds', '1 minute')",
+          "restingTime": "precise resting recommendation (e.g., '30-45 seconds for hypertrophy', '2-3 minutes for strength')",
+          "formCues": "detailed technique instructions and proper form guidelines",
+          "commonMistakes": "common errors and how to correct them",
+          "breathingPattern": "optimal breathing technique for this exercise",
+          "progressionMetrics": "how to measure improvement in this exercise",
           "variations": {
-            "easy": "description of easier variation",
-            "medium": "description of medium variation",
-            "hard": "description of harder variation"
+            "easy": "detailed description of easier variation with specific modifications",
+            "medium": "detailed description of standard variation with proper execution guidelines",
+            "hard": "detailed description of advanced variation with specific progression elements"
           }
         }
       ]
@@ -144,16 +228,16 @@ export async function POST(req: Request) {
     
     try {
       // Set a timeout for the OpenAI request
-      const timeoutMs = 25000; // 25 seconds
+      const timeoutMs = 30000; // 30 seconds
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo", // Fallback to a more reliable model
+        model: "gpt-4o", // Upgraded to GPT-4o for better workout enhancements
         messages: [
           {
             role: "system",
-            content: "answer only in hebrew. You are a professional fitness trainer specializing in creating detailed workout programs. Provide specific, actionable advice for workout enhancements. Respond only with valid JSON."
+            content: "אתה מאמן כושר מקצועי ברמה עולמית המתמחה בתכנון אימונים מדויקים ומבוססי מדע. תפקידך הוא לספק הנחיות מפורטות ומקצועיות לכל תרגיל, כולל טכניקה נכונה, וריאציות מותאמות לרמות שונות, וטיפים מתקדמים. הקפד לענות בעברית מקצועית ומדויקת. הגב אך ורק ב-JSON תקין."
           },
           {
             role: "user",
@@ -209,10 +293,20 @@ export async function POST(req: Request) {
           console.error('Failed to extract JSON from response:', extractError);
         }
         
-        // Fallback to default enhancements
-        const workoutType = workout.type || 'aerobic';
-        console.log('Using fallback enhancements');
-        return NextResponse.json(defaultEnhancements[workoutType as 'aerobic' | 'strength']);
+        // Use fallback enhancements if there's an error
+        console.log('Using fallback enhancements due to OpenAI error');
+        
+        // Determine workout type and use appropriate fallback
+        let workoutType = workout.type || 'aerobic';
+        
+        // Map 'military' type to the appropriate enhancement
+        if (workoutType === 'military') {
+          return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.military } });
+        } else if (workoutType === 'strength') {
+          return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.strength } });
+        } else {
+          return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.aerobic } });
+        }
       }
     } catch (openaiError: any) {
       console.error('OpenAI API error:', openaiError);
@@ -228,10 +322,20 @@ export async function POST(req: Request) {
         );
       }
       
-      // Fallback to default enhancements
-      const workoutType = workout.type || 'aerobic';
+      // Use fallback enhancements if there's an error
       console.log('Using fallback enhancements due to OpenAI error');
-      return NextResponse.json(defaultEnhancements[workoutType as 'aerobic' | 'strength']);
+      
+      // Determine workout type and use appropriate fallback
+      let workoutType = workout.type || 'aerobic';
+      
+      // Map 'military' type to the appropriate enhancement
+      if (workoutType === 'military') {
+        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.military } });
+      } else if (workoutType === 'strength') {
+        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.strength } });
+      } else {
+        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.aerobic } });
+      }
     }
     
   } catch (error: any) {

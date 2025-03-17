@@ -30,14 +30,13 @@ interface EnhancedExercise {
 
 interface WorkoutDay {
   day: string;
-  type: 'aerobic' | 'strength' | 'military';
+  type: 'aerobic' | 'strength';
   title: string;
   exercises: string[];
   duration: string;
   intensity: 'קל' | 'בינוני' | 'גבוה';
   workoutGoal?: string;
   enhancedExercises?: EnhancedExercise[];
-  equipment?: string;
 }
 
 interface UserAnswers {
@@ -64,6 +63,8 @@ export default function WorkoutDetails() {
   const [workout, setWorkout] = useState<WorkoutProgram | null>(null);
   const [loading, setLoading] = useState(true);
   const [enhancingWorkout, setEnhancingWorkout] = useState<Record<number, boolean>>({});
+  const [selectedVariations, setSelectedVariations] = useState<Record<string, 'easy' | 'medium' | 'hard'>>({});
+  const [expandedExercises, setExpandedExercises] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false);
   
   // Define weekDays array for the weekly schedule overview
@@ -289,14 +290,64 @@ export default function WorkoutDetails() {
   };
 
   // Get workout type colors
-  const getWorkoutTypeColors = (type: 'aerobic' | 'strength' | 'military') => {
-    if (type === 'aerobic') {
-      return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: 'text-blue-500', darkBg: 'bg-blue-500' };
-    } else if (type === 'strength') {
-      return { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', icon: 'text-orange-500', darkBg: 'bg-orange-500' };
-    } else {
-      // Military type
-      return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', icon: 'text-green-500', darkBg: 'bg-green-500' };
+  const getWorkoutTypeColors = (type: 'aerobic' | 'strength') => {
+    return type === 'aerobic' 
+      ? { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: 'text-blue-500', darkBg: 'bg-blue-500' }
+      : { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', icon: 'text-orange-500', darkBg: 'bg-orange-500' };
+  };
+
+  // Function to update exercise parameters and save to Firebase
+  const updateExerciseParams = async (
+    workoutIndex: number,
+    exerciseName: string,
+    params: {
+      sets?: number;
+      reps?: number;
+      duration?: number;
+      pace?: string;
+      intervals?: number;
+    }
+  ) => {
+    if (!workout || !workout.id) return;
+
+    try {
+      setIsSaving(true);
+      console.log(`Updating exercise: ${exerciseName} with params:`, params);
+
+      // Create a deep copy of the workout to modify
+      const updatedWorkout = JSON.parse(JSON.stringify(workout)) as WorkoutProgram;
+      
+      // Find the exercise to update
+      const day = updatedWorkout.schedule[workoutIndex];
+      if (!day.enhancedExercises) return;
+
+      const exerciseIndex = day.enhancedExercises.findIndex(e => e.name === exerciseName);
+      if (exerciseIndex === -1) {
+        console.error(`Exercise not found: ${exerciseName}`);
+        console.log('Available exercises:', day.enhancedExercises.map(e => e.name));
+        setIsSaving(false);
+        return;
+      }
+
+      // Update the exercise with new parameters
+      updatedWorkout.schedule[workoutIndex].enhancedExercises![exerciseIndex] = {
+        ...updatedWorkout.schedule[workoutIndex].enhancedExercises![exerciseIndex],
+        ...params
+      };
+
+      // Save to Firebase
+      await updateDocument('workoutPrograms', workout.id, {
+        schedule: updatedWorkout.schedule
+      });
+
+      // Update local state
+      setWorkout(updatedWorkout);
+      console.log(`Successfully updated ${exerciseName}`);
+    } catch (error) {
+      console.error('Error updating exercise parameters:', error);
+      alert('שגיאה בשמירת הנתונים. אנא נסה שוב מאוחר יותר.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -372,6 +423,15 @@ export default function WorkoutDetails() {
                 workoutGoal: enhancedData.workoutGoal,
                 enhancedExercises: enhancedData.enhancedExercises,
               };
+              
+              // Initialize selected variations to 'medium' for all exercises
+              enhancedData.enhancedExercises.forEach((exercise: EnhancedExercise) => {
+                const key = `${index}-${exercise.name}`;
+                setSelectedVariations(prev => ({
+                  ...prev,
+                  [key]: 'medium'
+                }));
+              });
             } catch (error) {
               console.error('Error enhancing workout:', error);
             } finally {
@@ -410,6 +470,13 @@ export default function WorkoutDetails() {
                   day.enhancedExercises = [];
                 }
                 day.enhancedExercises.push(newEnhancedExercise);
+                
+                // Initialize the selected variation
+                const key = `${index}-${exerciseName}`;
+                setSelectedVariations(prev => ({
+                  ...prev,
+                  [key]: 'medium'
+                }));
               });
             }
 
@@ -501,6 +568,22 @@ export default function WorkoutDetails() {
       // Re-throw the error to be handled by the caller
       throw error;
     }
+  };
+
+  const toggleVariation = (workoutIndex: number, exerciseName: string, variation: 'easy' | 'medium' | 'hard') => {
+    const key = `${workoutIndex}-${exerciseName}`;
+    setSelectedVariations({
+      ...selectedVariations,
+      [key]: variation
+    });
+  };
+
+  const toggleExerciseExpansion = (workoutIndex: number, exerciseName: string) => {
+    const key = `${workoutIndex}-${exerciseName}`;
+    setExpandedExercises(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   if (loading) {
@@ -600,10 +683,8 @@ export default function WorkoutDetails() {
                       <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
                         {workoutDay.type === 'aerobic' ? (
                           <FaRunning className="w-6 h-6 text-white" />
-                        ) : workoutDay.type === 'strength' ? (
-                          <FaDumbbell className="w-6 h-6 text-white" />
                         ) : (
-                          <FaBullseye className="w-6 h-6 text-white" />
+                          <FaDumbbell className="w-6 h-6 text-white" />
                         )}
                       </div>
                       <div>
@@ -681,11 +762,25 @@ export default function WorkoutDetails() {
                       (workoutDay.enhancedExercises && workoutDay.enhancedExercises.length > 0 ? 
                        workoutDay.enhancedExercises[0] : null);
                     
+                    const isExpanded = effectiveExercise ? 
+                      expandedExercises[`${index}-${effectiveExercise.name}`] : false;
+                    const selectedVariation = effectiveExercise ? 
+                      selectedVariations[`${index}-${effectiveExercise.name}`] || 'medium' : 'medium';
+                    
+                    // Debug log to identify matching issues
+                    if (!effectiveExercise) {
+                      console.log(`No enhanced exercise found for: ${exerciseName}`);
+                      if (workoutDay.enhancedExercises) {
+                        console.log('Available enhanced exercises:', workoutDay.enhancedExercises.map(e => e.name));
+                      }
+                    }
+                    
                     return (
                       <li key={i} className="border border-gray-200 rounded-lg overflow-hidden">
                         {/* Exercise Header */}
                         <div 
-                          className="p-4 bg-[#fff5eb] flex justify-between items-center hover:bg-[#ffefe0] transition-colors"
+                          className="p-4 bg-[#fff5eb] flex justify-between items-center cursor-pointer hover:bg-[#ffefe0] transition-colors"
+                          onClick={() => effectiveExercise && toggleExerciseExpansion(index, effectiveExercise.name)}
                         >
                           <div className="flex items-start gap-3">
                             <div className="w-6 h-6 rounded-full bg-[#ff8714] text-white flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
@@ -711,7 +806,281 @@ export default function WorkoutDetails() {
                               </div>
                             </div>
                           </div>
+                          {effectiveExercise && (
+                            <button className="text-[#ff8714] hover:text-[#e67200]">
+                              {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+                            </button>
+                          )}
                         </div>
+                        
+                        {/* Exercise Details (Expanded) */}
+                        {effectiveExercise && isExpanded && (
+                          <div className="p-4 border-t border-gray-200">
+                            {/* Variation Selector */}
+                            <div className="flex items-center gap-2 mb-4">
+                              <span className="text-sm text-gray-600">רמת קושי:</span>
+                              <div className="flex rounded-lg overflow-hidden border border-gray-300">
+                                <button 
+                                  className={`px-3 py-1 text-sm ${selectedVariation === 'easy' ? 'bg-green-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+                                  onClick={() => toggleVariation(index, effectiveExercise.name, 'easy')}
+                                >
+                                  קל
+                                </button>
+                                <button 
+                                  className={`px-3 py-1 text-sm border-l border-r border-gray-300 ${selectedVariation === 'medium' ? 'bg-[#ff8714] text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+                                  onClick={() => toggleVariation(index, effectiveExercise.name, 'medium')}
+                                >
+                                  בינוני
+                                </button>
+                                <button 
+                                  className={`px-3 py-1 text-sm ${selectedVariation === 'hard' ? 'bg-red-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+                                  onClick={() => toggleVariation(index, effectiveExercise.name, 'hard')}
+                                >
+                                  קשה
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Exercise Parameters Editor */}
+                            <div className="bg-gray-50 p-4 rounded-lg mb-4 border border-gray-200">
+                              <h5 className="font-medium text-gray-800 mb-3">הגדרות תרגיל:</h5>
+                              
+                              {isRunningExercise(effectiveExercise.name) ? (
+                                isIntervalRunning(effectiveExercise.name) ? (
+                                  // Interval Running Exercise
+                                  <div className="space-y-4">
+                                    <div>
+                                      <label className="block text-sm text-gray-600 mb-1">מספר אינטרוולים:</label>
+                                      <div className="flex items-center">
+                                        <button 
+                                          className="w-8 h-8 rounded-l-md bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                                          onClick={() => {
+                                            const currentIntervals = effectiveExercise.intervals || 5;
+                                            if (currentIntervals > 1) {
+                                              updateExerciseParams(index, effectiveExercise.name, {
+                                                intervals: currentIntervals - 1
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          -
+                                        </button>
+                                        <input 
+                                          type="number" 
+                                          min="1"
+                                          className="w-12 h-8 text-center border-y border-gray-300 text-sm"
+                                          value={effectiveExercise.intervals || 5}
+                                          onChange={(e) => {
+                                            const value = parseInt(e.target.value);
+                                            if (value > 0) {
+                                              updateExerciseParams(index, effectiveExercise.name, {
+                                                intervals: value
+                                              });
+                                            }
+                                          }}
+                                        />
+                                        <button 
+                                          className="w-8 h-8 rounded-r-md bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                                          onClick={() => {
+                                            const currentIntervals = effectiveExercise.intervals || 5;
+                                            updateExerciseParams(index, effectiveExercise.name, {
+                                              intervals: currentIntervals + 1
+                                            });
+                                          }}
+                                        >
+                                          +
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  // Continuous Running Exercise
+                                  <div className="space-y-4">
+                                    <div>
+                                      <label className="block text-sm text-gray-600 mb-1">משך ריצה (דקות):</label>
+                                      <div className="flex items-center">
+                                        <button 
+                                          className="w-8 h-8 rounded-l-md bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                                          onClick={() => {
+                                            const currentDuration = effectiveExercise.duration || 20;
+                                            if (currentDuration > 1) {
+                                              updateExerciseParams(index, effectiveExercise.name, {
+                                                duration: currentDuration - 1
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          -
+                                        </button>
+                                        <input 
+                                          type="number" 
+                                          min="1"
+                                          className="w-14 h-8 text-center border-y border-gray-300 text-sm"
+                                          value={effectiveExercise.duration || 20}
+                                          onChange={(e) => {
+                                            const value = parseInt(e.target.value);
+                                            if (value > 0) {
+                                              updateExerciseParams(index, effectiveExercise.name, {
+                                                duration: value
+                                              });
+                                            }
+                                          }}
+                                        />
+                                        <button 
+                                          className="w-8 h-8 rounded-r-md bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                                          onClick={() => {
+                                            const currentDuration = effectiveExercise.duration || 20;
+                                            updateExerciseParams(index, effectiveExercise.name, {
+                                              duration: currentDuration + 1
+                                            });
+                                          }}
+                                        >
+                                          +
+                                        </button>
+                                      </div>
+                                    </div>
+                                    
+                                    <div>
+                                      <label className="block text-sm text-gray-600 mb-1">קצב (דקות/ק&quot;מ):</label>
+                                      <input 
+                                        type="text" 
+                                        className="w-20 h-8 px-2 border border-gray-300 rounded text-sm"
+                                        value={effectiveExercise.pace || "5:30"}
+                                        onChange={(e) => {
+                                          updateExerciseParams(index, effectiveExercise.name, {
+                                            pace: e.target.value
+                                          });
+                                        }}
+                                        placeholder="5:30"
+                                      />
+                                    </div>
+                                  </div>
+                                )
+                              ) : (
+                                // Regular Strength Exercise
+                                <div className="flex flex-wrap gap-6">
+                                  <div>
+                                    <label className="block text-sm text-gray-600 mb-1">מספר סטים:</label>
+                                    <div className="flex items-center">
+                                      <button 
+                                        className="w-8 h-8 rounded-l-md bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                                        onClick={() => {
+                                          const currentSets = effectiveExercise.sets || 3;
+                                          if (currentSets > 1) {
+                                            updateExerciseParams(index, effectiveExercise.name, {
+                                              sets: currentSets - 1
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        -
+                                      </button>
+                                      <input 
+                                        type="number" 
+                                        min="1"
+                                        className="w-12 h-8 text-center border-y border-gray-300 text-sm"
+                                        value={effectiveExercise.sets || 3}
+                                        onChange={(e) => {
+                                          const value = parseInt(e.target.value);
+                                          if (value > 0) {
+                                            updateExerciseParams(index, effectiveExercise.name, {
+                                              sets: value
+                                            });
+                                          }
+                                        }}
+                                      />
+                                      <button 
+                                        className="w-8 h-8 rounded-r-md bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                                        onClick={() => {
+                                          const currentSets = effectiveExercise.sets || 3;
+                                          updateExerciseParams(index, effectiveExercise.name, {
+                                            sets: currentSets + 1
+                                          });
+                                        }}
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  </div>
+                                  
+                                  <div>
+                                    <label className="block text-sm text-gray-600 mb-1">מספר חזרות:</label>
+                                    <div className="flex items-center">
+                                      <button 
+                                        className="w-8 h-8 rounded-l-md bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                                        onClick={() => {
+                                          const currentReps = effectiveExercise.reps || 10;
+                                          if (currentReps > 1) {
+                                            updateExerciseParams(index, effectiveExercise.name, {
+                                              reps: currentReps - 1
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        -
+                                      </button>
+                                      <input 
+                                        type="number" 
+                                        min="1"
+                                        className="w-12 h-8 text-center border-y border-gray-300 text-sm"
+                                        value={effectiveExercise.reps || 10}
+                                        onChange={(e) => {
+                                          const value = parseInt(e.target.value);
+                                          if (value > 0) {
+                                            updateExerciseParams(index, effectiveExercise.name, {
+                                              reps: value
+                                            });
+                                          }
+                                        }}
+                                      />
+                                      <button 
+                                        className="w-8 h-8 rounded-r-md bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                                        onClick={() => {
+                                          const currentReps = effectiveExercise.reps || 10;
+                                          updateExerciseParams(index, effectiveExercise.name, {
+                                            reps: currentReps + 1
+                                          });
+                                        }}
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Variation Description */}
+                            <div className="bg-[#fff5eb] p-4 rounded-lg">
+                              <h5 className="font-medium text-gray-800 mb-2">תיאור התרגיל:</h5>
+                              <p className="text-gray-700">{effectiveExercise.variations[selectedVariation]}</p>
+                            </div>
+                            
+                            {/* Form Cues */}
+                            {effectiveExercise.formCues && (
+                              <div className="mt-4">
+                                <h5 className="font-medium text-gray-800 mb-2">טיפים לביצוע נכון:</h5>
+                                <p className="text-gray-700">{effectiveExercise.formCues}</p>
+                              </div>
+                            )}
+                            
+                            {/* Common Mistakes */}
+                            {effectiveExercise.commonMistakes && (
+                              <div className="mt-4">
+                                <h5 className="font-medium text-gray-800 mb-2">טעויות נפוצות:</h5>
+                                <p className="text-gray-700">{effectiveExercise.commonMistakes}</p>
+                              </div>
+                            )}
+                            
+                            {/* Breathing Pattern */}
+                            {effectiveExercise.breathingPattern && (
+                              <div className="mt-4">
+                                <h5 className="font-medium text-gray-800 mb-2">דפוס נשימה:</h5>
+                                <p className="text-gray-700">{effectiveExercise.breathingPattern}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </li>
                     );
                   })}

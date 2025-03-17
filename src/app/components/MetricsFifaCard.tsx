@@ -43,165 +43,305 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
   }, [user]);
 
   // Convert metrics to ratings (0-99)
-  const calculateRating = (value: string, type: 'time' | 'reps') => {
+  const calculateRating = (value: string, type: 'time' | 'reps', metricType?: string) => {
     if (type === 'time') {
       const [minutes, seconds] = value.split(':').map(Number);
       const totalSeconds = minutes * 60 + seconds;
       
-      // For 3000m: Under 12:00 is excellent (99), over 20:00 is 70
-      if (value.startsWith('3')) {
-        return Math.max(70, 99 - Math.floor((totalSeconds - 720) / 30));
+      if (isNaN(totalSeconds)) return 0;
+      
+      // For 3000m run (lower is better)
+      if (metricType === '3000m' || value === metrics.run3000m) {
+        if (totalSeconds < 600) return 99; // Under 10 minutes is exceptional
+        if (totalSeconds > 1500) return 40; // Over 25 minutes is below average
+        
+        // Linear scale between 10 and 25 minutes
+        return Math.round(99 - ((totalSeconds - 600) / 900) * 59);
       }
-      // For 400m: Under 1:00 is excellent (99), over 2:00 is 70
-      return Math.max(70, 99 - Math.floor((totalSeconds - 60) / 3));
+      
+      // For 400m run (lower is better)
+      if (metricType === '400m' || value === metrics.run400m) {
+        if (totalSeconds < 60) return 99; // Under 1 minute is exceptional
+        if (totalSeconds > 180) return 40; // Over 3 minutes is below average
+        
+        // Linear scale between 1 and 3 minutes
+        return Math.round(99 - ((totalSeconds - 60) / 120) * 59);
+      }
+      
+      return 50; // Default
     } else {
-      // For reps: Over 30 is excellent (99), under 5 is 70
-      return Math.max(70, Math.min(99, 70 + Math.floor(Number(value) * 1.5)));
+      // For reps (higher is better)
+      const reps = parseInt(value);
+      if (isNaN(reps)) return 0;
+      
+      // Pull-ups
+      if (metricType === 'pullUps' || value === metrics.pullUps) {
+        if (reps > 20) return 99;
+        if (reps < 1) return 40;
+        return Math.round(40 + (reps / 20) * 59);
+      }
+      
+      // Push-ups
+      if (metricType === 'pushUps' || value === metrics.pushUps) {
+        if (reps > 50) return 99;
+        if (reps < 5) return 40;
+        return Math.round(40 + (reps / 50) * 59);
+      }
+      
+      // Sit-ups
+      if (metricType === 'sitUps' || value === metrics.sitUps2min) {
+        if (reps > 70) return 99;
+        if (reps < 10) return 40;
+        return Math.round(40 + (reps / 70) * 59);
+      }
+      
+      return 50; // Default
     }
   };
 
-  // Calculate individual ratings
-  const run3000Rating = calculateRating(metrics.run3000m, 'time');
-  const run400Rating = calculateRating(metrics.run400m, 'time');
-  const pullUpsRating = calculateRating(metrics.pullUps, 'reps');
-  const pushUpsRating = calculateRating(metrics.pushUps, 'reps');
-  const sitUpsRating = calculateRating(metrics.sitUps2min, 'reps');
-
-  // Calculate main category ratings
-  const aerobic = run3000Rating;
-  const anaerobic = run400Rating;
-  const strength = Math.floor((pullUpsRating + pushUpsRating) / 2);
-  
-  // Overall rating
-  const overall = Math.floor((aerobic + anaerobic + strength) / 3);
+  // Calculate overall rating
+  const overallRating = Math.round(
+    (calculateRating(metrics.run3000m, 'time', '3000m') +
+    calculateRating(metrics.run400m, 'time', '400m') +
+    calculateRating(metrics.pullUps, 'reps', 'pullUps') +
+    calculateRating(metrics.pushUps, 'reps', 'pushUps') +
+    calculateRating(metrics.sitUps2min, 'reps', 'sitUps')) / 5
+  );
 
   // Get rating color based on value
   const getRatingColor = (rating: number) => {
-    if (rating >= 90) return 'text-emerald-400';
-    if (rating >= 80) return 'text-blue-400';
-    return 'text-amber-400';
+    if (rating >= 90) return "text-green-500";
+    if (rating >= 80) return "text-green-400";
+    if (rating >= 70) return "text-lime-500";
+    if (rating >= 60) return "text-yellow-500";
+    if (rating >= 50) return "text-orange-500";
+    return "text-red-500";
   };
 
-  // Format date
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('he-IL', { 
-      day: 'numeric', 
-      month: 'numeric', 
-      year: 'numeric' 
-    }).format(date);
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('he-IL', {
+        day: 'numeric',
+        month: 'numeric',
+        year: 'numeric',
+      }).format(date);
+    } catch (e) {
+      return dateString;
+    }
   };
 
   return (
-    <div className="w-full max-w-md relative mx-auto mb-8 group">
+    <div className="relative w-full overflow-hidden rounded-xl">
       {/* Card Background */}
-      <div className="relative bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-xl shadow-xl overflow-hidden">
-        {/* Accent elements */}
-        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#ff8714]/20 to-transparent rounded-full blur-2xl" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-[#ff8714]/20 to-transparent rounded-full blur-2xl" />
-        
-        {/* Card Content */}
-        <div className="relative p-6 flex flex-col">
-          {/* Header with date */}
-          <div className="text-white/60 text-sm mb-2 text-right">
-            {formatDate(metrics.createdAt)}
-          </div>
-          
-          {/* User info and overall rating */}
+      <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg">
+        <div className="p-6">
+          {/* Header */}
           <div className="flex justify-between items-center mb-6">
-            <div className="text-2xl md:text-3xl font-bold text-white/90">
-              {userName || "כרטיס מדדים"}
-            </div>
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#ff8714] to-[#e67200] flex items-center justify-center shadow-lg">
-              <span className="text-2xl font-bold text-white">{overall}</span>
-            </div>
-          </div>
-          
-          {/* Profile Picture */}
-          <div className="relative w-28 h-28 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#ff8714] to-[#e67200] blur-md opacity-50" />
-            <div className="relative w-full h-full rounded-full border-2 border-[#ff8714] overflow-hidden">
-              {profileImage ? (
-                <Image
-                  src={profileImage}
-                  alt="תמונת פרופיל"
-                  fill
-                  className="object-cover"
-                  unoptimized={profileImage.startsWith('data:')}
-                  priority
-                  onError={() => {
-                    console.error('Error loading profile image in FIFA card');
-                    setProfileImage(null);
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                  <span className="text-white/50 text-xl">
-                    {userName ? userName.charAt(0).toUpperCase() : "?"}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Detailed Stats */}
-          <div className="space-y-4 mb-4">
-            <h3 className="text-white/70 text-sm font-medium mb-3 text-center">קטגוריות ראשיות</h3>
-            
-            {/* Aerobic */}
-            <div className="relative overflow-hidden rounded-lg bg-white/5 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FaRunning className="w-5 h-5 text-[#ff8714]" />
-                  <span className="text-white/80">אירובי</span>
-                </div>
-                <span className={`text-xl font-bold ${getRatingColor(aerobic)}`}>{aerobic}</span>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-[#ff8714]/10 border-2 border-white shadow flex items-center justify-center">
+                {profileImage ? (
+                  <Image 
+                    src={profileImage} 
+                    alt={userName || "User"} 
+                    width={48} 
+                    height={48} 
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <div className="text-[#ff8714] text-xl font-bold">
+                    {userName?.charAt(0) || "U"}
+                  </div>
+                )}
               </div>
-              <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#ff8714] to-[#e67200]" style={{ width: `${aerobic}%` }} />
+              <div>
+                <div className="font-bold text-gray-800 text-lg">{userName || "משתמש"}</div>
+                <div className="text-xs text-gray-500">{formatDate(metrics.createdAt)}</div>
+              </div>
+            </div>
+            
+            {/* Overall Rating */}
+            <div className="relative group">
+              <div className="relative w-24 h-24 flex items-center justify-center">
+                {/* Background Circle */}
+                <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 36 36">
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15.91549430918954"
+                    fill="none"
+                    stroke="#f3f4f6"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  />
+                  {/* Progress Circle */}
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15.91549430918954"
+                    fill="none"
+                    stroke="#ff8714"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeDasharray={`${overallRating}, 100`}
+                    className="transition-all duration-1000 ease-out"
+                    style={{
+                      strokeDashoffset: 'calc(100 - var(--rating))',
+                      '--rating': overallRating
+                    } as any}
+                  />
+                </svg>
+                
+                {/* Rating Display */}
+                <div className="relative flex flex-col items-center">
+                  <div className={`text-2xl font-bold ${getRatingColor(overallRating)} transition-colors duration-300`}>
+                    {overallRating}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">דירוג כללי</div>
+                </div>
+              </div>
+              
+              {/* Hover Effect - Rating Description */}
+              <div className="absolute top-full right-0 mt-2 w-48 p-2 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 text-right z-10">
+                <div className="text-sm font-medium text-gray-800 mb-1">דירוג כללי</div>
+                <div className="text-xs text-gray-500">
+                  ממוצע משוקלל של כל המדדים שלך
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            {/* Aerobic */}
+            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 transition-all duration-300 hover:shadow hover:border-[#ff8714]/30">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-full bg-[#ff8714]/10 flex items-center justify-center">
+                  <FaRunning className="text-[#ff8714]" />
+                </div>
+                <div className="text-sm font-medium">אירובי</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`text-2xl font-bold ${getRatingColor(calculateRating(metrics.run3000m, 'time', '3000m'))}`}>
+                  {calculateRating(metrics.run3000m, 'time', '3000m')}
+                </div>
+                <div className="text-xs text-gray-500 mt-1 flex-1">
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#ff8714]" 
+                      style={{ 
+                        width: `${calculateRating(metrics.run3000m, 'time', '3000m')}%`,
+                        transition: 'width 1s ease-out'
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Anaerobic */}
-            <div className="relative overflow-hidden rounded-lg bg-white/5 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FaBolt className="w-5 h-5 text-[#ff8714]" />
-                  <span className="text-white/80">אנאירובי</span>
+            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 transition-all duration-300 hover:shadow hover:border-[#ff8714]/30">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-full bg-[#ff8714]/10 flex items-center justify-center">
+                  <FaBolt className="text-[#ff8714]" />
                 </div>
-                <span className={`text-xl font-bold ${getRatingColor(anaerobic)}`}>{anaerobic}</span>
+                <div className="text-sm font-medium">אנאירובי</div>
               </div>
-              <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#ff8714] to-[#e67200]" style={{ width: `${anaerobic}%` }} />
+              <div className="flex items-center gap-2">
+                <div className={`text-2xl font-bold ${getRatingColor(calculateRating(metrics.run400m, 'time', '400m'))}`}>
+                  {calculateRating(metrics.run400m, 'time', '400m')}
+                </div>
+                <div className="text-xs text-gray-500 mt-1 flex-1">
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#ff8714]" 
+                      style={{ 
+                        width: `${calculateRating(metrics.run400m, 'time', '400m')}%`,
+                        transition: 'width 1s ease-out'
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Strength */}
-            <div className="relative overflow-hidden rounded-lg bg-white/5 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FaDumbbell className="w-5 h-5 text-[#ff8714]" />
-                  <span className="text-white/80">כוח</span>
+            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 transition-all duration-300 hover:shadow hover:border-[#ff8714]/30">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-full bg-[#ff8714]/10 flex items-center justify-center">
+                  <FaDumbbell className="text-[#ff8714]" />
                 </div>
-                <span className={`text-xl font-bold ${getRatingColor(strength)}`}>{strength}</span>
+                <div className="text-sm font-medium">כוח</div>
               </div>
-              <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#ff8714] to-[#e67200]" style={{ width: `${strength}%` }} />
-            </div>
-          </div>
-          
-          {/* Raw Metrics */}
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-white/5 p-2 rounded-lg">
-              <div className="text-xs text-white/60">ריצת 3000</div>
-              <div className="text-white font-medium">{metrics.run3000m}</div>
-            </div>
-            <div className="bg-white/5 p-2 rounded-lg">
-              <div className="text-xs text-white/60">ריצת 400</div>
-              <div className="text-white font-medium">{metrics.run400m}</div>
-            </div>
-            <div className="bg-white/5 p-2 rounded-lg">
-              <div className="text-xs text-white/60">מתח</div>
-              <div className="text-white font-medium">{metrics.pullUps}</div>
+              
+              <div className="flex items-center gap-2">
+                <div className={`text-2xl font-bold ${getRatingColor(
+                  Math.round((
+                    calculateRating(metrics.pullUps, 'reps', 'pullUps') +
+                    calculateRating(metrics.pushUps, 'reps', 'pushUps') +
+                    calculateRating(metrics.sitUps2min, 'reps', 'sitUps')
+                  ) / 3)
+                )}`}>
+                  {Math.round((
+                    calculateRating(metrics.pullUps, 'reps', 'pullUps') +
+                    calculateRating(metrics.pushUps, 'reps', 'pushUps') +
+                    calculateRating(metrics.sitUps2min, 'reps', 'sitUps')
+                  ) / 3)}
+                </div>
+                <div className="text-xs text-gray-500 mt-1 flex-1">
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#ff8714]" 
+                      style={{ 
+                        width: `${Math.round((
+                          calculateRating(metrics.pullUps, 'reps', 'pullUps') +
+                          calculateRating(metrics.pushUps, 'reps', 'pushUps') +
+                          calculateRating(metrics.sitUps2min, 'reps', 'sitUps')
+                        ) / 3)}%`,
+                        transition: 'width 1s ease-out'
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Add CSS animations */}
+      <style jsx global>{`
+        @keyframes dashOffset {
+          from {
+            stroke-dasharray: 0, 100;
+          }
+        }
+        
+        .animate-dashOffset {
+          animation: dashOffset 1.5s ease-out forwards;
+        }
+      `}</style>
+      <style jsx>{`
+        @property --rating {
+          syntax: '<number>';
+          initial-value: 0;
+          inherits: false;
+        }
+        
+        circle {
+          transition: stroke-dashoffset 1.5s ease-in-out;
+        }
+      `}</style>
     </div>
   );
+}
+
+// Helper function to get color in hex format for SVG
+function getRatingColorHex(rating: number) {
+  if (rating >= 90) return "#22c55e"; // green-500
+  if (rating >= 80) return "#4ade80"; // green-400
+  if (rating >= 70) return "#84cc16"; // lime-500
+  if (rating >= 60) return "#eab308"; // yellow-500
+  if (rating >= 50) return "#f97316"; // orange-500
+  return "#ef4444"; // red-500
 } 

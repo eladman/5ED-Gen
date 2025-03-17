@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { saveProfile, getProfile, processProfileImage } from '@/lib/firebase/profileUtils';
 import Navbar from '@/app/components/Navbar';
+import TeamSelector from '@/components/TeamSelector';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -58,6 +59,11 @@ export default function ProfilePage() {
     const { name, value } = e.target;
     if (name === 'phone' && !/^\d*$/.test(value)) return;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setSaveStatus('idle');
+  };
+
+  const handleTeamChange = (teamId: string) => {
+    setFormData(prev => ({ ...prev, team: teamId }));
     setSaveStatus('idle');
   };
 
@@ -231,13 +237,10 @@ export default function ProfilePage() {
                 <label className="block text-sm font-medium text-right mb-1 text-gray-700">
                   קבוצה
                 </label>
-                <input
-                  type="text"
-                  name="team"
+                <TeamSelector 
                   value={formData.team}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded-md text-right focus:ring-2 focus:ring-[#ff8714] focus:border-transparent"
-                  required
+                  onChange={handleTeamChange}
+                  className="focus:ring-2 focus:ring-[#ff8714] focus:border-transparent"
                 />
               </div>
 

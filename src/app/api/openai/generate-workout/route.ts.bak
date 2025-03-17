@@ -82,88 +82,27 @@ const strengthWorkouts = [
   }
 ];
 
-// Military-specific workout templates
-const militaryWorkouts = [
-  {
-    type: 'military',
-    title: 'אימון הכנה לקרבי - סיבולת',
-    exercises: [
-      'חימום 10 דקות',
-      'ריצת אינטרוולים: 10 × 100 מטר ספרינט עם 30 שניות מנוחה',
-      'זחילה צבאית 4 × 20 מטר',
-      'ריצה עם משקל 5 ק"ג 3 × 400 מטר',
-      'תרגילי קפיצה 3 × 20 (קפיצות סקוואט, קפיצות פיסוק, ברפי)',
-      'שחרור 5 דקות'
-    ],
-    duration: '50 דקות',
-    intensity: 'גבוה',
-    equipment: 'משקולת 5 ק"ג או תיק עם משקל דומה'
-  },
-  {
-    type: 'military',
-    title: 'אימון הכנה לקרבי - כוח',
-    exercises: [
-      'חימום 10 דקות',
-      'מתח רחב 5 × מקסימום (מנוחה 90 שניות)',
-      'שכיבות שמיכה 5 × 20 (מנוחה 60 שניות)',
-      'סקוואט עם קפיצה 4 × 15 (מנוחה 60 שניות)',
-      'זחילת דוב 3 × 20 מטר (מנוחה 45 שניות)',
-      'מקבילים 4 × 12 (מנוחה 60 שניות)',
-      'פלאנק עם תזוזה צידית 3 × 45 שניות לכל צד',
-      'שחרור 5 דקות'
-    ],
-    duration: '55 דקות',
-    intensity: 'גבוה',
-    equipment: 'מתח, מקבילים'
-  },
-  {
-    type: 'military',
-    title: 'אימון הכנה לקרבי - משולב',
-    exercises: [
-      'חימום 10 דקות',
-      'סבב אימון (4 סיבובים, 45 שניות עבודה, 15 שניות מנוחה בין תרגילים):',
-      '- ברפי',
-      '- זחילה צבאית נמוכה',
-      '- מתיחות בטן מהירות',
-      '- ריצה במקום עם ברכיים גבוהות',
-      '- שכיבות שמיכה עם מחיאת כף',
-      '- קפיצות סקוואט',
-      'מנוחה 2 דקות בין סיבובים',
-      'ריצת 1.5 ק"מ בקצב מהיר',
-      'שחרור 5 דקות'
-    ],
-    duration: '50 דקות',
-    intensity: 'גבוה',
-    equipment: 'אין'
-  }
-];
+const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
-function generateWorkoutSchedule(frequency: 2 | 3 | 4 | 5, goal?: string) {
+function generateWorkoutSchedule(frequency: 2 | 3 | 4 | 5) {
   const schedule = [];
+  const daysGap = Math.floor(7 / frequency);
+  let currentDayIndex = 0;
 
   for (let i = 0; i < frequency; i++) {
-    // If goal is army/military, prioritize military workouts
-    if (goal === 'army' && militaryWorkouts.length > 0) {
-      // Ensure variety by cycling through available military workouts
-      const militaryWorkoutIndex = i % militaryWorkouts.length;
-      schedule.push({
-        ...militaryWorkouts[militaryWorkoutIndex],
-        day: (i + 1).toString()
-      });
-    } else {
-      // Standard alternating workout pattern for other goals
-      const isStrengthDay = i % 2 === 1;
-      const workoutTemplates = isStrengthDay ? strengthWorkouts : aerobicWorkouts;
-      const randomWorkout = workoutTemplates[Math.floor(Math.random() * workoutTemplates.length)];
-      
-      schedule.push({
-        ...randomWorkout,
-        day: (i + 1).toString()
-      });
-    }
+    const isStrengthDay = i % 2 === 1;
+    const workoutTemplates = isStrengthDay ? strengthWorkouts : aerobicWorkouts;
+    const randomWorkout = workoutTemplates[Math.floor(Math.random() * workoutTemplates.length)];
+    
+    schedule.push({
+      ...randomWorkout,
+      day: weekDays[currentDayIndex]
+    });
+
+    currentDayIndex = (currentDayIndex + daysGap) % 7;
   }
 
-  return schedule;
+  return schedule.sort((a, b) => weekDays.indexOf(a.day) - weekDays.indexOf(b.day));
 }
 
 const openai = new OpenAI({
@@ -211,8 +150,7 @@ export async function POST(req: Request) {
       console.log('Using fallback workouts due to configuration');
       const frequency = userAnswers.workoutFrequency || 3;
       const fallbackWorkouts = generateWorkoutSchedule(
-        Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5,
-        userAnswers.goal
+        Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5
       );
       return NextResponse.json({ workouts: fallbackWorkouts });
     }
@@ -251,20 +189,8 @@ export async function POST(req: Request) {
        - Balance different muscle groups throughout the week
        - Consider the user's experience level for exercise selection
        - Align with the user's specific goals (military preparation, aerobic improvement, strength building)
-    ${userAnswers.goal === 'army' ? `
-    4. IMPORTANT - Since the user selected "הכנה לצבא" (Military Preparation) as their goal:
-       - Create intense, military-style training workouts that specifically prepare for IDF physical tests and combat fitness
-       - Include exercises that mimic military activities such as crawling, sprinting on varied terrain (including sand if possible), carrying heavy objects, and obstacle course elements
-       - Focus on building endurance, explosive power, and mental resilience under pressure
-       - Incorporate interval training with minimal rest periods to simulate combat stress
-       - Include exercises that build upper body strength for activities like climbing and pulling
-       - Add specific military-style drills like bear crawls, low crawls, high crawls, and tactical movements
-       - Ensure workouts build both anaerobic and aerobic capacity needed for military fitness tests
-       - Include partner exercises when possible to simulate team-based military activities
-       - Design workouts with progressive intensity to prepare for the physical demands of basic training
-       - Focus on core strength and stability which is essential for military activities` : ''}
     
-    ${userAnswers.goal === 'army' ? '5' : '4'}. For each workout, also include:
+    4. For each workout, also include:
        - Equipment needed (if any)
        - Recommended resting time between exercises
        - Performance metrics to track progress
@@ -305,7 +231,7 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "system",
-            content: "You are an elite fitness coach with expertise in the Five Fingers Physical-Mental Training method, exercise physiology, sports science, and personalized training. Your specialty is creating professional, evidence-based workout programs tailored to individual needs and goals that combine physical challenge with mental resilience building. Each workout plan you create is meticulously structured with proper progression, periodization, and recovery, while also incorporating mental challenges that foster resilience, focus, and self-improvement. You have extensive experience in military preparation training, including IDF combat fitness requirements, military physical tests, and tactical conditioning. Keep in mind that the user is also doing 2 intense Five Fingers team workouts every week. Respond only with valid JSON that includes a 'workouts' array."
+            content: "You are an elite fitness coach with expertise in the Five Fingers Physical-Mental Training method, exercise physiology, sports science, and personalized training. Your specialty is creating professional, evidence-based workout programs tailored to individual needs and goals that combine physical challenge with mental resilience building. Each workout plan you create is meticulously structured with proper progression, periodization, and recovery, while also incorporating mental challenges that foster resilience, focus, and self-improvement. Keep in mind that the user is also doing 2 intense Five Fingers team workouts every week. Respond only with valid JSON that includes a 'workouts' array."
           },
           {
             role: "user",
@@ -364,8 +290,7 @@ export async function POST(req: Request) {
         // Fallback to predefined workouts
         const frequency = userAnswers.workoutFrequency || 3;
         const fallbackWorkouts = generateWorkoutSchedule(
-          Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5,
-          userAnswers.goal
+          Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5
         );
         
         console.log('Using fallback workouts');
@@ -388,8 +313,7 @@ export async function POST(req: Request) {
       // Fallback to predefined workouts
       const frequency = userAnswers.workoutFrequency || 3;
       const fallbackWorkouts = generateWorkoutSchedule(
-        Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5,
-        userAnswers.goal
+        Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5
       );
       
       console.log('Using fallback workouts due to OpenAI error');
@@ -405,8 +329,7 @@ export async function POST(req: Request) {
         const userAnswers = await req.json().then(body => body.userAnswers).catch(() => ({}));
         const frequency = userAnswers?.workoutFrequency || 3;
         const fallbackWorkouts = generateWorkoutSchedule(
-          Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5,
-          userAnswers.goal
+          Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5
         );
         console.log('Using fallback workouts due to general error');
         return NextResponse.json({ workouts: fallbackWorkouts });

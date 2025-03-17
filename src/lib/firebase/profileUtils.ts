@@ -6,6 +6,7 @@ interface ProfileData {
   name: string;
   phone: string;
   team: string;
+  group?: string; // Added for metrics comparison feature
   photoURL?: string;
   photoData?: string; // base64 encoded image data
 }

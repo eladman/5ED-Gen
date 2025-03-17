@@ -3,11 +3,14 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import Navbar from "@/app/components/Navbar";
-import { FaRunning, FaDumbbell, FaStopwatch, FaPlus, FaTrash } from "react-icons/fa";
+import { FaRunning, FaDumbbell, FaStopwatch, FaPlus, FaTrash, FaUsers } from "react-icons/fa";
 import { GiSittingDog } from "react-icons/gi";
 import toast from "react-hot-toast";
 import { addDocument, getDocuments, deleteDocument } from "@/lib/firebase/firebaseUtils";
 import MetricsFifaCard from "@/app/components/MetricsFifaCard";
+import MetricsComparison from "@/app/components/MetricsComparison";
+import { getProfile } from "@/lib/firebase/profileUtils";
+import { getTeamNameById } from '@/lib/teamUtils';
 
 interface MetricsForm {
   run3000m: string;
@@ -27,6 +30,7 @@ export default function MetricsPage() {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'personal' | 'social'>('personal');
   const [metrics, setMetrics] = useState<MetricsForm>({
     run3000m: "",
     pullUps: "",
@@ -34,7 +38,14 @@ export default function MetricsPage() {
     run400m: "",
     sitUps2min: "",
   });
+  const [timeInputs, setTimeInputs] = useState({
+    run3000m: { minutes: "", seconds: "" },
+    run400m: { minutes: "", seconds: "" }
+  });
   const [previousMetrics, setPreviousMetrics] = useState<Metrics[]>([]);
+  const [userName, setUserName] = useState<string>("");
+  const [userPhoto, setUserPhoto] = useState<string | null>(null);
+  const [userGroup, setUserGroup] = useState<string>("כיתה א");
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -54,33 +65,79 @@ export default function MetricsPage() {
     fetchMetrics();
   }, [user]);
 
+  // Fetch user profile data for name and photo
+  useEffect(() => {
+    const loadProfileData = async () => {
+      if (user) {
+        try {
+          const profile = await getProfile(user.uid);
+          if (profile) {
+            setUserName(profile.name || user.displayName || "");
+            
+            // Use profile photoData first, then fallback to photoURL
+            if (profile.photoData) {
+              setUserPhoto(profile.photoData);
+            } else if (profile.photoURL) {
+              setUserPhoto(profile.photoURL);
+            } else if (user.photoURL) {
+              setUserPhoto(user.photoURL);
+            }
+            
+            // Set group if available - use group property first, then team as fallback
+            if (profile.group) {
+              setUserGroup(profile.group);
+            } else if (profile.team) {
+              // Convert team ID to team name
+              setUserGroup(getTeamNameById(profile.team));
+            }
+          } else if (user.displayName) {
+            setUserName(user.displayName);
+            if (user.photoURL) {
+              setUserPhoto(user.photoURL);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching profile:", error);
+        }
+      }
+    };
+
+    loadProfileData();
+  }, [user]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
       const loadingToast = toast.loading('שומר מדדים...') as string;
 
+      // Format time inputs into metrics format
+      const formattedMetrics = {
+        ...metrics,
+        run3000m: `${timeInputs.run3000m.minutes || "0"}:${timeInputs.run3000m.seconds.padStart(2, '0')}`,
+        run400m: `${timeInputs.run400m.minutes || "0"}:${timeInputs.run400m.seconds.padStart(2, '0')}`,
+      };
+
       // Check if all fields are filled
-      const isAllFieldsFilled = Object.values(metrics).every(value => value !== "");
+      const isAllFieldsFilled = Object.values(formattedMetrics).every(value => value !== "" && value !== "0:00");
       if (!isAllFieldsFilled) {
         toast.error('יש למלא את כל המדדים לפני השמירה', { id: loadingToast });
         return;
       }
       
-      // Validate time format for running metrics
-      const timeRegex = /^\d{1,2}:\d{2}$/;
-      if (!timeRegex.test(metrics.run3000m)) {
-        toast.error('פורמט זמן לא תקין עבור ריצת 3,000 מטר (דק:שנ)', { id: loadingToast });
+      // Validate time format
+      if (formattedMetrics.run3000m === "0:00") {
+        toast.error('יש להזין זמן תקין עבור ריצת 3,000 מטר', { id: loadingToast });
         return;
       }
-      if (!timeRegex.test(metrics.run400m)) {
-        toast.error('פורמט זמן לא תקין עבור ריצת 400 מטר (דק:שנ)', { id: loadingToast });
+      if (formattedMetrics.run400m === "0:00") {
+        toast.error('יש להזין זמן תקין עבור ריצת 400 מטר', { id: loadingToast });
         return;
       }
 
       // Add timestamp and user ID to metrics
       const metricsData = {
-        ...metrics,
+        ...formattedMetrics,
         userId: user?.uid,
         createdAt: new Date().toISOString(),
       };
@@ -99,6 +156,10 @@ export default function MetricsPage() {
         run400m: "",
         sitUps2min: "",
       });
+      setTimeInputs({
+        run3000m: { minutes: "", seconds: "" },
+        run400m: { minutes: "", seconds: "" }
+      });
       setCurrentStep(1);
       setShowForm(false);
 
@@ -111,11 +172,61 @@ export default function MetricsPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setMetrics(prev => ({
+    
+    // For number inputs, ensure only positive numbers
+    if (name === 'pullUps' || name === 'pushUps' || name === 'sitUps2min') {
+      const numValue = value === '' ? '' : Math.max(0, parseInt(value)).toString();
+      setMetrics(prev => ({
+        ...prev,
+        [name]: numValue
+      }));
+    } else {
+      setMetrics(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const handleTimeChange = (metricName: 'run3000m' | 'run400m', field: 'minutes' | 'seconds', value: string) => {
+    // Allow only numbers
+    if (value !== '' && !/^\d+$/.test(value)) return;
+    
+    // Enforce limits: minutes (0-99), seconds (0-59)
+    if (field === 'minutes' && value !== '' && parseInt(value) > 99) return;
+    if (field === 'seconds' && value !== '' && parseInt(value) > 59) return;
+    
+    setTimeInputs(prev => ({
       ...prev,
-      [name]: value
+      [metricName]: {
+        ...prev[metricName],
+        [field]: value
+      }
     }));
   };
+
+  const parseTimeToInputs = (timeString: string) => {
+    if (!timeString || !timeString.includes(':')) return { minutes: '', seconds: '' };
+    
+    const [minutes, seconds] = timeString.split(':');
+    return { minutes, seconds };
+  };
+
+  useEffect(() => {
+    if (metrics.run3000m) {
+      setTimeInputs(prev => ({
+        ...prev,
+        run3000m: parseTimeToInputs(metrics.run3000m)
+      }));
+    }
+    
+    if (metrics.run400m) {
+      setTimeInputs(prev => ({
+        ...prev,
+        run400m: parseTimeToInputs(metrics.run400m)
+      }));
+    }
+  }, [metrics.run3000m, metrics.run400m]);
 
   const nextStep = () => {
     setCurrentStep(prev => Math.min(prev + 1, 3));
@@ -167,418 +278,545 @@ export default function MetricsPage() {
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-white text-black pb-16">
       <Navbar />
-      <div className="container-custom min-h-screen pt-32 pb-16">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-3">
-              המדדים <span className="text-gradient">שלי</span>
-            </h1>
-            <div className="w-24 h-1 bg-[#ff8714] mx-auto rounded-full"></div>
+      
+      <div className="container mx-auto px-4 pt-20 pb-8">
+        <div className="flex flex-col gap-4">
+          {/* Tab Navigation - Enhanced with pill style */}
+          <div className="flex justify-center mb-8 mt-4">
+            <div className="bg-gray-100 p-1.5 rounded-full inline-flex shadow-md">
+              <button 
+                className={`px-6 py-2.5 rounded-full font-medium text-base transition-all duration-200 ${
+                  activeTab === 'personal' 
+                    ? 'bg-white text-[#ff8714] shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+                onClick={() => setActiveTab('personal')}
+              >
+                המדדים שלי
+              </button>
+              <button 
+                className={`px-6 py-2.5 rounded-full font-medium text-base flex items-center gap-2 transition-all duration-200 ${
+                  activeTab === 'social' 
+                    ? 'bg-white text-[#ff8714] shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+                onClick={() => setActiveTab('social')}
+              >
+                <FaUsers className="w-4 h-4" />
+                <span>השוואה חברתית</span>
+              </button>
+            </div>
           </div>
 
-          {!showForm && (
-            <div className="space-y-8">
-              {/* Add New Metrics Button */}
-              <div className="flex justify-start">
+          {activeTab === 'personal' ? (
+            <div className="animate-fadeIn">
+              {/* Personal Metrics Tab Content */}
+              {/* Add New Metrics Button - Floating action button style */}
+              <div className="fixed bottom-6 right-6 z-10">
                 <button
-                  onClick={() => setShowForm(true)}
-                  className="flex items-center gap-2 bg-[#ff8714] text-white py-3 px-6 rounded-xl text-lg font-medium hover:bg-[#e67200] focus:outline-none focus:ring-2 focus:ring-[#ff8714] focus:ring-offset-2 transition-colors"
+                  onClick={() => setShowForm(!showForm)}
+                  className={`flex items-center justify-center w-14 h-14 rounded-full bg-[#ff8714] text-white shadow-lg hover:bg-[#e67200] transition-all duration-200 ${
+                    showForm ? 'rotate-45' : ''
+                  }`}
+                  aria-label={showForm ? "Close form" : "Add new metrics"}
                 >
                   <FaPlus className="w-5 h-5" />
-                  הוסף מדדים חדשים
                 </button>
               </div>
-
-              {previousMetrics.length === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-xl">
-                  <p className="text-gray-500 text-lg">עדיין לא נשמרו מדדים</p>
+            
+              {/* Metrics Form - Showing with animation */}
+              {showForm && (
+                <div className="bg-white rounded-xl p-6 mb-8 shadow-xl border border-gray-200 animate-slideUp">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold">הזנת מדדים חדשים</h2>
+                    <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1">
+                      {[1, 2, 3].map(step => (
+                        <div
+                          key={step}
+                          className={`w-8 h-8 flex items-center justify-center rounded-full cursor-pointer transition-all ${
+                            currentStep === step 
+                              ? 'bg-[#ff8714] text-white' 
+                              : 'text-gray-500 hover:bg-gray-200'
+                          }`}
+                          onClick={() => setCurrentStep(step)}
+                        >
+                          {step}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Step 1 - Aerobic */}
+                    {currentStep === 1 && (
+                      <div className="space-y-6 animate-fadeIn">
+                        <div className="text-center mb-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#ff8714]/10 mb-2">
+                            <FaRunning className="text-[#ff8714] w-6 h-6" />
+                          </div>
+                          <h3 className="text-lg font-medium">סיבולת אירובית</h3>
+                          <p className="text-gray-500 text-sm">הזן את זמן ריצת 3,000 מטר שלך</p>
+                        </div>
+                        
+                        <div className="space-y-2 max-w-md mx-auto">
+                          <label className="block text-sm font-medium">ריצת 3,000 מטר (דק:שנ)</label>
+                          <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                value={timeInputs.run3000m.seconds}
+                                onChange={(e) => handleTimeChange('run3000m', 'seconds', e.target.value)}
+                                placeholder="שניות"
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff8714] text-center text-lg"
+                                maxLength={2}
+                              />
+                              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                <span className="text-gray-400">שנ'</span>
+                              </div>
+                            </div>
+                            <span className="text-xl font-bold">:</span>
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                value={timeInputs.run3000m.minutes}
+                                onChange={(e) => handleTimeChange('run3000m', 'minutes', e.target.value)}
+                                placeholder="דקות"
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff8714] text-center text-lg"
+                                maxLength={2}
+                              />
+                              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                <span className="text-gray-400">דק'</span>
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-500 text-center mt-2">הזן את הזמן בפורמט דקות:שניות (לדוגמה: 12:30)</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Step 2 - Anaerobic */}
+                    {currentStep === 2 && (
+                      <div className="space-y-6 animate-fadeIn">
+                        <div className="text-center mb-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#ff8714]/10 mb-2">
+                            <FaStopwatch className="text-[#ff8714] w-6 h-6" />
+                          </div>
+                          <h3 className="text-lg font-medium">סיבולת אנאירובית</h3>
+                          <p className="text-gray-500 text-sm">הזן את זמן ריצת 400 מטר שלך</p>
+                        </div>
+                        
+                        <div className="space-y-2 max-w-md mx-auto">
+                          <label className="block text-sm font-medium">ריצת 400 מטר (דק:שנ)</label>
+                          <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                value={timeInputs.run400m.seconds}
+                                onChange={(e) => handleTimeChange('run400m', 'seconds', e.target.value)}
+                                placeholder="שניות"
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff8714] text-center text-lg"
+                                maxLength={2}
+                              />
+                              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                <span className="text-gray-400">שנ'</span>
+                              </div>
+                            </div>
+                            <span className="text-xl font-bold">:</span>
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                value={timeInputs.run400m.minutes}
+                                onChange={(e) => handleTimeChange('run400m', 'minutes', e.target.value)}
+                                placeholder="דקות"
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff8714] text-center text-lg"
+                                maxLength={2}
+                              />
+                              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                <span className="text-gray-400">דק'</span>
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-500 text-center mt-2">הזן את הזמן בפורמט דקות:שניות (לדוגמה: 1:20)</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Step 3 - Strength */}
+                    {currentStep === 3 && (
+                      <div className="space-y-6 animate-fadeIn">
+                        <div className="text-center mb-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#ff8714]/10 mb-2">
+                            <FaDumbbell className="text-[#ff8714] w-6 h-6" />
+                          </div>
+                          <h3 className="text-lg font-medium">כוח</h3>
+                          <p className="text-gray-500 text-sm">הזן את תוצאות תרגילי הכוח שלך</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium">מתח (חזרות)</label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                name="pullUps"
+                                value={metrics.pullUps}
+                                onChange={handleChange}
+                                placeholder="למשל: 10"
+                                min="0"
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff8714] text-center text-lg"
+                              />
+                              <div className="absolute inset-y-0 right-0 flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setMetrics(prev => ({
+                                    ...prev,
+                                    pullUps: prev.pullUps ? (parseInt(prev.pullUps) + 1).toString() : "1"
+                                  }))}
+                                  className="h-full px-3 bg-gray-100 border-l border-gray-300 rounded-r-lg hover:bg-gray-200"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              <div className="absolute inset-y-0 left-0 flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setMetrics(prev => ({
+                                    ...prev,
+                                    pullUps: prev.pullUps && parseInt(prev.pullUps) > 0 ? (parseInt(prev.pullUps) - 1).toString() : "0"
+                                  }))}
+                                  className="h-full px-3 bg-gray-100 border-r border-gray-300 rounded-l-lg hover:bg-gray-200"
+                                  disabled={!metrics.pullUps || parseInt(metrics.pullUps) <= 0}
+                                >
+                                  -
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium">שכיבות שמיכה (חזרות)</label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                name="pushUps"
+                                value={metrics.pushUps}
+                                onChange={handleChange}
+                                placeholder="למשל: 20"
+                                min="0"
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff8714] text-center text-lg"
+                              />
+                              <div className="absolute inset-y-0 right-0 flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setMetrics(prev => ({
+                                    ...prev,
+                                    pushUps: prev.pushUps ? (parseInt(prev.pushUps) + 1).toString() : "1"
+                                  }))}
+                                  className="h-full px-3 bg-gray-100 border-l border-gray-300 rounded-r-lg hover:bg-gray-200"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              <div className="absolute inset-y-0 left-0 flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setMetrics(prev => ({
+                                    ...prev,
+                                    pushUps: prev.pushUps && parseInt(prev.pushUps) > 0 ? (parseInt(prev.pushUps) - 1).toString() : "0"
+                                  }))}
+                                  className="h-full px-3 bg-gray-100 border-r border-gray-300 rounded-l-lg hover:bg-gray-200"
+                                  disabled={!metrics.pushUps || parseInt(metrics.pushUps) <= 0}
+                                >
+                                  -
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium">בטן (חזרות ב-2 דקות)</label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                name="sitUps2min"
+                                value={metrics.sitUps2min}
+                                onChange={handleChange}
+                                placeholder="למשל: 40"
+                                min="0"
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff8714] text-center text-lg"
+                              />
+                              <div className="absolute inset-y-0 right-0 flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setMetrics(prev => ({
+                                    ...prev,
+                                    sitUps2min: prev.sitUps2min ? (parseInt(prev.sitUps2min) + 1).toString() : "1"
+                                  }))}
+                                  className="h-full px-3 bg-gray-100 border-l border-gray-300 rounded-r-lg hover:bg-gray-200"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              <div className="absolute inset-y-0 left-0 flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setMetrics(prev => ({
+                                    ...prev,
+                                    sitUps2min: prev.sitUps2min && parseInt(prev.sitUps2min) > 0 ? (parseInt(prev.sitUps2min) - 1).toString() : "0"
+                                  }))}
+                                  className="h-full px-3 bg-gray-100 border-r border-gray-300 rounded-l-lg hover:bg-gray-200"
+                                  disabled={!metrics.sitUps2min || parseInt(metrics.sitUps2min) <= 0}
+                                >
+                                  -
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Navigation Buttons - Enhanced with progress indicator */}
+                    <div className="pt-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="w-24">
+                          {currentStep > 1 && (
+                            <button
+                              type="button"
+                              onClick={prevStep}
+                              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1"
+                            >
+                              <span>הקודם</span>
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          {[1, 2, 3].map(step => (
+                            <div 
+                              key={step}
+                              className={`w-2 h-2 rounded-full ${
+                                currentStep === step ? 'bg-[#ff8714]' : 'bg-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        
+                        <div className="w-24 text-right">
+                          {currentStep < 3 ? (
+                            <button
+                              type="button"
+                              onClick={nextStep}
+                              className="px-4 py-2 bg-[#ff8714] text-white rounded-lg hover:bg-[#e67200] transition-colors flex items-center gap-1 ml-auto"
+                            >
+                              <span>הבא</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="submit"
+                              className="px-4 py-2 bg-[#ff8714] text-white rounded-lg hover:bg-[#e67200] transition-colors flex items-center gap-1 ml-auto"
+                            >
+                              <span>שמור</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </form>
                 </div>
-              ) : (
-                <>
-                  {/* FIFA Card for most recent metrics */}
-                  <div className="mb-12">
+              )}
+                
+              {/* Previous Metrics - Enhanced with better cards */}
+              {previousMetrics.length > 0 ? (
+                <div className="space-y-6">
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <span className="w-1 h-6 bg-[#ff8714] rounded-full"></span>
+                    המדדים שלי
+                  </h2>
+                  
+                  {/* Latest Metrics Card - Featured */}
+                  <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200 mb-8">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-[#ff8714]/10 flex items-center justify-center">
+                          <FaRunning className="text-[#ff8714] w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg">המדדים האחרונים שלי</h3>
+                          <div className="text-sm text-gray-500">{formatDate(previousMetrics[0].createdAt)}</div>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleDelete(previousMetrics[0].id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors p-2"
+                        aria-label="Delete metric"
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                      <div className="bg-gray-50 rounded-lg p-3 text-center">
+                        <div className="text-xs text-gray-500 mb-1">ריצת 3,000 מטר</div>
+                        <div className="font-bold text-lg">{previousMetrics[0].run3000m}</div>
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-lg p-3 text-center">
+                        <div className="text-xs text-gray-500 mb-1">ריצת 400 מטר</div>
+                        <div className="font-bold text-lg">{previousMetrics[0].run400m}</div>
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-lg p-3 text-center">
+                        <div className="text-xs text-gray-500 mb-1">מתח</div>
+                        <div className="font-bold text-lg">{previousMetrics[0].pullUps}</div>
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-lg p-3 text-center">
+                        <div className="text-xs text-gray-500 mb-1">שכיבות שמיכה</div>
+                        <div className="font-bold text-lg">{previousMetrics[0].pushUps}</div>
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-lg p-3 text-center">
+                        <div className="text-xs text-gray-500 mb-1">בטן 2 דקות</div>
+                        <div className="font-bold text-lg">{previousMetrics[0].sitUps2min}</div>
+                      </div>
+                    </div>
+                    
                     <MetricsFifaCard metrics={previousMetrics[0]} />
                   </div>
-
-                  <div className="space-y-8">
-                    {/* Historical metrics */}
-                    <div>
-                      <h2 className="text-2xl font-bold mb-6">היסטוריית מדדים</h2>
-                      <div className="space-y-4">
-                        {previousMetrics.map((metric) => (
-                          <div key={metric.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-[#ff8714] transition-colors">
-                            <div className="flex justify-between items-start mb-4">
-                              <div className="text-sm text-gray-500">{formatDate(metric.createdAt)}</div>
-                              <button
-                                onClick={() => handleDelete(metric.id)}
-                                className="text-red-500 hover:text-red-600 transition-colors p-2"
-                                title="מחק מדד"
-                              >
-                                <FaTrash className="w-4 h-4" />
-                              </button>
+                  
+                  {/* Previous Metrics History */}
+                  {previousMetrics.length > 1 && (
+                    <>
+                      <h3 className="text-lg font-medium flex items-center gap-2 mb-4">
+                        <span className="w-1 h-5 bg-gray-300 rounded-full"></span>
+                        היסטוריית מדדים
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {previousMetrics.slice(1).map((metric) => (
+                          <div key={metric.id} className="bg-white rounded-xl p-4 shadow border border-gray-200 relative hover:shadow-md transition-shadow group">
+                            <button 
+                              onClick={() => handleDelete(metric.id)}
+                              className="absolute top-3 left-3 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label="Delete metric"
+                            >
+                              <FaTrash />
+                            </button>
+                            
+                            <div className="text-sm text-gray-500 mb-3">{formatDate(metric.createdAt)}</div>
+                            
+                            <div className="grid grid-cols-2 gap-3 mb-3">
+                              <div className="flex items-center gap-2">
+                                <FaRunning className="text-[#ff8714] w-4 h-4 flex-shrink-0" />
+                                <div>
+                                  <div className="text-xs text-gray-500">ריצת 3,000 מטר</div>
+                                  <div className="font-medium">{metric.run3000m}</div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <FaStopwatch className="text-[#ff8714] w-4 h-4 flex-shrink-0" />
+                                <div>
+                                  <div className="text-xs text-gray-500">ריצת 400 מטר</div>
+                                  <div className="font-medium">{metric.run400m}</div>
+                                </div>
+                              </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-gray-600">
-                                  <FaRunning className="w-5 h-5" />
-                                  <span>ריצת 3,000 מטר:</span>
-                                  <span className="font-mono">{metric.run3000m}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-gray-600">
-                                  <FaRunning className="w-5 h-5" />
-                                  <span>ריצת 400 מטר:</span>
-                                  <span className="font-mono">{metric.run400m}</span>
-                                </div>
+                            
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="text-center bg-gray-50 rounded p-1">
+                                <div className="text-xs text-gray-500">מתח</div>
+                                <div className="font-medium">{metric.pullUps}</div>
                               </div>
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-gray-600">
-                                  <FaDumbbell className="w-5 h-5" />
-                                  <span>מתח:</span>
-                                  <span>{metric.pullUps}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-gray-600">
-                                  <FaDumbbell className="w-5 h-5" />
-                                  <span>שכיבות סמיכה:</span>
-                                  <span>{metric.pushUps}</span>
-                                </div>
+                              
+                              <div className="text-center bg-gray-50 rounded p-1">
+                                <div className="text-xs text-gray-500">שכיבות</div>
+                                <div className="font-medium">{metric.pushUps}</div>
                               </div>
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-gray-600">
-                                  <GiSittingDog className="w-5 h-5" />
-                                  <span>כפיפות בטן:</span>
-                                  <span>{metric.sitUps2min}</span>
-                                </div>
+                              
+                              <div className="text-center bg-gray-50 rounded p-1">
+                                <div className="text-xs text-gray-500">בטן</div>
+                                <div className="font-medium">{metric.sitUps2min}</div>
                               </div>
                             </div>
                           </div>
                         ))}
                       </div>
-                    </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-16 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#ff8714]/10 mb-4">
+                    <FaRunning className="text-[#ff8714] w-8 h-8" />
                   </div>
-                </>
+                  <h3 className="text-xl font-medium mb-2">אין לך עדיין מדדים</h3>
+                  <p className="text-gray-500 mb-6">הוסף מדדים חדשים כדי לראות את הנתונים שלך</p>
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="px-6 py-3 bg-[#ff8714] text-white rounded-full font-medium hover:bg-[#e67200] transition-colors inline-flex items-center gap-2"
+                  >
+                    <FaPlus /> הזן מדדים חדשים
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="animate-fadeIn">
+              {/* Social Comparison Tab Content */}
+              {previousMetrics.length > 0 ? (
+                <MetricsComparison 
+                  userMetrics={previousMetrics[0]} 
+                  userName={userName}
+                  userPhoto={userPhoto}
+                  userGroup={userGroup}
+                />
+              ) : (
+                <div className="text-center py-16 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#ff8714]/10 mb-4">
+                    <FaUsers className="text-[#ff8714] w-8 h-8" />
+                  </div>
+                  <h3 className="text-xl font-medium mb-2">אין לך עדיין מדדים להשוואה</h3>
+                  <p className="text-gray-500 mb-6">הוסף מדדים חדשים כדי להשוות את עצמך לאחרים</p>
+                  <button
+                    onClick={() => {
+                      setActiveTab('personal');
+                      setShowForm(true);
+                    }}
+                    className="px-6 py-3 bg-[#ff8714] text-white rounded-full font-medium hover:bg-[#e67200] transition-colors inline-flex items-center gap-2"
+                  >
+                    <FaPlus /> הזן מדדים חדשים
+                  </button>
+                </div>
               )}
             </div>
           )}
-
-          {showForm && (
-            <>
-              {/* Progress Bar */}
-              <div className="relative pt-8 mb-12">
-                <div className="absolute top-0 left-0 right-0 h-2 bg-gray-200 rounded-full">
-                  <div 
-                    className="absolute h-full bg-[#ff8714] rounded-full transition-all"
-                    style={{ width: `${(currentStep / 3) * 100}%` }}
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { step: 1, label: 'מדדי ריצה' },
-                    { step: 2, label: 'מדדי כוח' },
-                    { step: 3, label: 'מדדי ליבה' }
-                  ].map((item) => (
-                    <div
-                      key={item.step}
-                      className={`flex flex-col items-center pt-6 ${
-                        currentStep >= item.step ? 'text-[#ff8714]' : 'text-gray-500'
-                      }`}
-                    >
-                      <div className={`w-4 h-4 rounded-full mb-2 ${
-                        currentStep >= item.step ? 'bg-[#ff8714]' : 'bg-gray-300'
-                      }`} />
-                      <span className="text-sm text-center">{item.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Step 1: Running Metrics */}
-                {currentStep === 1 && (
-                  <div className="bg-blue-50 p-8 rounded-xl space-y-6">
-                    <div className="flex items-center gap-3 mb-6">
-                      <FaRunning className="w-8 h-8 text-blue-500" />
-                      <h2 className="text-2xl font-semibold">מדדי ריצה</h2>
-                    </div>
-                    
-                    <div className="space-y-8">
-                      <div>
-                        <label className="block text-xl font-medium text-gray-700 mb-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <FaRunning className="w-6 h-6" />
-                            <span>זמן ריצת 3,000 מטר</span>
-                            <FaStopwatch className="w-6 h-6" />
-                          </div>
-                        </label>
-                        <div className="flex justify-center items-center gap-2 rtl">
-                          <input
-                            type="text"
-                            placeholder="שניות"
-                            value={metrics.run3000m.split(':')[1] || ''}
-                            onChange={(e) => {
-                              const seconds = e.target.value;
-                              const minutes = metrics.run3000m.split(':')[0] || '0';
-                              if (/^\d{0,2}$/.test(seconds)) {
-                                setMetrics(prev => ({
-                                  ...prev,
-                                  run3000m: `${minutes}:${seconds}`
-                                }));
-                              }
-                            }}
-                            className="w-20 text-center text-xl font-mono bg-white border-2 border-gray-300 rounded-lg p-2 hover:border-[#ff8714] focus:border-[#ff8714] focus:ring-1 focus:ring-[#ff8714] focus:outline-none"
-                            maxLength={2}
-                          />
-                          <span className="text-2xl font-mono">:</span>
-                          <input
-                            type="text"
-                            placeholder="דקות"
-                            value={metrics.run3000m.split(':')[0] || ''}
-                            onChange={(e) => {
-                              const minutes = e.target.value;
-                              const seconds = metrics.run3000m.split(':')[1] || '00';
-                              if (/^\d{0,2}$/.test(minutes)) {
-                                setMetrics(prev => ({
-                                  ...prev,
-                                  run3000m: `${minutes}:${seconds}`
-                                }));
-                              }
-                            }}
-                            className="w-20 text-center text-xl font-mono bg-white border-2 border-gray-300 rounded-lg p-2 hover:border-[#ff8714] focus:border-[#ff8714] focus:ring-1 focus:ring-[#ff8714] focus:outline-none"
-                            maxLength={2}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xl font-medium text-gray-700 mb-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <FaRunning className="w-6 h-6" />
-                            <span>זמן ריצת 400 מטר</span>
-                            <FaStopwatch className="w-6 h-6" />
-                          </div>
-                        </label>
-                        <div className="flex justify-center items-center gap-2 rtl">
-                          <input
-                            type="text"
-                            placeholder="שניות"
-                            value={metrics.run400m.split(':')[1] || ''}
-                            onChange={(e) => {
-                              const seconds = e.target.value;
-                              const minutes = metrics.run400m.split(':')[0] || '0';
-                              if (/^\d{0,2}$/.test(seconds)) {
-                                setMetrics(prev => ({
-                                  ...prev,
-                                  run400m: `${minutes}:${seconds}`
-                                }));
-                              }
-                            }}
-                            className="w-20 text-center text-xl font-mono bg-white border-2 border-gray-300 rounded-lg p-2 hover:border-[#ff8714] focus:border-[#ff8714] focus:ring-1 focus:ring-[#ff8714] focus:outline-none"
-                            maxLength={2}
-                          />
-                          <span className="text-2xl font-mono">:</span>
-                          <input
-                            type="text"
-                            placeholder="דקות"
-                            value={metrics.run400m.split(':')[0] || ''}
-                            onChange={(e) => {
-                              const minutes = e.target.value;
-                              const seconds = metrics.run400m.split(':')[1] || '00';
-                              if (/^\d{0,2}$/.test(minutes)) {
-                                setMetrics(prev => ({
-                                  ...prev,
-                                  run400m: `${minutes}:${seconds}`
-                                }));
-                              }
-                            }}
-                            className="w-20 text-center text-xl font-mono bg-white border-2 border-gray-300 rounded-lg p-2 hover:border-[#ff8714] focus:border-[#ff8714] focus:ring-1 focus:ring-[#ff8714] focus:outline-none"
-                            maxLength={2}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 2: Strength Metrics */}
-                {currentStep === 2 && (
-                  <div className="bg-orange-50 p-8 rounded-xl space-y-6">
-                    <div className="flex items-center gap-3 mb-6">
-                      <FaDumbbell className="w-8 h-8 text-orange-500" />
-                      <h2 className="text-2xl font-semibold">מדדי כוח</h2>
-                    </div>
-
-                    <div className="space-y-8">
-                      <div>
-                        <label className="block text-xl font-medium text-gray-700 mb-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <FaDumbbell className="w-6 h-6" />
-                            <span>מתח</span>
-                          </div>
-                        </label>
-                        <div className="flex justify-center items-center gap-4">
-                          <button
-                            type="button"
-                            onClick={() => setMetrics(prev => ({
-                              ...prev,
-                              pullUps: String(Math.max(0, parseInt(prev.pullUps || '0') - 1))
-                            }))}
-                            className="w-12 h-12 rounded-full bg-gray-100 text-gray-600 text-2xl flex items-center justify-center hover:bg-gray-200"
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            name="pullUps"
-                            value={metrics.pullUps}
-                            onChange={handleChange}
-                            className="w-24 text-center text-3xl font-bold bg-white border-2 border-gray-300 rounded-lg p-3 hover:border-[#ff8714] focus:border-[#ff8714] focus:ring-1 focus:ring-[#ff8714] focus:outline-none"
-                            placeholder="0"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setMetrics(prev => ({
-                              ...prev,
-                              pullUps: String(parseInt(prev.pullUps || '0') + 1)
-                            }))}
-                            className="w-12 h-12 rounded-full bg-[#ff8714] text-white text-2xl flex items-center justify-center hover:bg-[#e67200]"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xl font-medium text-gray-700 mb-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <FaDumbbell className="w-6 h-6" />
-                            <span>שכיבות סמיכה</span>
-                          </div>
-                        </label>
-                        <div className="flex justify-center items-center gap-4">
-                          <button
-                            type="button"
-                            onClick={() => setMetrics(prev => ({
-                              ...prev,
-                              pushUps: String(Math.max(0, parseInt(prev.pushUps || '0') - 1))
-                            }))}
-                            className="w-12 h-12 rounded-full bg-gray-100 text-gray-600 text-2xl flex items-center justify-center hover:bg-gray-200"
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            name="pushUps"
-                            value={metrics.pushUps}
-                            onChange={handleChange}
-                            className="w-24 text-center text-3xl font-bold bg-white border-2 border-gray-300 rounded-lg p-3 hover:border-[#ff8714] focus:border-[#ff8714] focus:ring-1 focus:ring-[#ff8714] focus:outline-none"
-                            placeholder="0"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setMetrics(prev => ({
-                              ...prev,
-                              pushUps: String(parseInt(prev.pushUps || '0') + 1)
-                            }))}
-                            className="w-12 h-12 rounded-full bg-[#ff8714] text-white text-2xl flex items-center justify-center hover:bg-[#e67200]"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 3: Core Metrics */}
-                {currentStep === 3 && (
-                  <div className="bg-green-50 p-8 rounded-xl space-y-6">
-                    <div className="flex items-center gap-3 mb-6">
-                      <GiSittingDog className="w-8 h-8 text-green-500" />
-                      <h2 className="text-2xl font-semibold">מדדי ליבה</h2>
-                    </div>
-
-                    <div>
-                      <label className="block text-xl font-medium text-gray-700 mb-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <GiSittingDog className="w-6 h-6" />
-                          <span>כפיפות בטן ב-2 דקות</span>
-                        </div>
-                      </label>
-                      <div className="flex justify-center items-center gap-4">
-                        <button
-                          type="button"
-                          onClick={() => setMetrics(prev => ({
-                            ...prev,
-                            sitUps2min: String(Math.max(0, parseInt(prev.sitUps2min || '0') - 1))
-                          }))}
-                          className="w-12 h-12 rounded-full bg-gray-100 text-gray-600 text-2xl flex items-center justify-center hover:bg-gray-200"
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          name="sitUps2min"
-                          value={metrics.sitUps2min}
-                          onChange={handleChange}
-                          className="w-24 text-center text-3xl font-bold bg-white border-2 border-gray-300 rounded-lg p-3 hover:border-[#ff8714] focus:border-[#ff8714] focus:ring-1 focus:ring-[#ff8714] focus:outline-none"
-                          placeholder="0"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setMetrics(prev => ({
-                            ...prev,
-                            sitUps2min: String(parseInt(prev.sitUps2min || '0') + 1)
-                          }))}
-                          className="w-12 h-12 rounded-full bg-[#ff8714] text-white text-2xl flex items-center justify-center hover:bg-[#e67200]"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Navigation Buttons */}
-                <div className="flex justify-between gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowForm(false)}
-                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-xl text-lg font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-colors"
-                  >
-                    ביטול
-                  </button>
-                  {currentStep > 1 && (
-                    <button
-                      type="button"
-                      onClick={prevStep}
-                      className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-xl text-lg font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-colors"
-                    >
-                      חזור
-                    </button>
-                  )}
-                  {currentStep < 3 ? (
-                    <button
-                      type="button"
-                      onClick={nextStep}
-                      className="flex-1 bg-[#ff8714] text-white py-3 px-6 rounded-xl text-lg font-medium hover:bg-[#e67200] focus:outline-none focus:ring-2 focus:ring-[#ff8714] focus:ring-offset-2 transition-colors"
-                    >
-                      המשך
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      className="flex-1 bg-[#ff8714] text-white py-3 px-6 rounded-xl text-lg font-medium hover:bg-[#e67200] focus:outline-none focus:ring-2 focus:ring-[#ff8714] focus:ring-offset-2 transition-colors"
-                    >
-                      שמור מדדים
-                    </button>
-                  )}
-                </div>
-              </form>
-            </>
-          )}
         </div>
       </div>
-    </>
+      
+      {/* Add CSS animations */}
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+        
+        .animate-slideUp {
+          animation: slideUp 0.4s ease-out;
+        }
+      `}</style>
+    </div>
   );
 } 

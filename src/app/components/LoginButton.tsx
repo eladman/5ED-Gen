@@ -16,12 +16,36 @@ export default function LoginButton() {
         await signOut();
         router.push("/");
       } else {
-        await signInWithGoogle();
-        router.push("/create-program");
+        // Check if running in a browser environment
+        if (typeof window !== 'undefined') {
+          // Inform user about potential popup blockers
+          console.log("Please ensure popup blockers are disabled for this site");
+          
+          await signInWithGoogle();
+          router.push("/create-program");
+        } else {
+          throw new Error("Authentication requires a browser environment");
+        }
       }
     } catch (error: any) {
       console.error("Auth error:", error);
-      setLocalError(error.message || "An error occurred during authentication");
+      
+      // Provide more specific error messages based on error type
+      let errorMessage = "An error occurred during authentication";
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "Sign-in popup was closed. Please try again.";
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = "Sign-in popup was blocked. Please allow popups for this site and try again.";
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        errorMessage = "Sign-in process was cancelled. Please try again.";
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your internet connection and try again.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setLocalError(errorMessage);
       // Clear error after 5 seconds
       setTimeout(() => setLocalError(null), 5000);
     }

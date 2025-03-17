@@ -1,4 +1,4 @@
-import { FaRunning, FaDumbbell, FaSave } from 'react-icons/fa';
+import { FaRunning, FaDumbbell, FaSave, FaBullseye } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { addDocument } from '@/lib/firebase/firebaseUtils';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -7,11 +7,12 @@ import { useRouter } from 'next/navigation';
 
 interface WorkoutDay {
   day: string;
-  type: 'aerobic' | 'strength';
+  type: 'aerobic' | 'strength' | 'military';
   title: string;
   exercises: string[];
   duration: string;
-  intensity: 'קל' | 'בינוני' | 'גבוה';
+  intensity: string;
+  equipment?: string;
   workoutGoal?: string;
 }
 
@@ -111,94 +112,147 @@ const strengthWorkouts: Omit<WorkoutDay, 'day'>[] = [
   }
 ];
 
+// Military-specific workout templates
+const militaryWorkouts: Omit<WorkoutDay, 'day'>[] = [
+  {
+    type: 'military',
+    title: 'אימון הכנה לקרבי - סיבולת',
+    exercises: [
+      'חימום 10 דקות',
+      'ריצת אינטרוולים: 10 × 100 מטר ספרינט עם 30 שניות מנוחה',
+      'זחילה צבאית 4 × 20 מטר',
+      'ריצה עם משקל 5 ק"ג 3 × 400 מטר',
+      'תרגילי קפיצה 3 × 20 (קפיצות סקוואט, קפיצות פיסוק, ברפי)',
+      'שחרור 5 דקות'
+    ],
+    duration: '50 דקות',
+    intensity: 'גבוה',
+    equipment: 'משקולת 5 ק"ג או תיק עם משקל דומה'
+  },
+  {
+    type: 'military',
+    title: 'אימון הכנה לקרבי - כוח',
+    exercises: [
+      'חימום 10 דקות',
+      'מתח רחב 5 × מקסימום (מנוחה 90 שניות)',
+      'שכיבות שמיכה 5 × 20 (מנוחה 60 שניות)',
+      'סקוואט עם קפיצה 4 × 15 (מנוחה 60 שניות)',
+      'זחילת דוב 3 × 20 מטר (מנוחה 45 שניות)',
+      'מקבילים 4 × 12 (מנוחה 60 שניות)',
+      'פלאנק עם תזוזה צידית 3 × 45 שניות לכל צד',
+      'שחרור 5 דקות'
+    ],
+    duration: '55 דקות',
+    intensity: 'גבוה',
+    equipment: 'מתח, מקבילים'
+  }
+];
+
 const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
-function generateWorkoutSchedule(frequency: 2 | 3 | 4 | 5): WorkoutDay[] {
+function generateWorkoutSchedule(frequency: 2 | 3 | 4 | 5, goal?: string): WorkoutDay[] {
   const schedule: WorkoutDay[] = [];
 
   for (let i = 0; i < frequency; i++) {
-    const isStrengthDay = i % 2 === 1;
-    const workoutTemplates = isStrengthDay ? strengthWorkouts : aerobicWorkouts;
-    const randomWorkout = workoutTemplates[Math.floor(Math.random() * workoutTemplates.length)];
-    
-    schedule.push({
-      ...randomWorkout,
-      day: (i + 1).toString()
-    });
+    // If goal is army/military, prioritize military workouts
+    if (goal === 'army' && militaryWorkouts.length > 0) {
+      // Ensure variety by cycling through available military workouts
+      const militaryWorkoutIndex = i % militaryWorkouts.length;
+      schedule.push({
+        ...militaryWorkouts[militaryWorkoutIndex],
+        day: (i + 1).toString()
+      });
+    } else {
+      // Standard alternating workout pattern for other goals
+      const isStrengthDay = i % 2 === 1;
+      const workoutTemplates = isStrengthDay ? strengthWorkouts : aerobicWorkouts;
+      const randomWorkout = workoutTemplates[Math.floor(Math.random() * workoutTemplates.length)];
+      
+      schedule.push({
+        ...randomWorkout,
+        day: (i + 1).toString()
+      });
+    }
   }
 
   return schedule;
 }
 
 export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: WeeklyWorkoutTemplateProps) {
+  const [workoutSchedule, setWorkoutSchedule] = useState<WorkoutDay[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setLoading] = useState(true);
-  const [workoutSchedule, setWorkoutSchedule] = useState<WorkoutDay[]>([]);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const generateWorkoutProgram = async () => {
-      try {
-        const response = await fetch('/api/openai/generate-workout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userAnswers }),
-          signal: AbortSignal.timeout(30000)
-        });
+    if (userAnswers) {
+      generateWorkoutProgram();
+    }
+  }, [userAnswers]);
 
-        if (!response.ok) {
-          if (response.status === 504) {
-            console.error('Request timed out');
+  const generateWorkoutProgram = async (retryCount = 0, maxRetries = 2) => {
+    setLoading(true);
+    
+    try {
+      const response = await fetch('/api/openai/generate-workout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userAnswers }),
+        signal: AbortSignal.timeout(60000)
+      });
+
+      if (!response.ok) {
+        if (response.status === 504) {
+          console.error('Request timed out');
+          if (retryCount < maxRetries) {
+            toast.loading(`ניסיון נוסף... (${retryCount + 1}/${maxRetries + 1})`);
+            return generateWorkoutProgram(retryCount + 1, maxRetries);
+          } else {
             toast.error('בקשה לשרת נכשלה בגלל זמן תגובה ארוך. אנא נסה שוב.');
             setLoading(false);
             return;
           }
         }
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-          if (data.error && (
-              data.error.includes('API key') || 
-              data.error.includes('authentication') || 
-              data.message?.includes('API key') ||
-              data.message?.includes('authentication')
-            )) {
-            console.error('OpenAI API key error:', data);
-            toast.error('שגיאת אימות מול שרת ה-AI. אנא פנה למנהל המערכת.');
-            setLoading(false);
-            return;
-          }
-          
-          throw new Error(data.message || data.error || 'אירעה שגיאה ביצירת תוכנית האימונים');
-        }
-
-        if (!data.workouts || !Array.isArray(data.workouts)) {
-          console.error('Invalid response format:', data);
-          throw new Error('התקבל פורמט לא תקין מהשרת');
-        }
-
-        setWorkoutSchedule(data.workouts);
-      } catch (error: any) {
-        console.error('Error:', error);
-        
-        if (error.name === 'AbortError') {
-          toast.error('בקשה לשרת נכשלה בגלל זמן תגובה ארוך. אנא נסה שוב.');
-        } else {
-          setError(error.message || 'אירעה שגיאה ביצירת תוכנית האימונים');
-          toast.error('לא ניתן ליצור תוכנית אימונים כרגע, אנא נסה שוב מאוחר יותר');
-        }
-      } finally {
-        setLoading(false);
       }
-    };
 
-    generateWorkoutProgram();
-  }, [userAnswers]);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        if (data.error && (
+            data.error.includes('API key') || 
+            data.error.includes('authentication') || 
+            data.message?.includes('API key') ||
+            data.message?.includes('authentication')
+          )) {
+          console.error('OpenAI API key error:', data);
+          toast.error('שגיאת אימות מול שרת ה-AI. אנא פנה למנהל המערכת.');
+          setLoading(false);
+          return;
+        }
+        
+        throw new Error(data.message || data.error || 'אירעה שגיאה ביצירת תוכנית האימונים');
+      }
+
+      if (!data.workouts || !Array.isArray(data.workouts)) {
+        console.error('Invalid response format:', data);
+        throw new Error('התקבל פורמט לא תקין מהשרת');
+      }
+
+      setWorkoutSchedule(data.workouts);
+    } catch (error: any) {
+      console.error('Error generating workout program:', error);
+      toast.error('לא ניתן ליצור תוכנית אימונים כרגע, אנא נסה שוב מאוחר יותר');
+      // Use fallback workout schedule for any error
+      const fallbackSchedule = generateWorkoutSchedule(userAnswers.workoutFrequency, userAnswers.goal);
+      setWorkoutSchedule(fallbackSchedule);
+      toast.success('נוצרה תוכנית אימונים בסיסית');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!user) {
@@ -206,7 +260,13 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
       return;
     }
 
-    setIsSaving(true);
+    // Verify schedule is properly formatted before saving
+    if (!workoutSchedule || !Array.isArray(workoutSchedule) || workoutSchedule.length === 0) {
+      toast.error('תוכנית האימון ריקה או לא חוקית');
+      return;
+    }
+
+    setSaving(true);
     try {
       await addDocument('workoutPrograms', {
         userId: user.uid,
@@ -222,11 +282,11 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
       console.error('Error saving workout program:', error);
       toast.error('אירעה שגיאה בשמירת התוכנית');
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#ff8714]"></div>
@@ -238,99 +298,117 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
     );
   }
 
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <div className="mb-6">
-          <svg className="mx-auto h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <h3 className="mt-4 text-lg font-medium text-gray-900">שגיאה ביצירת תוכנית האימונים</h3>
-          <p className="mt-2 text-red-500">{error}</p>
-        </div>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-6 py-3 bg-[#ff8714] text-white rounded-lg hover:bg-[#e67200] transition-colors"
-        >
-          נסה שוב
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-2xl font-bold">תוכנית אימונים שבועית</h2>
         <button
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={saving}
           className="inline-flex items-center gap-2 px-6 py-3 bg-[#ff8714] text-white rounded-lg hover:bg-[#e67200] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <FaSave className="w-5 h-5" />
-          <span>{isSaving ? 'שומר...' : 'שמור תוכנית'}</span>
+          <span>{saving ? 'שומר...' : 'שמור תוכנית'}</span>
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {workoutSchedule.map((workout, index) => (
+        {Array.isArray(workoutSchedule) && workoutSchedule.map((workout, index) => (
           <div
             key={index}
-            className="bg-white rounded-xl shadow-lg overflow-hidden border-2 border-gray-100 hover:border-[#ff8714] transition-all duration-300"
+            className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 hover:shadow-xl transition-all duration-300"
           >
-            <div className={`p-4 ${
-              workout.type === 'aerobic' ? 'bg-blue-50' : 'bg-orange-50'
+            {/* Card Header with Gradient Background */}
+            <div className={`p-5 relative ${
+              workout.type === 'aerobic' 
+                ? 'bg-gradient-to-r from-[#ff8714] to-[#e67200]' 
+                : workout.type === 'strength' 
+                  ? 'bg-gradient-to-r from-[#ff8714] to-[#e67200]'
+                  : 'bg-gradient-to-r from-[#ff8714] to-[#e67200]'
             }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {workout.type === 'aerobic' ? (
-                    <FaRunning className="w-5 h-5 text-blue-500" />
-                  ) : (
-                    <FaDumbbell className="w-5 h-5 text-orange-500" />
-                  )}
+              <div className="absolute top-0 right-0 w-32 h-32 -mr-10 -mt-10 rounded-full opacity-20 bg-white"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      {workout.type === 'aerobic' ? (
+                        <FaRunning className="w-6 h-6 text-white" />
+                      ) : workout.type === 'strength' ? (
+                        <FaDumbbell className="w-6 h-6 text-white" />
+                      ) : (
+                        <FaBullseye className="w-6 h-6 text-white" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xl text-white">{workout.title}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-white/80 text-sm">אימון {workout.day}</span>
+                        <span className="w-1 h-1 rounded-full bg-white/60"></span>
+                        <span className="text-white/80 text-sm">{workout.duration}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${
+                    workout.intensity === 'קל' 
+                      ? 'bg-green-100 text-green-800' 
+                      : workout.intensity === 'בינוני' 
+                        ? 'bg-yellow-100 text-yellow-800' 
+                        : 'bg-red-100 text-red-800'
+                  }`}>
+                    {workout.intensity}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Workout Goal Section */}
+            {workout.workoutGoal && (
+              <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-start gap-2">
+                  <FaBullseye className="w-5 h-5 text-[#ff8714] mt-0.5 flex-shrink-0" />
                   <div>
-                    <h3 className="font-bold">{workout.title}</h3>
-                    <p className="text-sm text-gray-600">אימון {workout.day}</p>
+                    <h4 className="font-bold text-gray-800 text-sm">מטרת האימון:</h4>
+                    <p className="text-gray-700 text-sm mt-1">{workout.workoutGoal}</p>
                   </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-sm ${
-                  workout.intensity === 'קל' ? 'bg-green-100 text-green-700' :
-                  workout.intensity === 'בינוני' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-red-100 text-red-700'
-                }`}>
-                  {workout.intensity}
-                </span>
               </div>
-              
-              {workout.workoutGoal && (
-                <div className="mt-3 bg-blue-50 p-3 rounded-md border border-blue-100">
-                  <h4 className="font-bold text-blue-800 mb-1">מטרת האימון:</h4>
-                  <p className="text-blue-700 text-sm">{workout.workoutGoal}</p>
-                </div>
-              )}
-            </div>
+            )}
 
-            <div className="p-4">
+            {/* Equipment Section (if available) */}
+            {workout.equipment && (
+              <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">ציוד נדרש:</span>
+                  <span className="text-sm text-gray-600">{workout.equipment}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Exercises List */}
+            <div className="p-5">
+              <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-[#fff5eb] text-[#ff8714] flex items-center justify-center text-sm">{workout.exercises.length}</span>
+                <span>תרגילים</span>
+              </h4>
               <ul className="space-y-3">
                 {workout.exercises.map((exercise, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#ff8714] mt-2"></span>
-                    <span className="font-medium">{exercise}</span>
+                  <li key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-[#fff5eb] transition-colors">
+                    <div className="w-6 h-6 rounded-full bg-[#fff5eb] text-[#ff8714] flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
+                      {i + 1}
+                    </div>
+                    <div>
+                      <p className="text-gray-800">{exercise}</p>
+                    </div>
                   </li>
                 ))}
               </ul>
-              
-              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center text-sm text-gray-600">
-                <span>משך האימון:</span>
-                <span>{workout.duration}</span>
-              </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-8 bg-gray-50 rounded-lg p-6">
-        <h3 className="font-bold mb-4">הערות חשובות:</h3>
+      <div className="mt-8 bg-[#fff5eb] rounded-lg p-6">
+        <h3 className="font-bold mb-4 text-gray-800">הערות חשובות:</h3>
         <ul className="space-y-2 text-gray-600">
           <li className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#ff8714]"></span>

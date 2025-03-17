@@ -181,31 +181,50 @@ export default function SavedWorkouts() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {workout.schedule.slice(0, 2).map((day, index) => (
-                <div 
-                  key={day.day} 
-                  className={`rounded-lg p-4 ${day.type === 'aerobic' ? 'bg-blue-50' : 'bg-orange-50'}`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    {day.type === 'aerobic' ? (
-                      <FaRunning className="w-4 h-4 text-blue-500" />
-                    ) : (
-                      <FaDumbbell className="w-4 h-4 text-orange-500" />
-                    )}
-                    <h5 className="font-semibold">{`אימון ${index + 1} - ${day.title}`}</h5>
-                  </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <p className="text-sm text-gray-600">{day.duration}</p>
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${
-                      day.intensity === 'קל' ? 'bg-green-100 text-green-700' :
-                      day.intensity === 'בינוני' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {day.intensity}
-                    </span>
-                  </div>
-                </div>
-              ))}
+              {(() => {
+                if (!workout.schedule || !Array.isArray(workout.schedule) || workout.schedule.length === 0) {
+                  return (
+                    <div className="col-span-2 text-center py-3 bg-gray-50 rounded-lg">
+                      <p className="text-gray-600">אין ימי אימון מוגדרים בתוכנית זו</p>
+                    </div>
+                  );
+                }
+                
+                const scheduleArray = Array.isArray(workout.schedule) ? workout.schedule : [];
+                const displayCount = Math.min(2, scheduleArray.length);
+                const workoutsToDisplay = [];
+                
+                for (let i = 0; i < displayCount; i++) {
+                  const day = scheduleArray[i];
+                  workoutsToDisplay.push(
+                    <div 
+                      key={`workout-${workout.id}-day-${i}`}
+                      className={`rounded-lg p-4 ${day.type === 'aerobic' ? 'bg-blue-50' : 'bg-orange-50'}`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        {day.type === 'aerobic' ? (
+                          <FaRunning className="w-4 h-4 text-blue-500" />
+                        ) : (
+                          <FaDumbbell className="w-4 h-4 text-orange-500" />
+                        )}
+                        <h5 className="font-semibold">{`אימון ${i + 1} - ${day.title}`}</h5>
+                      </div>
+                      <div className="flex justify-between items-center mt-2">
+                        <p className="text-sm text-gray-600">{day.duration}</p>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${
+                          day.intensity === 'קל' ? 'bg-green-100 text-green-700' :
+                          day.intensity === 'בינוני' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {day.intensity}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                return workoutsToDisplay;
+              })()}
             </div>
           </div>
         </div>

@@ -23,11 +23,25 @@ export const logoutUser = () => signOut(auth);
 
 export const signInWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
+  
+  // Add scopes for better user profile access
+  provider.addScope('profile');
+  provider.addScope('email');
+  
+  // Set custom parameters
+  provider.setCustomParameters({
+    prompt: 'select_account'
+  });
+  
   try {
-    const result = await signInWithPopup(auth, provider);
+    console.log("Initiating Google sign-in popup");
+    // Wrap in a Promise.resolve to ensure proper promise handling
+    const result = await Promise.resolve(signInWithPopup(auth, provider));
+    console.log("Google sign-in successful");
     return result.user;
   } catch (error) {
     console.error("Error signing in with Google", error);
+    // Rethrow to allow handling in the UI layer
     throw error;
   }
 };
