@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     // Check if API key is available
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: 'OpenAI API key is not configured' },
+        { error: 'מפתח ה-API של OpenAI לא מוגדר' },
         { status: 500 }
       );
     }
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     
     if (!audioFile || !(audioFile instanceof File)) {
       return NextResponse.json(
-        { error: 'No audio file provided or invalid file' },
+        { error: 'לא סופק קובץ אודיו או שהקובץ אינו תקין' },
         { status: 400 }
       );
     }
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Error processing audio:", error);
     return NextResponse.json(
-      { error: "Error processing audio", details: error instanceof Error ? error.message : String(error) },
+      { error: "אירעה שגיאה בעיבוד האודיו", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

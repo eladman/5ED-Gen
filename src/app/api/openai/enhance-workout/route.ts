@@ -129,7 +129,7 @@ export async function POST(req: Request) {
     if (!process.env.OPENAI_API_KEY) {
       console.error('OpenAI API key is missing');
       return NextResponse.json(
-        { error: 'OpenAI API key is not configured' },
+        { error: 'מפתח ה-API של OpenAI לא מוגדר' },
         { status: 500 }
       );
     }
@@ -145,7 +145,7 @@ export async function POST(req: Request) {
     } catch (parseError: any) {
       console.error('Error parsing request body:', parseError);
       return NextResponse.json(
-        { error: 'Invalid request format', details: parseError.message },
+        { error: 'תבנית הבקשה אינה חוקית', details: parseError.message },
         { status: 400 }
       );
     }
@@ -154,28 +154,11 @@ export async function POST(req: Request) {
     if (!workout) {
       console.error('Missing workout in request');
       return NextResponse.json(
-        { error: 'Missing workout in request' },
+        { error: 'חסר האימון בבקשה' },
         { status: 400 }
       );
     }
 
-    // Use fallback enhancements if in production and we're having issues
-    if (process.env.NODE_ENV === 'production' && process.env.USE_FALLBACK_ENHANCEMENTS === 'true') {
-      console.log('Using fallback enhancements due to configuration');
-      
-      // Determine workout type and use appropriate fallback
-      let workoutType = workout.type || 'aerobic';
-      
-      // Map 'military' type to the appropriate enhancement
-      if (workoutType === 'military') {
-        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.military } });
-      } else if (workoutType === 'strength') {
-        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.strength } });
-      } else {
-        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.aerobic } });
-      }
-    }
-    
     const prompt = `Enhance the following workout with professional, detailed information:
     - Workout: ${JSON.stringify(workout)}
     
@@ -233,7 +216,7 @@ export async function POST(req: Request) {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // Upgraded to GPT-4o for better workout enhancements
+        model: "gpt-4o-mini", // Updated to gpt-4o-mini as requested
         messages: [
           {
             role: "system",
@@ -256,7 +239,7 @@ export async function POST(req: Request) {
       if (!content) {
         console.error('No content received from OpenAI');
         return NextResponse.json(
-          { error: 'No content received from OpenAI' },
+          { error: 'לא התקבל תוכן מ-OpenAI' },
           { status: 500 }
         );
       }

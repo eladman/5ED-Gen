@@ -176,7 +176,7 @@ export async function POST(req: Request) {
     if (!process.env.OPENAI_API_KEY) {
       console.error('OpenAI API key is missing');
       return NextResponse.json(
-        { error: 'OpenAI API key is not configured' },
+        { error: 'מפתח ה-API של OpenAI לא מוגדר' },
         { status: 500 }
       );
     }
@@ -192,7 +192,7 @@ export async function POST(req: Request) {
     } catch (parseError: any) {
       console.error('Error parsing request body:', parseError);
       return NextResponse.json(
-        { error: 'Invalid request format', details: parseError.message },
+        { error: 'תבנית הבקשה אינה חוקית', details: parseError.message },
         { status: 400 }
       );
     }
@@ -201,119 +201,100 @@ export async function POST(req: Request) {
     if (!userAnswers) {
       console.error('Missing userAnswers in request');
       return NextResponse.json(
-        { error: 'Missing user answers in request' },
+        { error: 'חסרות תשובות המשתמש בבקשה' },
         { status: 400 }
       );
     }
 
-    // Use fallback workouts if in production and we're having issues
-    if (process.env.NODE_ENV === 'production' && process.env.USE_FALLBACK_WORKOUTS === 'true') {
-      console.log('Using fallback workouts due to configuration');
-      const frequency = userAnswers.workoutFrequency || 3;
-      const fallbackWorkouts = generateWorkoutSchedule(
-        Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5,
-        userAnswers.goal
-      );
-      return NextResponse.json({ workouts: fallbackWorkouts });
-    }
+    const prompt = `Generate a personalized workout program using the Five Fingers Physical-Mental Training method based on the following user information:
+    - Gender: ${userAnswers.gender || 'Not specified'}
+    - Age Group: ${userAnswers.group || 'Not specified'}
+    - Experience Level: ${userAnswers.experienceLevel || 'Not specified'}
+    - 3km Run Time: ${userAnswers.threeKmTime || 'Not specified'}
+    - Max Pull-ups: ${userAnswers.pullUps || 'Not specified'}
+    - Training Goal: ${userAnswers.goal || 'Not specified'}
+    - Weekly Workout Frequency: ${userAnswers.workoutFrequency || '3'} times
 
-    // Set a shorter timeout for production to avoid Vercel serverless function timeouts
-    const timeoutMs = process.env.NODE_ENV === 'production' ? 50000 : 60000; // Increased timeout to 50 seconds in production
-    console.log(`Setting OpenAI request timeout to ${timeoutMs}ms`);
-
-    const prompt = `הפק תוכנית אימונים מותאמת אישית בעברית בלבד, על פי שיטת האימון הפיזי-מנטלי של חמש האצבעות, בהתבסס על המידע הבא:
-    - מגדר: ${userAnswers.gender || 'לא צוין'}
-    - קבוצת גיל: ${userAnswers.group || 'לא צוין'}
-    - רמת ניסיון: ${userAnswers.experienceLevel || 'לא צוין'}
-    - זמן ריצה 3 ק"מ: ${userAnswers.threeKmTime || 'לא צוין'}
-    - מקסימום מתח: ${userAnswers.pullUps || 'לא צוין'}
-    - מטרת אימון: ${userAnswers.goal || 'לא צוין'}
-    - תדירות אימונים שבועית: ${userAnswers.workoutFrequency || '3'} פעמים
-
-    אנא צור לוח זמנים שבועי מקיף לאימונים על פי ההנחיות הבאות:
+    Please generate a comprehensive weekly workout schedule following these guidelines:
     
-    1. כל אימון צריך להיות בין 45-60 דקות ולכלול:
-       - חימום של 10 דקות (אין צורך לפרט את פרטי החימום)
-       - אימון מובנה המשלב מאמץ פיזי ואתגרי חוסן מנטלי לבניית כושר גופני וחוסן נפשי
-       - תרגילים הדוחפים את גבולות המשתמש, תוך אימוץ אי-נוחות ככלי לצמיחה
-       - שילוב של אתגרי כוח, סיבולת וריכוז מנטלי
-       - כותרת ברורה ומעוררת מוטיבציה המשקפת את מיקוד האימון
-       - מטרת אימון ספציפית המסבירה את המטרה, היתרונות והתוצאות הצפויות
-       - רמת עצימות מדויקת (קל/בינוני/גבוה)
-       - משך זמן מדויק (בין 45-60 דקות בסך הכל)
+    1. Each workout should be between 45-60 minutes and include:
+       - A 10-minute warm-up (no need to specify the warm-up details)
+       - A structured workout that combines physical effort and mental resilience challenges to build both physical fitness and mental toughness
+       - Exercises that push the user's limits, embracing discomfort as a tool for growth
+       - A mix of strength, endurance, and mental focus challenges
+       - A clear, motivational title that reflects the workout's focus
+       - A specific workout goal that explains the purpose, benefits, and expected outcomes
+       - Precise intensity level (קל/בינוני/גבוה)
+       - Accurate duration (between 45-60 minutes total)
     
-    2. עבור כל תרגיל, כלול:
-       - חזרות, סטים ותזמון מדויקים
-       - רגעים המאתגרים את החוזק המנטלי — כגון החזקת תנוחות תחת עייפות, שמירה על ריכוז תחת לחץ, או הצבת והשגת יעדים קטנים במהלך האימונים
-       - זמני מנוחה ספציפיים בין סטים
+    2. For each exercise, include:
+       - Exact repetitions, sets, and timing
+       - Moments that challenge mental strength — such as holding positions under fatigue, maintaining focus under pressure, or setting and achieving small targets during workouts
+       - Specific rest periods between sets
     
-    3. ודא שהתוכנית עוקבת אחר העקרונות הבאים:
-       - המשתמש כבר מבצע שני אימוני חמש אצבעות אינטנסיביים בשבוע, לכן תוכנית זו צריכה לספק אימון משלים מבלי להעמיס יתר על המידה על גופו
-       - תן עדיפות לתנועות פונקציונליות, תרגילי משקל גוף ויעדים מאתגרים אך בני השגה
-       - התאם את רמת הקושי לרמת הכושר הנוכחית של המשתמש, עם אפשרויות להגברת העצימות
-       - שלב רגעים המאתגרים את החוזק המנטלי לאורך האימונים
-       - אזן בין קבוצות שרירים שונות לאורך השבוע
-       - התחשב ברמת הניסיון של המשתמש לבחירת התרגילים
-       - התאם למטרות הספציפיות של המשתמש (הכנה צבאית, שיפור אירובי, בניית כוח)
+    3. Ensure the program follows these principles:
+       - The user already performs two intense Five Fingers workouts per week, so this program should provide complementary training without overloading their body
+       - Prioritize functional movements, bodyweight exercises, and challenging yet achievable goals
+       - Adapt the difficulty to suit the user's current fitness level, with options to scale intensity
+       - Incorporate moments that challenge mental strength throughout the workouts
+       - Balance different muscle groups throughout the week
+       - Consider the user's experience level for exercise selection
+       - Align with the user's specific goals (military preparation, aerobic improvement, strength building)
     ${userAnswers.goal === 'army' ? `
-    4. חשוב - מכיוון שהמשתמש בחר "הכנה לצבא" כמטרה שלו:
-       - צור אימוני סגנון צבאי אינטנסיביים המכינים ספציפית למבחנים פיזיים בצה"ל וכושר קרבי
-       - כלול תרגילים המדמים פעילויות צבאיות כגון זחילה, ריצה בשטח מגוון (כולל חול אם אפשר), נשיאת חפצים כבדים ואלמנטים של מסלול מכשולים
-       - התמקד בבניית סיבולת, כוח מתפרץ וחוסן מנטלי תחת לחץ
-       - שלב אימוני אינטרוולים עם זמני מנוחה מינימליים כדי לדמות לחץ קרבי
-       - כלול תרגילים הבונים כוח פלג גוף עליון לפעילויות כמו טיפוס ומשיכה
-       - הוסף תרגילי סגנון צבאי ספציפיים כמו זחילת דוב, זחילה נמוכה, זחילה גבוהה ותנועות טקטיות
-       - ודא שהאימונים בונים יכולת אנאירובית ואירובית הנדרשת למבחני כושר צבאיים
-       - כלול תרגילים עם שותף כאשר אפשר כדי לדמות פעילויות צבאיות מבוססות צוות
-       - תכנן אימונים עם עצימות מתקדמת כדי להכין לדרישות הפיזיות של הטירונות
-       - התמקד בחוזק וביציבות הליבה שהם חיוניים לפעילויות צבאיות` : ''}
+    4. IMPORTANT - Since the user selected "הכנה לצבא" (Military Preparation) as their goal:
+       - Create intense, military-style training workouts that specifically prepare for IDF physical tests and combat fitness
+       - Include exercises that mimic military activities such as crawling, sprinting on varied terrain (including sand if possible), carrying heavy objects, and obstacle course elements
+       - Focus on building endurance, explosive power, and mental resilience under pressure
+       - Incorporate interval training with minimal rest periods to simulate combat stress
+       - Include exercises that build upper body strength for activities like climbing and pulling
+       - Add specific military-style drills like bear crawls, low crawls, high crawls, and tactical movements
+       - Ensure workouts build both anaerobic and aerobic capacity needed for military fitness tests
+       - Include partner exercises when possible to simulate team-based military activities
+       - Design workouts with progressive intensity to prepare for the physical demands of basic training
+       - Focus on core strength and stability which is essential for military activities` : ''}
     
-    ${userAnswers.goal === 'army' ? '5' : '4'}. עבור כל אימון, כלול גם:
-       - ציוד נדרש (אם יש)
-       - זמן מנוחה מומלץ בין תרגילים
-       - מדדי ביצוע למעקב אחר התקדמות
+    ${userAnswers.goal === 'army' ? '5' : '4'}. For each workout, also include:
+       - Equipment needed (if any)
+       - Recommended resting time between exercises
+       - Performance metrics to track progress
 
-    פרמט את התשובה כאובייקט JSON עם מערך 'workouts', כאשר כל אימון מכיל:
+    Format the response as a JSON object with a 'workouts' array, where each workout contains:
     {
       "workouts": [
         {
-          "workoutNumber": "מספר (מספר האימון)",
-          "type": "aerobic" או "strength",
-          "title": "מחרוזת (כותרת ברורה ומעוררת מוטיבציה)",
-          "equipment": "מחרוזת (ציוד נדרש, אם יש)",
-          "exercises": ["מערך של תיאורי תרגילים מפורטים עם סטים, חזרות והנחיות צורה"],
-          "duration": "מחרוזת (בדקות, בין 45-60 דקות)",
-          "intensity": "קל" או "בינוני" או "גבוה",
-          "workoutGoal": "מחרוזת המתארת את המטרה הספציפית, היתרונות והתוצאות הצפויות",
+          "workoutNumber": "number (workout number)",
+          "type": "aerobic" or "strength",
+          "title": "string (clear, motivational title)",
+          "equipment": "string (equipment needed, if any)",
+          "exercises": ["array of detailed exercise descriptions with sets, reps, and form cues"],
+          "duration": "string (in minutes, between 45-60 minutes)",
+          "intensity": "קל" or "בינוני" or "גבוה",
+          "workoutGoal": "string describing the specific purpose, benefits, and expected outcomes",
           "enhancedExercises": [
             {
-              "restingTime": "מחרוזת (למשל, '30 שניות', 'דקה אחת')"
+              "restingTime": "string (e.g., '30 seconds', '1 minute')"
             }
           ]
         }
       ]
     }
 
-    ודא שהאימונים הם גם תובעניים פיזית וגם מאתגרים מנטלית, מטפחים חוסן, מיקוד ושיפור עצמי.
-
-    חשוב מאוד: התשובה חייבת להיות בעברית בלבד. אל תשתמש באנגלית בכלל.`;
+    Ensure the workouts are both physically demanding and mentally challenging, fostering resilience, focus, and self-improvement.`;
 
     console.log('Sending request to OpenAI');
     
     try {
       // Set a timeout for the OpenAI request
+      const timeoutMs = 40000; // Increased from 25000 to 40000 ms (40 seconds)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log('OpenAI request timeout reached, aborting');
-        controller.abort();
-      }, timeoutMs);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // Using GPT-4o for better quality responses
+        model: "gpt-4o-mini", // Updated to gpt-4o-mini as requested
         messages: [
           {
             role: "system",
-            content: "אתה מאמן כושר עילית עם מומחיות בשיטת האימון הפיזי-מנטלי של חמש האצבעות, פיזיולוגיה של אימונים, מדעי הספורט ואימון מותאם אישית. ההתמחות שלך היא ביצירת תוכניות אימונים מקצועיות ומבוססות ראיות המותאמות לצרכים וליעדים אישיים, המשלבות אתגר פיזי עם בניית חוסן מנטלי. כל תוכנית אימונים שאתה יוצר מובנית בקפידה עם התקדמות נכונה, תקופתיות והתאוששות, תוך שילוב אתגרים מנטליים המטפחים חוסן, מיקוד ושיפור עצמי. יש לך ניסיון נרחב באימוני הכנה צבאיים, כולל דרישות כושר קרבי בצה\"ל, מבחנים פיזיים צבאיים ואימון טקטי. זכור שהמשתמש גם עושה 2 אימוני צוות אינטנסיביים של חמש אצבעות בכל שבוע. חשוב מאוד: עליך להשיב בעברית בלבד. השב רק עם JSON תקף הכולל מערך 'workouts'."
+            content: "אתה מאמן כושר עילית בעל מומחיות בשיטת האימון החמישי האצבעות הפיזי-מנטלי, פיזיולוגיה של אימון, מדעי הספורט, ואימון מותאם אישית. ההתמחות שלך היא ביצירת תוכניות אימון מקצועיות ומבוססות ראיות המותאמות לצרכים ויעדים אישיים המשלבות אתגר פיזי עם בניית חוסן מנטלי. כל תוכנית אימון שאתה יוצר מובנית בקפידה עם התקדמות נכונה, תקופתיות, והתאוששות, תוך שילוב אתגרים מנטליים המטפחים חוסן, מיקוד, ושיפור עצמי. יש לך ניסיון רב באימון הכנה צבאית, כולל דרישות כושר קרבי של צה״ל, מבחני כושר צבאיים, ואימון טקטי. זכור שהמשתמש גם עושה 2 אימוני צוות חמישי האצבעות אינטנסיביים בכל שבוע. הגב רק עם JSON תקין הכולל מערך 'workouts'."
           },
           {
             role: "user",
@@ -321,8 +302,7 @@ export async function POST(req: Request) {
           }
         ],
         temperature: 0.7,
-        response_format: { type: "json_object" },
-        max_tokens: 4000 // Increased token limit for more detailed responses
+        response_format: { type: "json_object" }
       }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
@@ -333,7 +313,7 @@ export async function POST(req: Request) {
       if (!content) {
         console.error('No content received from OpenAI');
         return NextResponse.json(
-          { error: 'No content received from OpenAI' },
+          { error: 'לא התקבל תוכן מ-OpenAI' },
           { status: 500 }
         );
       }

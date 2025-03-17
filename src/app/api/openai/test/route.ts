@@ -12,7 +12,7 @@ export async function GET() {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({
         success: false,
-        error: 'OpenAI API key is not configured'
+        error: 'מפתח ה-API של OpenAI לא מוגדר'
       }, { status: 500 });
     }
     
@@ -41,7 +41,7 @@ export async function GET() {
     
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: 'אירעה שגיאה בשימוש ב-API של OpenAI: ' + error.message,
       details: error
     }, { status: 500 });
   }
