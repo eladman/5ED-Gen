@@ -191,41 +191,66 @@ export async function POST(req: Request) {
     
     try {
       // Set a timeout for the OpenAI request
-      const timeoutMs = 25000; // Reduce to 25 seconds for Vercel limits
+      const timeoutMs = 60000; // 60 seconds
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      // Ultra simplified system message
-      const systemMessage = "מאמן כושר: שדרג תרגילי אימון עם מידע טכני. תן JSON בעברית בלבד.";
+      // System message
+      const systemMessage = "אתה מאמן כושר מקצועי ברמה עולמית המתמחה בתכנון אימונים מדויקים ומבוססי מדע. תפקידך הוא לספק הנחיות מפורטות ומקצועיות לכל תרגיל, כולל טכניקה נכונה, וריאציות מותאמות לרמות שונות, וטיפים מתקדמים. הקפד לענות בעברית מקצועית ומדויקת. הגב אך ורק ב-JSON תקין.";
 
-      // Ultra simplified prompt
-      const simplifiedPrompt = `שדרג אימון: ${JSON.stringify({
-        title: workout.title,
-        type: workout.type,
-        exercises: workout.exercises.slice(0, 3) // Limit to first 3 exercises to reduce complexity
-      })}`;
-
-      // Prepare default enhanced exercises
-      const defaultEnhancedExercises = createDefaultEnhancedExercises(workout.exercises);
-
-      // Default workout goal
-      const defaultWorkoutGoal = workout.type === 'aerobic' 
-        ? "שיפור סיבולת לב-ריאה, חיזוק מערכת הנשימה והלב, העלאת יכולת אירובית"
-        : "חיזוק והגדלת מסת שריר, שיפור כוח וסיבולת שרירית";
-
-      // Fallback directly if environment variable is set
-      if (process.env.USE_FALLBACK_WORKOUTS === 'true') {
-        console.log('Using fallback enhancement instead of OpenAI API');
-        return NextResponse.json({
-          workoutGoal: defaultWorkoutGoal,
-          enhancedExercises: defaultEnhancedExercises
-        });
+      // Detailed prompt
+      const detailedPrompt = `Enhance the following workout with professional, detailed information:
+      - Workout: ${JSON.stringify(workout)}
+      
+      Please provide the following comprehensive enhancements:
+      
+      1. A specific, evidence-based workout goal that explains:
+         - The primary physiological purpose of this workout
+         - The specific fitness benefits and adaptations it targets
+         - How it contributes to overall athletic development
+         - Expected outcomes with consistent training
+      
+      2. For each exercise, provide:
+         - Precise recommended resting time between sets (based on exercise intensity and type)
+         - Detailed form cues and technique instructions to ensure proper execution
+         - Common mistakes to avoid and how to correct them
+         - Progression metrics to track improvement
+      
+      3. For each exercise, provide three distinct variations:
+         - Easy: A simplified version with specific modifications for beginners or those with limitations
+         - Medium: The standard version with proper form and execution guidelines
+         - Hard: An advanced variation with specific progression elements for experienced athletes
+      
+      4. Additional professional insights:
+         - Optimal breathing patterns for each exercise
+         - Mind-muscle connection cues
+         - Recovery recommendations
+         - Performance indicators to track progress
+      
+      Format the response as a JSON object with the following structure:
+      {
+        "workoutGoal": "detailed description of the workout's purpose, benefits, and expected outcomes",
+        "enhancedExercises": [
+          {
+            "name": "original exercise name",
+            "restingTime": "precise resting recommendation (e.g., '30-45 seconds for hypertrophy', '2-3 minutes for strength')",
+            "formCues": "detailed technique instructions and proper form guidelines",
+            "commonMistakes": "common errors and how to correct them",
+            "breathingPattern": "optimal breathing technique for this exercise",
+            "progressionMetrics": "how to measure improvement in this exercise",
+            "variations": {
+              "easy": "detailed description of easier variation with specific modifications",
+              "medium": "detailed description of standard variation with proper execution guidelines",
+              "hard": "detailed description of advanced variation with specific progression elements"
+            }
+          }
+        ]
       }
-
-      console.log('Calling OpenAI with simplified prompt');
+      
+      VERY IMPORTANT: ALL CONTENT MUST BE IN HEBREW (עברית) ONLY.`;
       
       const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo", // Using a faster model that's less likely to timeout
+        model: "gpt-4o", // Using GPT-4o model as requested
         messages: [
           {
             role: "system",
@@ -233,12 +258,12 @@ export async function POST(req: Request) {
           },
           {
             role: "user",
-            content: simplifiedPrompt
+            content: detailedPrompt
           }
         ],
         temperature: 0.7,
         response_format: { type: "json_object" },
-        max_tokens: 2000 // Reduced token count
+        max_tokens: 4000
       }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
@@ -247,50 +272,70 @@ export async function POST(req: Request) {
       
       const content = completion.choices[0].message.content;
       if (!content) {
-        console.error('No content received from OpenAI, using fallback');
-        return NextResponse.json({
-          workoutGoal: defaultWorkoutGoal,
-          enhancedExercises: defaultEnhancedExercises
-        });
+        console.error('No content received from OpenAI');
+        return NextResponse.json(
+          { error: 'לא התקבלה תשובה מהשרת. אנא נסה שוב.' },
+          { status: 500 }
+        );
       }
 
-      // Parse the response with fallback
+      // Parse the response
       try {
         const enhancedWorkout = JSON.parse(content);
         console.log('Successfully parsed OpenAI response');
         
         // Validate the response structure
         if (!enhancedWorkout.workoutGoal || !enhancedWorkout.enhancedExercises || !Array.isArray(enhancedWorkout.enhancedExercises)) {
-          console.error('Invalid response structure from OpenAI, using fallback');
-          return NextResponse.json({
-            workoutGoal: defaultWorkoutGoal,
-            enhancedExercises: defaultEnhancedExercises
-          });
+          console.error('Invalid response structure from OpenAI:', enhancedWorkout);
+          return NextResponse.json(
+            { error: 'מבנה התשובה שגוי. אנא נסה שוב.' },
+            { status: 500 }
+          );
         }
         
         return NextResponse.json(enhancedWorkout);
       } catch (jsonError) {
-        console.error('Error parsing OpenAI response, using fallback');
-        return NextResponse.json({
-          workoutGoal: defaultWorkoutGoal,
-          enhancedExercises: defaultEnhancedExercises
-        });
+        console.error('Error parsing OpenAI response:', jsonError, 'Content:', content);
+        
+        // Try to extract JSON from the response if it's wrapped in markdown or other text
+        try {
+          const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
+                           content.match(/```\s*([\s\S]*?)\s*```/) ||
+                           content.match(/{[\s\S]*}/);
+                           
+          if (jsonMatch && jsonMatch[1]) {
+            const extractedJson = JSON.parse(jsonMatch[1]);
+            if (extractedJson.workoutGoal && extractedJson.enhancedExercises) {
+              console.log('Successfully extracted JSON from OpenAI response');
+              return NextResponse.json(extractedJson);
+            }
+          }
+        } catch (extractError) {
+          console.error('Failed to extract JSON from response:', extractError);
+        }
+        
+        return NextResponse.json(
+          { error: 'שגיאה בעיבוד התשובה. אנא נסה שוב.' },
+          { status: 500 }
+        );
       }
     } catch (openaiError: any) {
-      console.error('OpenAI API error, using fallback:', openaiError);
+      console.error('OpenAI API error:', openaiError);
       
-      // Create default enhanced exercises for fallback
-      const enhancedExercises = createDefaultEnhancedExercises(workout.exercises);
+      if (openaiError.message?.includes('timeout') || 
+          openaiError.type === 'request_timeout' ||
+          openaiError.name === 'AbortError' ||
+          openaiError.code === 'ETIMEDOUT') {
+        return NextResponse.json(
+          { error: 'תם הזמן המוקצב לבקשה. אנא נסה שוב.' },
+          { status: 504 }
+        );
+      }
       
-      // Default workout goal
-      const workoutGoal = workout.type === 'aerobic' 
-        ? "שיפור סיבולת לב-ריאה, חיזוק מערכת הנשימה והלב, העלאת יכולת אירובית"
-        : "חיזוק והגדלת מסת שריר, שיפור כוח וסיבולת שרירית";
-      
-      return NextResponse.json({
-        workoutGoal: workoutGoal,
-        enhancedExercises: enhancedExercises
-      });
+      return NextResponse.json(
+        { error: 'שגיאה בתקשורת עם השרת: ' + openaiError.message },
+        { status: 500 }
+      );
     }
     
   } catch (error: any) {
