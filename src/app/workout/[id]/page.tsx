@@ -862,7 +862,7 @@ export default function WorkoutDetails() {
                                   {i + 1}
                                 </div>
                                 <div>
-                                  <p className="font-medium text-gray-800">{exercise}</p>
+                                  <p className="font-medium text-gray-800">{typeof exercise === 'string' ? exercise : JSON.stringify(exercise)}</p>
                                   <div className="text-sm text-gray-500 mt-1 space-y-1">
                                     {enhancedExercise ? (
                                       <>

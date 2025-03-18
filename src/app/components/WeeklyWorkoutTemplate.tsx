@@ -431,7 +431,7 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
                       {i + 1}
                     </div>
                     <div>
-                      <p className="text-gray-800">{exercise}</p>
+                      <p className="text-gray-800">{typeof exercise === 'string' ? exercise : JSON.stringify(exercise)}</p>
                     </div>
                   </li>
                 ))}
