@@ -187,76 +187,72 @@ export async function POST(req: Request) {
     //   }
     // }
     
-    const prompt = `Enhance the following workout with professional, detailed information:
-    - Workout: ${JSON.stringify(workout)}
-    
-    Please provide the following comprehensive enhancements:
-    
-    1. A specific, evidence-based workout goal that explains:
-       - The primary physiological purpose of this workout
-       - The specific fitness benefits and adaptations it targets
-       - How it contributes to overall athletic development
-       - Expected outcomes with consistent training
-    
-    2. For each exercise, provide:
-       - Precise recommended resting time between sets (based on exercise intensity and type)
-       - Detailed form cues and technique instructions to ensure proper execution
-       - Common mistakes to avoid and how to correct them
-       - Progression metrics to track improvement
-    
-    3. For each exercise, provide three distinct variations:
-       - Easy: A simplified version with specific modifications for beginners or those with limitations
-       - Medium: The standard version with proper form and execution guidelines
-       - Hard: An advanced variation with specific progression elements for experienced athletes
-    
-    4. Additional professional insights:
-       - Optimal breathing patterns for each exercise
-       - Mind-muscle connection cues
-       - Recovery recommendations
-       - Performance indicators to track progress
-    
-    Format the response as a JSON object with the following structure:
-    {
-      "workoutGoal": "detailed description of the workout's purpose, benefits, and expected outcomes",
-      "enhancedExercises": [
-        {
-          "name": "original exercise name",
-          "restingTime": "precise resting recommendation (e.g., '30-45 seconds for hypertrophy', '2-3 minutes for strength')",
-          "formCues": "detailed technique instructions and proper form guidelines",
-          "commonMistakes": "common errors and how to correct them",
-          "breathingPattern": "optimal breathing technique for this exercise",
-          "progressionMetrics": "how to measure improvement in this exercise",
-          "variations": {
-            "easy": "detailed description of easier variation with specific modifications",
-            "medium": "detailed description of standard variation with proper execution guidelines",
-            "hard": "detailed description of advanced variation with specific progression elements"
-          }
-        }
-      ]
-    }`;
-
     console.log('Sending request to OpenAI');
     
     try {
       // Set a timeout for the OpenAI request
-      const timeoutMs = 30000; // 30 seconds
+      const timeoutMs = 60000; // Increase to 60 seconds
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+      // Simplify the system message to reduce token count
+      const systemMessage = "אתה מאמן כושר מקצועי המתמחה בשיטת Five Fingers. תפקידך לספק הנחיות מפורטות ומקצועיות לכל תרגיל, כולל טכניקה נכונה ווריאציות מותאמות. הקפד על תשובות בעברית בלבד ובפורמט JSON.";
+
+      // Simplify the prompt to reduce token count
+      const simplifiedPrompt = `שדרג את האימון הבא עם מידע מקצועי מפורט:
+      אימון: ${JSON.stringify(workout)}
+
+      נדרש:
+      1. מטרת אימון מפורטת:
+         - מטרה פיזיולוגית
+         - יתרונות ותוצאות צפויות
+
+      2. לכל תרגיל:
+         - זמן מנוחה מומלץ
+         - הנחיות טכניקה
+         - טעויות נפוצות
+         - מדדי התקדמות
+
+      3. וריאציות לכל תרגיל:
+         - קל: גרסה מותאמת למתחילים
+         - בינוני: גרסה סטנדרטית
+         - מתקדם: גרסה מאתגרת
+
+      מבנה JSON נדרש:
+      {
+        "workoutGoal": "מטרת האימון",
+        "enhancedExercises": [
+          {
+            "name": "שם התרגיל",
+            "restingTime": "זמן מנוחה",
+            "formCues": "הנחיות טכניקה",
+            "commonMistakes": "טעויות נפוצות",
+            "breathingPattern": "דפוס נשימה",
+            "progressionMetrics": "מדדי התקדמות",
+            "variations": {
+              "easy": "גרסה קלה",
+              "medium": "גרסה רגילה",
+              "hard": "גרסה מתקדמת"
+            }
+          }
+        ]
+      }`;
+
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // Using GPT-4o exclusively
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: "אתה מאמן כושר מקצועי ברמה עולמית המתמחה בתכנון אימונים מדויקים ומבוססי מדע. תפקידך הוא לספק הנחיות מפורטות ומקצועיות לכל תרגיל, כולל טכניקה נכונה, וריאציות מותאמות לרמות שונות, וטיפים מתקדמים. הקפד לענות בעברית מקצועית ומדויקת. הגב אך ורק ב-JSON תקין."
+            content: systemMessage
           },
           {
             role: "user",
-            content: prompt
+            content: simplifiedPrompt
           }
         ],
         temperature: 0.7,
-        response_format: { type: "json_object" }
+        response_format: { type: "json_object" },
+        max_tokens: 4000
       }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
@@ -267,7 +263,7 @@ export async function POST(req: Request) {
       if (!content) {
         console.error('No content received from OpenAI');
         return NextResponse.json(
-          { error: 'No content received from GPT-4o. Please try again.' },
+          { error: 'לא התקבלה תשובה מהשרת. אנא נסה שוב.' },
           { status: 500 }
         );
       }
@@ -281,7 +277,7 @@ export async function POST(req: Request) {
         if (!enhancedWorkout.workoutGoal || !enhancedWorkout.enhancedExercises || !Array.isArray(enhancedWorkout.enhancedExercises)) {
           console.error('Invalid response structure from OpenAI:', enhancedWorkout);
           return NextResponse.json(
-            { error: 'GPT-4o returned an invalid response structure. Please try again.' },
+            { error: 'מבנה התשובה שגוי. אנא נסה שוב.' },
             { status: 500 }
           );
         }
@@ -307,29 +303,26 @@ export async function POST(req: Request) {
           console.error('Failed to extract JSON from response:', extractError);
         }
         
-        // Return error instead of fallback
         return NextResponse.json(
-          { error: 'Failed to parse GPT-4o response. Please try again.' },
+          { error: 'שגיאה בעיבוד התשובה. אנא נסה שוב.' },
           { status: 500 }
         );
       }
     } catch (openaiError: any) {
       console.error('OpenAI API error:', openaiError);
       
-      // Check if it's a timeout error
       if (openaiError.message?.includes('timeout') || 
           openaiError.type === 'request_timeout' ||
           openaiError.name === 'AbortError' ||
           openaiError.code === 'ETIMEDOUT') {
         return NextResponse.json(
-          { error: 'GPT-4o request timed out. Please try again.' },
+          { error: 'תם הזמן המוקצב לבקשה. אנא נסה שוב.' },
           { status: 504 }
         );
       }
       
-      // Return error instead of fallback
       return NextResponse.json(
-        { error: 'Error communicating with GPT-4o: ' + openaiError.message, details: 'Please try again later.' },
+        { error: 'שגיאה בתקשורת עם השרת: ' + openaiError.message },
         { status: 500 }
       );
     }
@@ -340,7 +333,7 @@ export async function POST(req: Request) {
     // Return error instead of fallback
     return NextResponse.json(
       { 
-        error: 'Failed to enhance workout details with GPT-4o',
+        error: 'Failed to enhance workout details with GPT-4',
         message: error.message,
         details: 'Please try again later.'
       },

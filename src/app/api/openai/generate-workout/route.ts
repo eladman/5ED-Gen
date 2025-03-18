@@ -299,26 +299,65 @@ export async function POST(req: Request) {
     console.log('Sending request to OpenAI');
     
     // Set a timeout for the OpenAI request
-    const timeoutMs = 60000; // Increase to 60 seconds
+    const timeoutMs = 120000; // Increase to 120 seconds for complex generations
     
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+      // Simplify the system message to reduce token count
+      const systemMessage = "אתה מאמן כושר מקצועי המתמחה בשיטת Five Fingers. תפקידך ליצור תוכניות אימון מותאמות אישית המשלבות אתגר פיזי ומנטלי. התמקד בהכנה צבאית, סיבולת וכוח. כל התוכן חייב להיות בעברית בלבד. הקפד על תשובות קצרות ויעילות בפורמט JSON.";
+
+      // Simplify the prompt to reduce token count while keeping essential information
+      const simplifiedPrompt = `צור תוכנית אימון מותאמת אישית על בסיס הנתונים הבאים:
+      - מגדר: ${userAnswers.gender || 'לא צוין'}
+      - קבוצת גיל: ${userAnswers.group || 'לא צוין'}
+      - רמת ניסיון: ${userAnswers.experienceLevel || 'לא צוין'}
+      - זמן ריצת 3 ק"מ: ${userAnswers.threeKmTime || 'לא צוין'}
+      - מתח מקסימלי: ${userAnswers.pullUps || 'לא צוין'}
+      - מטרת אימון: ${userAnswers.goal || 'לא צוין'}
+      - תדירות אימונים: ${userAnswers.workoutFrequency || '3'} פעמים בשבוע
+
+      דרישות:
+      1. כל אימון 45-60 דקות
+      2. חימום 10 דקות
+      3. תרגילים עם סטים, חזרות וזמני מנוחה
+      4. רמת עצימות (קל/בינוני/גבוה)
+      5. ציוד נדרש
+      ${userAnswers.goal === 'army' ? '6. התמקדות בהכנה לצבא: סיבולת, כוח מתפרץ, זחילות, ריצות עם משקל' : ''}
+
+      הקפד על מבנה JSON:
+      {
+        "workouts": [
+          {
+            "workoutNumber": "מספר",
+            "type": "aerobic/strength",
+            "title": "כותרת",
+            "equipment": "ציוד",
+            "exercises": ["תרגילים"],
+            "duration": "משך",
+            "intensity": "עצימות",
+            "workoutGoal": "מטרה",
+            "enhancedExercises": [{"restingTime": "זמן מנוחה"}]
+          }
+        ]
+      }`;
+
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // Using GPT-4o exclusively
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: "You are an elite fitness coach with expertise in the Five Fingers Physical-Mental Training method, exercise physiology, sports science, and personalized training. Your specialty is creating professional, evidence-based workout programs tailored to individual needs and goals that combine physical challenge with mental resilience building. Each workout plan you create is meticulously structured with proper progression, periodization, and recovery, while also incorporating mental challenges that foster resilience, focus, and self-improvement. You have extensive experience in military preparation training, including IDF combat fitness requirements, military physical tests, and tactical conditioning. Keep in mind that the user is also doing 2 intense Five Fingers team workouts every week. VERY IMPORTANT: All workout titles, exercises, descriptions and content MUST be in Hebrew (עברית) only. Keep descriptions concise but effective - too much text can cause timeout errors. Respond only with valid JSON that includes a 'workouts' array."
+            content: systemMessage
           },
           {
             role: "user",
-            content: prompt
+            content: simplifiedPrompt
           }
         ],
         temperature: 0.7,
-        response_format: { type: "json_object" }
+        response_format: { type: "json_object" },
+        max_tokens: 4000
       }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
@@ -329,7 +368,7 @@ export async function POST(req: Request) {
       if (!content) {
         console.error('No content received from OpenAI');
         return NextResponse.json(
-          { error: 'No content received from GPT-4o. Please try again.' },
+          { error: 'לא התקבלה תשובה מהשרת. אנא נסה שוב.' },
           { status: 500 }
         );
       }
@@ -343,7 +382,7 @@ export async function POST(req: Request) {
         if (!workoutProgram.workouts || !Array.isArray(workoutProgram.workouts)) {
           console.error('Invalid response structure from OpenAI:', workoutProgram);
           return NextResponse.json(
-            { error: 'GPT-4o returned an invalid response structure. Please try again.' },
+            { error: 'מבנה התשובה שגוי. אנא נסה שוב.' },
             { status: 500 }
           );
         }
@@ -369,30 +408,27 @@ export async function POST(req: Request) {
           console.error('Failed to extract JSON from response:', extractError);
         }
         
-        // Return error instead of fallback
         return NextResponse.json(
-          { error: 'Failed to parse GPT-4o response. Please try again.' },
+          { error: 'שגיאה בעיבוד התשובה. אנא נסה שוב.' },
           { status: 500 }
         );
       }
     } catch (openaiError: any) {
       console.error('OpenAI API error:', openaiError);
       
-      // Check if it's a timeout error
       if (openaiError.message?.includes('timeout') || 
           openaiError.type === 'request_timeout' ||
           openaiError.name === 'AbortError' ||
           openaiError.code === 'ETIMEDOUT') {
         console.error('Request timed out after', timeoutMs/1000, 'seconds');
         return NextResponse.json(
-          { error: 'GPT-4o request timed out. Please try again.' },
+          { error: 'תם הזמן המוקצב לבקשה. אנא נסה שוב.' },
           { status: 504 }
         );
       }
       
-      // Return error instead of fallback
       return NextResponse.json(
-        { error: 'Error communicating with GPT-4o: ' + openaiError.message, details: 'Please try again later.' },
+        { error: 'שגיאה בתקשורת עם השרת: ' + openaiError.message },
         { status: 500 }
       );
     }
@@ -403,7 +439,7 @@ export async function POST(req: Request) {
     // Return error instead of fallback
     return NextResponse.json(
       { 
-        error: 'Failed to generate workout program with GPT-4o',
+        error: 'Failed to generate workout program with GPT-4',
         message: error.message,
         details: 'Please try again later.'
       },
