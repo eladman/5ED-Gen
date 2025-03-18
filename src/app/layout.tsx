@@ -1,10 +1,14 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Heebo } from 'next/font/google'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
 import { Toaster } from 'react-hot-toast'
 
-const inter = Inter({ subsets: ['latin'] })
+const heebo = Heebo({ 
+  subsets: ['hebrew', 'latin'],
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'חמש אצבעות - תוכניות אימון אישיות',
@@ -18,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="he" dir="rtl">
-      <body className={`${inter.className} bg-white min-h-screen`}>
+      <body className={`${heebo.className} bg-white min-h-screen`}>
         <AuthProvider>
           {children}
           <Toaster position="top-center" toastOptions={{
