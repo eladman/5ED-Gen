@@ -2,8 +2,11 @@
 
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 export default function Hero() {
+  const router = useRouter();
+
   return (
     <section className="relative min-h-[90vh] flex items-center section-padding overflow-hidden bg-gradient-to-b from-[#fff5eb] to-white">
       <div className="container-custom relative z-10">
@@ -43,6 +46,7 @@ export default function Hero() {
                 className="btn-primary"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => router.push('/create-program')}
               >
                 צור תוכנית אימון
               </motion.button>
