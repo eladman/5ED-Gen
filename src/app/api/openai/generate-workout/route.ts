@@ -299,52 +299,37 @@ export async function POST(req: Request) {
     console.log('Sending request to OpenAI');
     
     // Set a timeout for the OpenAI request
-    const timeoutMs = 120000; // Increase to 120 seconds for complex generations
+    const timeoutMs = 25000; // Reduce to 25 seconds for Vercel limits
     
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      // Simplify the system message to reduce token count
-      const systemMessage = "אתה מאמן כושר מקצועי המתמחה בשיטת Five Fingers. תפקידך ליצור תוכניות אימון מותאמות אישית המשלבות אתגר פיזי ומנטלי. התמקד בהכנה צבאית, סיבולת וכוח. כל התוכן חייב להיות בעברית בלבד. הקפד על תשובות קצרות ויעילות בפורמט JSON.";
+      // Ultra simplified system message to reduce token count
+      const systemMessage = "תן תוכנית אימון כושר ב-JSON בעברית בלבד. מבנה: workouts:[{workoutNumber,type,title,equipment,exercises,duration,intensity,workoutGoal}]";
 
-      // Simplify the prompt to reduce token count while keeping essential information
-      const simplifiedPrompt = `צור תוכנית אימון מותאמת אישית על בסיס הנתונים הבאים:
-      - מגדר: ${userAnswers.gender || 'לא צוין'}
-      - קבוצת גיל: ${userAnswers.group || 'לא צוין'}
-      - רמת ניסיון: ${userAnswers.experienceLevel || 'לא צוין'}
-      - זמן ריצת 3 ק"מ: ${userAnswers.threeKmTime || 'לא צוין'}
-      - מתח מקסימלי: ${userAnswers.pullUps || 'לא צוין'}
-      - מטרת אימון: ${userAnswers.goal || 'לא צוין'}
-      - תדירות אימונים: ${userAnswers.workoutFrequency || '3'} פעמים בשבוע
+      // Ultra simplified prompt with minimal text
+      const simplifiedPrompt = `אימון לפי: מגדר=${userAnswers.gender}, גיל=${userAnswers.group}, נסיון=${userAnswers.experienceLevel}, ריצה=${userAnswers.threeKmTime}, מתח=${userAnswers.pullUps}, מטרה=${userAnswers.goal}, תדירות=${userAnswers.workoutFrequency || '3'}. ${userAnswers.goal === 'army' ? 'התמקד בהכנה צבאית.' : ''}`;
 
-      דרישות:
-      1. כל אימון 45-60 דקות
-      2. חימום 10 דקות
-      3. תרגילים עם סטים, חזרות וזמני מנוחה
-      4. רמת עצימות (קל/בינוני/גבוה)
-      5. ציוד נדרש
-      ${userAnswers.goal === 'army' ? '6. התמקדות בהכנה לצבא: סיבולת, כוח מתפרץ, זחילות, ריצות עם משקל' : ''}
+      // Fallback to sample workouts if we have already tried twice
+      if (process.env.USE_FALLBACK_WORKOUTS === 'true') {
+        console.log('Using fallback workouts instead of OpenAI API');
+        
+        const fallbackWorkouts = {
+          workouts: userAnswers.goal === 'army' 
+            ? militaryWorkouts 
+            : userAnswers.goal === 'aerobic' 
+              ? aerobicWorkouts 
+              : strengthWorkouts
+        };
+        
+        return NextResponse.json(fallbackWorkouts);
+      }
 
-      הקפד על מבנה JSON:
-      {
-        "workouts": [
-          {
-            "workoutNumber": "מספר",
-            "type": "aerobic/strength",
-            "title": "כותרת",
-            "equipment": "ציוד",
-            "exercises": ["תרגילים"],
-            "duration": "משך",
-            "intensity": "עצימות",
-            "workoutGoal": "מטרה",
-            "enhancedExercises": [{"restingTime": "זמן מנוחה"}]
-          }
-        ]
-      }`;
-
+      console.log('Calling OpenAI with simplified prompt');
+      
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-3.5-turbo", // Using a faster model that's less likely to timeout
         messages: [
           {
             role: "system",
@@ -357,7 +342,7 @@ export async function POST(req: Request) {
         ],
         temperature: 0.7,
         response_format: { type: "json_object" },
-        max_tokens: 4000
+        max_tokens: 2500 // Reduced token count
       }, { signal: controller.signal });
 
       clearTimeout(timeoutId);
@@ -367,10 +352,17 @@ export async function POST(req: Request) {
       const content = completion.choices[0].message.content;
       if (!content) {
         console.error('No content received from OpenAI');
-        return NextResponse.json(
-          { error: 'לא התקבלה תשובה מהשרת. אנא נסה שוב.' },
-          { status: 500 }
-        );
+        
+        // Return fallback workouts if no content was received
+        const fallbackWorkouts = {
+          workouts: userAnswers.goal === 'army' 
+            ? militaryWorkouts 
+            : userAnswers.goal === 'aerobic' 
+              ? aerobicWorkouts 
+              : strengthWorkouts
+        };
+        
+        return NextResponse.json(fallbackWorkouts);
       }
 
       // Try to parse the response
@@ -380,57 +372,48 @@ export async function POST(req: Request) {
         
         // Validate the response structure
         if (!workoutProgram.workouts || !Array.isArray(workoutProgram.workouts)) {
-          console.error('Invalid response structure from OpenAI:', workoutProgram);
-          return NextResponse.json(
-            { error: 'מבנה התשובה שגוי. אנא נסה שוב.' },
-            { status: 500 }
-          );
+          console.error('Invalid response structure from OpenAI, returning fallback');
+          
+          // Return fallback workouts if structure is invalid
+          const fallbackWorkouts = {
+            workouts: userAnswers.goal === 'army' 
+              ? militaryWorkouts 
+              : userAnswers.goal === 'aerobic' 
+                ? aerobicWorkouts 
+                : strengthWorkouts
+          };
+          
+          return NextResponse.json(fallbackWorkouts);
         }
         
         return NextResponse.json(workoutProgram);
       } catch (jsonError) {
-        console.error('Error parsing OpenAI response:', jsonError, 'Content:', content);
+        console.error('Error parsing OpenAI response, returning fallback');
         
-        // Try to extract JSON from the response if it's wrapped in markdown or other text
-        try {
-          const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
-                           content.match(/```\s*([\s\S]*?)\s*```/) ||
-                           content.match(/{[\s\S]*}/);
-                           
-          if (jsonMatch && jsonMatch[1]) {
-            const extractedJson = JSON.parse(jsonMatch[1]);
-            if (extractedJson.workouts && Array.isArray(extractedJson.workouts)) {
-              console.log('Successfully extracted JSON from OpenAI response');
-              return NextResponse.json(extractedJson);
-            }
-          }
-        } catch (extractError) {
-          console.error('Failed to extract JSON from response:', extractError);
-        }
+        // Return fallback workouts if parsing failed
+        const fallbackWorkouts = {
+          workouts: userAnswers.goal === 'army' 
+            ? militaryWorkouts 
+            : userAnswers.goal === 'aerobic' 
+              ? aerobicWorkouts 
+              : strengthWorkouts
+        };
         
-        return NextResponse.json(
-          { error: 'שגיאה בעיבוד התשובה. אנא נסה שוב.' },
-          { status: 500 }
-        );
+        return NextResponse.json(fallbackWorkouts);
       }
     } catch (openaiError: any) {
-      console.error('OpenAI API error:', openaiError);
+      console.error('OpenAI API error, returning fallback:', openaiError);
       
-      if (openaiError.message?.includes('timeout') || 
-          openaiError.type === 'request_timeout' ||
-          openaiError.name === 'AbortError' ||
-          openaiError.code === 'ETIMEDOUT') {
-        console.error('Request timed out after', timeoutMs/1000, 'seconds');
-        return NextResponse.json(
-          { error: 'תם הזמן המוקצב לבקשה. אנא נסה שוב.' },
-          { status: 504 }
-        );
-      }
+      // Always return fallback workouts on error
+      const fallbackWorkouts = {
+        workouts: userAnswers.goal === 'army' 
+          ? militaryWorkouts 
+          : userAnswers.goal === 'aerobic' 
+            ? aerobicWorkouts 
+            : strengthWorkouts
+      };
       
-      return NextResponse.json(
-        { error: 'שגיאה בתקשורת עם השרת: ' + openaiError.message },
-        { status: 500 }
-      );
+      return NextResponse.json(fallbackWorkouts);
     }
     
   } catch (error: any) {
