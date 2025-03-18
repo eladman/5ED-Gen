@@ -1,6 +1,9 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 
+// Add edge runtime config
+export const runtime = 'edge';
+
 // Sample workout templates for fallback
 const aerobicWorkouts = [
   {
@@ -171,6 +174,9 @@ const openai = new OpenAI({
 });
 
 export async function POST(req: Request) {
+  const startTime = Date.now();
+  console.log('Starting generate-workout API call');
+  
   try {
     // Check if API key is available and valid
     if (!process.env.OPENAI_API_KEY) {
@@ -192,7 +198,7 @@ export async function POST(req: Request) {
       );
     }
     
-    console.log('Received workout generation request');
+    console.log('Received workout generation request', `Elapsed: ${(Date.now() - startTime)/1000}s`);
     
     // Parse request body with error handling
     let userAnswers;
@@ -217,173 +223,56 @@ export async function POST(req: Request) {
       );
     }
 
-    const prompt = `Generate a personalized workout program using the Five Fingers Physical-Mental Training method based on the following user information:
+    const prompt = `Create a personalized Five Fingers workout program for:
     - Gender: ${userAnswers.gender || 'Not specified'}
-    - Age Group: ${userAnswers.group || 'Not specified'}
-    - Experience Level: ${userAnswers.experienceLevel || 'Not specified'}
-    - 3km Run Time: ${userAnswers.threeKmTime || 'Not specified'}
+    - Age: ${userAnswers.group || 'Not specified'}
+    - Experience: ${userAnswers.experienceLevel || 'Not specified'}
+    - 3km Time: ${userAnswers.threeKmTime || 'Not specified'}
     - Max Pull-ups: ${userAnswers.pullUps || 'Not specified'}
-    - Training Goal: ${userAnswers.goal || 'Not specified'}
-    - Weekly Workout Frequency: ${userAnswers.workoutFrequency || '3'} times
+    - Goal: ${userAnswers.goal || 'Not specified'}
+    - Weekly Frequency: ${userAnswers.workoutFrequency || '3'} times
 
-    VERY IMPORTANT: ALL CONTENT MUST BE IN HEBREW (עברית) ONLY. DO NOT USE ANY ENGLISH AT ALL.
+    Guidelines:
+    1. 45-60 minute workouts with warm-up, workout, and cool-down
+    2. Include clear title, specific workout goal, intensity level, and duration
+    3. Detail exercises with reps, sets, and rest periods
+    4. Focus on military preparation with crawling, sprinting, carrying objects
+    5. Include equipment needed and metrics to track
 
-    Please generate a comprehensive weekly workout schedule following these guidelines:
-    
-    1. Each workout should be between 45-60 minutes and include:
-       - A 10-minute warm-up (no need to specify the warm-up details)
-       - A structured workout that combines physical effort and mental resilience challenges to build both physical fitness and mental toughness
-       - Exercises that push the user's limits, embracing discomfort as a tool for growth
-       - A mix of strength, endurance, and mental focus challenges
-       - A clear, motivational title that reflects the workout's focus (IN HEBREW)
-       - A specific workout goal that explains the purpose, benefits, and expected outcomes (IN HEBREW)
-       - Precise intensity level (קל/בינוני/גבוה)
-       - Accurate duration (between 45-60 minutes total)
-    
-    2. For each exercise, include:
-       - Exact repetitions, sets, and timing (IN HEBREW)
-       - Moments that challenge mental strength — such as holding positions under fatigue, maintaining focus under pressure, or setting and achieving small targets during workouts
-       - Specific rest periods between sets (IN HEBREW)
-    
-    3. Ensure the program follows these principles:
-       - The user already performs two intense Five Fingers workouts per week, so this program should provide complementary training without overloading their body
-       - Prioritize functional movements, bodyweight exercises, and challenging yet achievable goals
-       - Adapt the difficulty to suit the user's current fitness level, with options to scale intensity
-       - Incorporate moments that challenge mental strength throughout the workouts
-       - Balance different muscle groups throughout the week
-       - Consider the user's experience level for exercise selection
-       - Align with the user's specific goals (military preparation, aerobic improvement, strength building)
-    ${userAnswers.goal === 'army' ? `
-    4. IMPORTANT - Since the user selected "הכנה לצבא" (Military Preparation) as their goal:
-       - Create intense, military-style training workouts that specifically prepare for IDF physical tests and combat fitness
-       - Include exercises that mimic military activities such as crawling, sprinting on varied terrain (including sand if possible), carrying heavy objects, and obstacle course elements
-       - Focus on building endurance, explosive power, and mental resilience under pressure
-       - Incorporate interval training with minimal rest periods to simulate combat stress
-       - Include exercises that build upper body strength for activities like climbing and pulling
-       - Add specific military-style drills like bear crawls, low crawls, high crawls, and tactical movements
-       - Ensure workouts build both anaerobic and aerobic capacity needed for military fitness tests
-       - Include partner exercises when possible to simulate team-based military activities
-       - Design workouts with progressive intensity to prepare for the physical demands of basic training
-       - Focus on core strength and stability which is essential for military activities` : ''}
-    
-    ${userAnswers.goal === 'army' ? '5' : '4'}. For each workout, also include:
-       - Equipment needed (if any) (IN HEBREW)
-       - Recommended resting time between exercises (IN HEBREW)
-       - Performance metrics to track progress (IN HEBREW)
+    Format as JSON with a 'workouts' array. ALL TEXT MUST BE IN HEBREW ONLY.`;
 
-    REMINDER: ALL CONTENT MUST BE IN HEBREW (עברית) ONLY.
-
-    Format the response as a JSON object with a 'workouts' array, where each workout contains:
-    {
-      "workouts": [
-        {
-          "workoutNumber": "number (workout number)",
-          "type": "aerobic" or "strength",
-          "title": "string (clear, motivational title IN HEBREW)",
-          "equipment": "string (equipment needed, if any IN HEBREW)",
-          "exercises": ["array of detailed exercise descriptions with sets, reps, and form cues IN HEBREW"],
-          "duration": "string (in minutes, between 45-60 minutes)",
-          "intensity": "קל" or "בינוני" or "גבוה",
-          "workoutGoal": "string describing the specific purpose, benefits, and expected outcomes IN HEBREW",
-          "enhancedExercises": [
-            {
-              "restingTime": "string (e.g., '30 seconds', '1 minute' IN HEBREW)"
-            }
-          ]
-        }
-      ]
-    }
-
-    Ensure the workouts are both physically demanding and mentally challenging, fostering resilience, focus, and self-improvement. ALL TEXT MUST BE IN HEBREW.`;
-
-    console.log('Sending request to OpenAI');
+    console.log('Sending request to OpenAI', `Elapsed: ${(Date.now() - startTime)/1000}s`);
     
     // Set a timeout for the OpenAI request
-    const timeoutMs = 60000; // 60 seconds
+    const timeoutMs = 50000; // 50 seconds for edge runtime
     
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      // System message
-      const systemMessage = "You are an elite fitness coach with expertise in the Five Fingers Physical-Mental Training method, exercise physiology, sports science, and personalized training. Your specialty is creating professional, evidence-based workout programs tailored to individual needs and goals that combine physical challenge with mental resilience building. Each workout plan you create is meticulously structured with proper progression, periodization, and recovery, while also incorporating mental challenges that foster resilience, focus, and self-improvement. You have extensive experience in military preparation training, including IDF combat fitness requirements, military physical tests, and tactical conditioning. Keep in mind that the user is also doing 2 intense Five Fingers team workouts every week. VERY IMPORTANT: All workout titles, exercises, descriptions and content MUST be in Hebrew (עברית) only. Respond only with valid JSON that includes a 'workouts' array.";
+      // System message - simplify
+      const systemMessage = "You are an elite fitness coach specializing in creating workout programs in Hebrew. Create professional, evidence-based workout programs that combine physical and mental challenges. ALL OUTPUT MUST BE IN HEBREW.";
 
-      // Full detailed prompt
-      const detailedPrompt = `Generate a personalized workout program using the Five Fingers Physical-Mental Training method based on the following user information:
+      // Full detailed prompt - simplify
+      const detailedPrompt = `Create a personalized Five Fingers workout program for:
       - Gender: ${userAnswers.gender || 'Not specified'}
-      - Age Group: ${userAnswers.group || 'Not specified'}
-      - Experience Level: ${userAnswers.experienceLevel || 'Not specified'}
-      - 3km Run Time: ${userAnswers.threeKmTime || 'Not specified'}
+      - Age: ${userAnswers.group || 'Not specified'}
+      - Experience: ${userAnswers.experienceLevel || 'Not specified'}
+      - 3km Time: ${userAnswers.threeKmTime || 'Not specified'}
       - Max Pull-ups: ${userAnswers.pullUps || 'Not specified'}
-      - Training Goal: ${userAnswers.goal || 'Not specified'}
-      - Weekly Workout Frequency: ${userAnswers.workoutFrequency || '3'} times
+      - Goal: ${userAnswers.goal || 'Not specified'}
+      - Weekly Frequency: ${userAnswers.workoutFrequency || '3'} times
 
-      VERY IMPORTANT: ALL CONTENT MUST BE IN HEBREW (עברית) ONLY. DO NOT USE ANY ENGLISH AT ALL.
+      Guidelines:
+      1. 45-60 minute workouts with warm-up, workout, and cool-down
+      2. Include clear title, specific workout goal, intensity level, and duration
+      3. Detail exercises with reps, sets, and rest periods
+      4. Focus on military preparation with crawling, sprinting, carrying objects
+      5. Include equipment needed and metrics to track
 
-      Please generate a comprehensive weekly workout schedule following these guidelines:
-      
-      1. Each workout should be between 45-60 minutes and include:
-         - A 10-minute warm-up (no need to specify the warm-up details)
-         - A structured workout that combines physical effort and mental resilience challenges to build both physical fitness and mental toughness
-         - Exercises that push the user's limits, embracing discomfort as a tool for growth
-         - A mix of strength, endurance, and mental focus challenges
-         - A clear, motivational title that reflects the workout's focus (IN HEBREW)
-         - A specific workout goal that explains the purpose, benefits, and expected outcomes (IN HEBREW)
-         - Precise intensity level (קל/בינוני/גבוה)
-         - Accurate duration (between 45-60 minutes total)
-      
-      2. For each exercise, include:
-         - Exact repetitions, sets, and timing (IN HEBREW)
-         - Moments that challenge mental strength — such as holding positions under fatigue, maintaining focus under pressure, or setting and achieving small targets during workouts
-         - Specific rest periods between sets (IN HEBREW)
-      
-      3. Ensure the program follows these principles:
-         - The user already performs two intense Five Fingers workouts per week, so this program should provide complementary training without overloading their body
-         - Prioritize functional movements, bodyweight exercises, and challenging yet achievable goals
-         - Adapt the difficulty to suit the user's current fitness level, with options to scale intensity
-         - Incorporate moments that challenge mental strength throughout the workouts
-         - Balance different muscle groups throughout the week
-         - Consider the user's experience level for exercise selection
-         - Align with the user's specific goals (military preparation, aerobic improvement, strength building)
-      
-      4. IMPORTANT - Since the user selected "הכנה לצבא" (Military Preparation) as their goal:
-         - Create intense, military-style training workouts that specifically prepare for IDF physical tests and combat fitness
-         - Include exercises that mimic military activities such as crawling, sprinting on varied terrain (including sand if possible), carrying heavy objects, and obstacle course elements
-         - Focus on building endurance, explosive power, and mental resilience under pressure
-         - Incorporate interval training with minimal rest periods to simulate combat stress
-         - Include exercises that build upper body strength for activities like climbing and pulling
-         - Add specific military-style drills like bear crawls, low crawls, high crawls, and tactical movements
-         - Ensure workouts build both anaerobic and aerobic capacity needed for military fitness tests
-         - Include partner exercises when possible to simulate team-based military activities
-         - Design workouts with progressive intensity to prepare for the physical demands of basic training
-         - Focus on core strength and stability which is essential for military activities
-      
-      5. For each workout, also include:
-         - Equipment needed (if any) (IN HEBREW)
-         - Recommended resting time between exercises (IN HEBREW)
-         - Performance metrics to track progress (IN HEBREW)
+      Format as JSON with a 'workouts' array. ALL TEXT MUST BE IN HEBREW ONLY.`;
 
-      REMINDER: ALL CONTENT MUST BE IN HEBREW (עברית) ONLY.
-
-      Format the response as a JSON object with a 'workouts' array, where each workout contains:
-      {
-        "workouts": [
-          {
-            "workoutNumber": "number (workout number)",
-            "type": "aerobic" or "strength",
-            "title": "string (clear, motivational title IN HEBREW)",
-            "equipment": "string (equipment needed, if any IN HEBREW)",
-            "exercises": ["array of detailed exercise descriptions with sets, reps, and form cues IN HEBREW"],
-            "duration": "string (in minutes, between 45-60 minutes)",
-            "intensity": "קל" or "בינוני" or "גבוה",
-            "workoutGoal": "string describing the specific purpose, benefits, and expected outcomes IN HEBREW"
-          }
-        ]
-      }
-
-      Ensure the workouts are both physically demanding and mentally challenging, fostering resilience, focus, and self-improvement. ALL TEXT MUST BE IN HEBREW.`;
-
-      console.log('Calling OpenAI');
+      console.log('Calling OpenAI', `Elapsed: ${(Date.now() - startTime)/1000}s`);
       
       const completion = await openai.chat.completions.create({
         model: "gpt-4o", // Using GPT-4o model as requested
@@ -404,7 +293,7 @@ export async function POST(req: Request) {
 
       clearTimeout(timeoutId);
 
-      console.log('Received response from OpenAI');
+      console.log('Received response from OpenAI', `Elapsed: ${(Date.now() - startTime)/1000}s`);
       
       const content = completion.choices[0].message.content;
       if (!content) {

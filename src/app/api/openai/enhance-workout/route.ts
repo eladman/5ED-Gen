@@ -1,6 +1,9 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 
+// Add edge runtime config
+export const runtime = 'edge';
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -124,6 +127,9 @@ const defaultEnhancements = {
 };
 
 export async function POST(req: Request) {
+  const startTime = Date.now();
+  console.log('Starting enhance-workout API call');
+  
   try {
     // Check if API key is available and valid
     if (!process.env.OPENAI_API_KEY) {
@@ -145,7 +151,7 @@ export async function POST(req: Request) {
       );
     }
     
-    console.log('Received workout enhancement request');
+    console.log('Received workout enhancement request', `Elapsed: ${(Date.now() - startTime)/1000}s`);
     
     // Parse request body with error handling
     let workout;
@@ -187,11 +193,11 @@ export async function POST(req: Request) {
       }));
     };
     
-    console.log('Sending request to OpenAI');
+    console.log('Sending request to OpenAI', `Elapsed: ${(Date.now() - startTime)/1000}s`);
     
     try {
       // Set a timeout for the OpenAI request
-      const timeoutMs = 60000; // 60 seconds
+      const timeoutMs = 50000; // 50 seconds for edge runtime
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -199,55 +205,21 @@ export async function POST(req: Request) {
       const systemMessage = "אתה מאמן כושר מקצועי ברמה עולמית המתמחה בתכנון אימונים מדויקים ומבוססי מדע. תפקידך הוא לספק הנחיות מפורטות ומקצועיות לכל תרגיל, כולל טכניקה נכונה, וריאציות מותאמות לרמות שונות, וטיפים מתקדמים. הקפד לענות בעברית מקצועית ומדויקת. הגב אך ורק ב-JSON תקין.";
 
       // Detailed prompt
-      const detailedPrompt = `Enhance the following workout with professional, detailed information:
-      - Workout: ${JSON.stringify(workout)}
+      const detailedPrompt = `Enhance the following workout with professional, detailed information.
+      Workout: ${JSON.stringify(workout)}
       
-      Please provide the following comprehensive enhancements:
+      Instructions:
+      1. Provide a workout goal explaining the purpose and benefits
+      2. For each exercise:
+         - Recommended resting time
+         - Form cues and technique
+         - Common mistakes
+         - Progression metrics
+         - Three variations: easy, medium, hard
+         - Breathing pattern
       
-      1. A specific, evidence-based workout goal that explains:
-         - The primary physiological purpose of this workout
-         - The specific fitness benefits and adaptations it targets
-         - How it contributes to overall athletic development
-         - Expected outcomes with consistent training
-      
-      2. For each exercise, provide:
-         - Precise recommended resting time between sets (based on exercise intensity and type)
-         - Detailed form cues and technique instructions to ensure proper execution
-         - Common mistakes to avoid and how to correct them
-         - Progression metrics to track improvement
-      
-      3. For each exercise, provide three distinct variations:
-         - Easy: A simplified version with specific modifications for beginners or those with limitations
-         - Medium: The standard version with proper form and execution guidelines
-         - Hard: An advanced variation with specific progression elements for experienced athletes
-      
-      4. Additional professional insights:
-         - Optimal breathing patterns for each exercise
-         - Mind-muscle connection cues
-         - Recovery recommendations
-         - Performance indicators to track progress
-      
-      Format the response as a JSON object with the following structure:
-      {
-        "workoutGoal": "detailed description of the workout's purpose, benefits, and expected outcomes",
-        "enhancedExercises": [
-          {
-            "name": "original exercise name",
-            "restingTime": "precise resting recommendation (e.g., '30-45 seconds for hypertrophy', '2-3 minutes for strength')",
-            "formCues": "detailed technique instructions and proper form guidelines",
-            "commonMistakes": "common errors and how to correct them",
-            "breathingPattern": "optimal breathing technique for this exercise",
-            "progressionMetrics": "how to measure improvement in this exercise",
-            "variations": {
-              "easy": "detailed description of easier variation with specific modifications",
-              "medium": "detailed description of standard variation with proper execution guidelines",
-              "hard": "detailed description of advanced variation with specific progression elements"
-            }
-          }
-        ]
-      }
-      
-      VERY IMPORTANT: ALL CONTENT MUST BE IN HEBREW (עברית) ONLY.`;
+      Format response as JSON with workoutGoal and enhancedExercises array.
+      ALL CONTENT MUST BE IN HEBREW ONLY.`;
       
       const completion = await openai.chat.completions.create({
         model: "gpt-4o", // Using GPT-4o model as requested
