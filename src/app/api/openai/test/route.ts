@@ -34,7 +34,7 @@ export async function GET() {
     // Simple test to check if the API key works
     try {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // Using GPT-4o for testing
+        model: "gpt-4o-mini", // Using GPT-4o-mini for testing
         messages: [
           {
             role: "system",
