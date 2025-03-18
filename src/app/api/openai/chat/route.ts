@@ -9,7 +9,17 @@ export async function POST(req: Request) {
     // Check if API key is available
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: 'מפתח ה-API של OpenAI לא מוגדר' },
+        { error: 'OpenAI API key is not configured' },
+        { status: 500 }
+      );
+    }
+    
+    // Validate API key format (basic check)
+    // Support both standard API keys (sk-...) and project-based API keys (sk-proj-...)
+    if (!(process.env.OPENAI_API_KEY.startsWith('sk-') || process.env.OPENAI_API_KEY.startsWith('sk-proj-')) || 
+        process.env.OPENAI_API_KEY.length < 20) {
+      return NextResponse.json(
+        { error: 'Invalid OpenAI API key format. Please check your environment variables.' },
         { status: 500 }
       );
     }
@@ -18,7 +28,7 @@ export async function POST(req: Request) {
     
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
-        { error: 'מערך ההודעות אינו תקין או ריק' },
+        { error: 'Invalid or empty messages array' },
         { status: 400 }
       );
     }
@@ -26,8 +36,8 @@ export async function POST(req: Request) {
     // Find the system message if it exists
     const systemMessage = messages.find((msg: any) => msg.role === 'system');
     
-    // Default system message if none is provided - enforcing Hebrew responses
-    const defaultSystemMessage = "אתה עוזר מועיל שמספק עצות אימון. עליך לענות תמיד בעברית בלבד. אם אינך יודע את התשובה, אמור זאת בפשטות בעברית.";
+    // Default system message if none is provided
+    const defaultSystemMessage = "You are a helpful AI assistant that provides workout advice. Answer in Hebrew.";
     
     // Log for debugging
     console.log("Processing chat request with messages:", 
@@ -36,25 +46,37 @@ export async function POST(req: Request) {
     
     try {
       const result = await streamText({
-        model: openai("gpt-4o-mini"),
+        model: openai("gpt-4o"),
         messages: convertToCoreMessages(messages),
         system: systemMessage?.content || defaultSystemMessage,
         temperature: 0.7,
         maxTokens: 1000,
       });
-  
+
       return result.toDataStreamResponse();
-    } catch (streamError) {
-      console.error("OpenAI Streaming Error:", streamError);
+    } catch (openaiError: any) {
+      console.error("OpenAI API Error:", openaiError);
+      
+      // Check if it's an API key error
+      if (openaiError.message?.includes('API key') || 
+          openaiError.message?.includes('authentication') ||
+          openaiError.message?.includes('401') ||
+          openaiError.message?.includes('Incorrect API key')) {
+        return NextResponse.json(
+          { error: 'Invalid OpenAI API key. Please check your API key configuration.' },
+          { status: 401 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: "אירעה שגיאה ביצירת התוכן. נא לנסות שוב מאוחר יותר.", details: streamError instanceof Error ? streamError.message : String(streamError) },
+        { error: "Error processing request with GPT-4o", details: openaiError.message || String(openaiError) },
         { status: 500 }
       );
     }
   } catch (error) {
     console.error("OpenAI API Error:", error);
     return NextResponse.json(
-      { error: "אירעה שגיאה בעיבוד הבקשה", details: error instanceof Error ? error.message : String(error) },
+      { error: "Error processing request", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

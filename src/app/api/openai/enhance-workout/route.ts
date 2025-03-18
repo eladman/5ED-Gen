@@ -125,11 +125,22 @@ const defaultEnhancements = {
 
 export async function POST(req: Request) {
   try {
-    // Check if API key is available
+    // Check if API key is available and valid
     if (!process.env.OPENAI_API_KEY) {
       console.error('OpenAI API key is missing');
       return NextResponse.json(
-        { error: 'מפתח ה-API של OpenAI לא מוגדר' },
+        { error: 'OpenAI API key is not configured' },
+        { status: 500 }
+      );
+    }
+    
+    // Validate API key format (basic check)
+    // Support both standard API keys (sk-...) and project-based API keys (sk-proj-...)
+    if (!(process.env.OPENAI_API_KEY.startsWith('sk-') || process.env.OPENAI_API_KEY.startsWith('sk-proj-')) || 
+        process.env.OPENAI_API_KEY.length < 20) {
+      console.error('OpenAI API key appears to be invalid');
+      return NextResponse.json(
+        { error: 'Invalid OpenAI API key format. Please check your environment variables.' },
         { status: 500 }
       );
     }
@@ -145,7 +156,7 @@ export async function POST(req: Request) {
     } catch (parseError: any) {
       console.error('Error parsing request body:', parseError);
       return NextResponse.json(
-        { error: 'תבנית הבקשה אינה חוקית', details: parseError.message },
+        { error: 'Invalid request format', details: parseError.message },
         { status: 400 }
       );
     }
@@ -154,63 +165,75 @@ export async function POST(req: Request) {
     if (!workout) {
       console.error('Missing workout in request');
       return NextResponse.json(
-        { error: 'חסר האימון בבקשה' },
+        { error: 'Missing workout in request' },
         { status: 400 }
       );
     }
 
-    const prompt = `בקשה בעברית - פירוט אימון - יש להשיב בעברית בלבד!
-    שדרג את האימון הבא עם מידע מקצועי ומפורט:
-    - אימון: ${JSON.stringify(workout)}
+    // Remove fallback mechanism
+    // if (process.env.NODE_ENV === 'production' && process.env.USE_FALLBACK_ENHANCEMENTS === 'true') {
+    //   console.log('Using fallback enhancements due to configuration');
+    //   
+    //   // Determine workout type and use appropriate fallback
+    //   let workoutType = workout.type || 'aerobic';
+    //   
+    //   // Map 'military' type to the appropriate enhancement
+    //   if (workoutType === 'military') {
+    //     return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.military } });
+    //   } else if (workoutType === 'strength') {
+    //     return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.strength } });
+    //   } else {
+    //     return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.aerobic } });
+    //   }
+    // }
     
-    חשוב מאוד: התשובה כולה חייבת להיות בעברית בלבד כולל כל שמות השדות והערכים.
-
-    נא לספק את השדרוגים המקיפים הבאים:
+    const prompt = `Enhance the following workout with professional, detailed information:
+    - Workout: ${JSON.stringify(workout)}
     
-    1. מטרת אימון ספציפית, מבוססת מדעית המסבירה:
-       - המטרה הפיזיולוגית העיקרית של אימון זה
-       - היתרונות והסתגלויות הכושר הספציפיים שהוא מכוון אליהם
-       - כיצד הוא תורם להתפתחות אתלטית כוללת
-       - תוצאות צפויות עם אימון עקבי
+    Please provide the following comprehensive enhancements:
     
-    2. עבור כל תרגיל, ספק:
-       - זמן מנוחה מומלץ מדויק בין סטים (בהתבסס על עצימות וסוג התרגיל)
-       - הנחיות טכניקה מפורטות והוראות צורה להבטחת ביצוע נכון
-       - טעויות נפוצות שיש להימנע מהן וכיצד לתקן אותן
-       - מדדי התקדמות למעקב אחר שיפור
+    1. A specific, evidence-based workout goal that explains:
+       - The primary physiological purpose of this workout
+       - The specific fitness benefits and adaptations it targets
+       - How it contributes to overall athletic development
+       - Expected outcomes with consistent training
     
-    3. עבור כל תרגיל, ספק שלוש וריאציות נבדלות:
-       - קל: גרסה מפושטת עם התאמות ספציפיות למתחילים או בעלי מגבלות
-       - בינוני: הגרסה הסטנדרטית עם הנחיות צורה וביצוע נכונים
-       - קשה: וריאציה מתקדמת עם אלמנטי התקדמות ספציפיים לספורטאים מנוסים
+    2. For each exercise, provide:
+       - Precise recommended resting time between sets (based on exercise intensity and type)
+       - Detailed form cues and technique instructions to ensure proper execution
+       - Common mistakes to avoid and how to correct them
+       - Progression metrics to track improvement
     
-    4. תובנות מקצועיות נוספות:
-       - דפוסי נשימה אופטימליים לכל תרגיל
-       - רמזי חיבור מוח-שריר
-       - המלצות התאוששות
-       - אינדיקטורים לביצוע למעקב אחר התקדמות
+    3. For each exercise, provide three distinct variations:
+       - Easy: A simplified version with specific modifications for beginners or those with limitations
+       - Medium: The standard version with proper form and execution guidelines
+       - Hard: An advanced variation with specific progression elements for experienced athletes
     
-    פרמט את התשובה כאובייקט JSON עם המבנה הבא (הכל בעברית):
+    4. Additional professional insights:
+       - Optimal breathing patterns for each exercise
+       - Mind-muscle connection cues
+       - Recovery recommendations
+       - Performance indicators to track progress
+    
+    Format the response as a JSON object with the following structure:
     {
-      "מטרת_אימון": "תיאור מפורט של מטרת האימון, היתרונות והתוצאות הצפויות",
-      "תרגילים_מורחבים": [
+      "workoutGoal": "detailed description of the workout's purpose, benefits, and expected outcomes",
+      "enhancedExercises": [
         {
-          "שם": "שם התרגיל המקורי",
-          "זמן_מנוחה": "המלצת מנוחה מדויקת (למשל, '30-45 שניות להיפרטרופיה', '2-3 דקות לכוח')",
-          "הנחיות_צורה": "הוראות טכניקה מפורטות והנחיות צורה נכונה",
-          "טעויות_נפוצות": "טעויות נפוצות וכיצד לתקן אותן",
-          "דפוס_נשימה": "טכניקת נשימה אופטימלית לתרגיל זה",
-          "מדדי_התקדמות": "כיצד למדוד שיפור בתרגיל זה",
-          "וריאציות": {
-            "קל": "תיאור מפורט של וריאציה קלה יותר עם התאמות ספציפיות",
-            "בינוני": "תיאור מפורט של וריאציה סטנדרטית עם הנחיות ביצוע נכונות",
-            "קשה": "תיאור מפורט של וריאציה מתקדמת עם אלמנטי התקדמות ספציפיים"
+          "name": "original exercise name",
+          "restingTime": "precise resting recommendation (e.g., '30-45 seconds for hypertrophy', '2-3 minutes for strength')",
+          "formCues": "detailed technique instructions and proper form guidelines",
+          "commonMistakes": "common errors and how to correct them",
+          "breathingPattern": "optimal breathing technique for this exercise",
+          "progressionMetrics": "how to measure improvement in this exercise",
+          "variations": {
+            "easy": "detailed description of easier variation with specific modifications",
+            "medium": "detailed description of standard variation with proper execution guidelines",
+            "hard": "detailed description of advanced variation with specific progression elements"
           }
         }
       ]
-    }
-    
-    חשוב מאוד: כל הטקסט בתשובה חייב להיות בעברית בלבד, כולל כל שמות השדות והערכים.`;
+    }`;
 
     console.log('Sending request to OpenAI');
     
@@ -221,11 +244,11 @@ export async function POST(req: Request) {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o", // Using GPT-4o exclusively
         messages: [
           {
             role: "system",
-            content: "אתה מאמן כושר מקצועי ברמה עולמית המתמחה בתכנון אימונים מדויקים ומבוססי מדע. תפקידך הוא לספק הנחיות מפורטות ומקצועיות לכל תרגיל, כולל טכניקה נכונה, וריאציות מותאמות לרמות שונות, וטיפים מתקדמים. חשוב מאוד: הקפד לענות בעברית מקצועית ומדויקת בלבד, כולל כל שמות השדות והערכים ב-JSON. הגב אך ורק ב-JSON תקין המכיל שדות בעברית בלבד."
+            content: "אתה מאמן כושר מקצועי ברמה עולמית המתמחה בתכנון אימונים מדויקים ומבוססי מדע. תפקידך הוא לספק הנחיות מפורטות ומקצועיות לכל תרגיל, כולל טכניקה נכונה, וריאציות מותאמות לרמות שונות, וטיפים מתקדמים. הקפד לענות בעברית מקצועית ומדויקת. הגב אך ורק ב-JSON תקין."
           },
           {
             role: "user",
@@ -244,76 +267,28 @@ export async function POST(req: Request) {
       if (!content) {
         console.error('No content received from OpenAI');
         return NextResponse.json(
-          { error: 'לא התקבל תוכן מ-OpenAI' },
+          { error: 'No content received from GPT-4o. Please try again.' },
           { status: 500 }
         );
       }
 
-      // Parse the response with fallback
+      // Parse the response without fallback
       try {
         const enhancedWorkout = JSON.parse(content);
         console.log('Successfully parsed OpenAI response');
         
-        // Transform Hebrew field names if they're in English
-        const hebrewFieldMap = {
-          'workoutGoal': 'מטרת_אימון',
-          'enhancedExercises': 'תרגילים_מורחבים',
-          'name': 'שם',
-          'restingTime': 'זמן_מנוחה',
-          'formCues': 'הנחיות_צורה',
-          'commonMistakes': 'טעויות_נפוצות',
-          'breathingPattern': 'דפוס_נשימה',
-          'progressionMetrics': 'מדדי_התקדמות',
-          'variations': 'וריאציות',
-          'easy': 'קל',
-          'medium': 'בינוני',
-          'hard': 'קשה'
-        };
-        
-        // Process the workoutGoal field to ensure Hebrew
-        if (enhancedWorkout.workoutGoal && !enhancedWorkout.מטרת_אימון) {
-          enhancedWorkout.מטרת_אימון = enhancedWorkout.workoutGoal;
-          delete enhancedWorkout.workoutGoal;
+        // Validate the response structure
+        if (!enhancedWorkout.workoutGoal || !enhancedWorkout.enhancedExercises || !Array.isArray(enhancedWorkout.enhancedExercises)) {
+          console.error('Invalid response structure from OpenAI:', enhancedWorkout);
+          return NextResponse.json(
+            { error: 'GPT-4o returned an invalid response structure. Please try again.' },
+            { status: 500 }
+          );
         }
         
-        // Process the enhancedExercises array to ensure Hebrew field names
-        if (enhancedWorkout.enhancedExercises && !enhancedWorkout.תרגילים_מורחבים) {
-          enhancedWorkout.תרגילים_מורחבים = enhancedWorkout.enhancedExercises;
-          delete enhancedWorkout.enhancedExercises;
-        }
-        
-        // Process each exercise to ensure Hebrew fields
-        if (enhancedWorkout.תרגילים_מורחבים && Array.isArray(enhancedWorkout.תרגילים_מורחבים)) {
-          enhancedWorkout.תרגילים_מורחבים = enhancedWorkout.תרגילים_מורחבים.map((exercise: any) => {
-            const hebrewExercise: any = {};
-            
-            Object.entries(exercise).forEach(([key, value]) => {
-              const hebrewKey = hebrewFieldMap[key as keyof typeof hebrewFieldMap] || key;
-              
-              // If this is the variations object, process its fields too
-              if (key === 'variations' || key === 'וריאציות') {
-                const variations = value as Record<string, any>;
-                const hebrewVariations: Record<string, any> = {};
-                
-                Object.entries(variations).forEach(([varKey, varValue]) => {
-                  const hebrewVarKey = hebrewFieldMap[varKey as keyof typeof hebrewFieldMap] || varKey;
-                  hebrewVariations[hebrewVarKey] = varValue;
-                });
-                
-                hebrewExercise[hebrewKey] = hebrewVariations;
-              } else {
-                hebrewExercise[hebrewKey] = value;
-              }
-            });
-            
-            return hebrewExercise;
-          });
-        }
-        
-        console.log('Processed response to ensure Hebrew fields');
         return NextResponse.json(enhancedWorkout);
       } catch (jsonError) {
-        console.error('Error parsing or processing OpenAI response:', jsonError, 'Content:', content);
+        console.error('Error parsing OpenAI response:', jsonError, 'Content:', content);
         
         // Try to extract JSON from the response if it's wrapped in markdown or other text
         try {
@@ -332,20 +307,11 @@ export async function POST(req: Request) {
           console.error('Failed to extract JSON from response:', extractError);
         }
         
-        // Use fallback enhancements if there's an error
-        console.log('Using fallback enhancements due to OpenAI error');
-        
-        // Determine workout type and use appropriate fallback
-        let workoutType = workout.type || 'aerobic';
-        
-        // Map 'military' type to the appropriate enhancement
-        if (workoutType === 'military') {
-          return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.military } });
-        } else if (workoutType === 'strength') {
-          return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.strength } });
-        } else {
-          return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.aerobic } });
-        }
+        // Return error instead of fallback
+        return NextResponse.json(
+          { error: 'Failed to parse GPT-4o response. Please try again.' },
+          { status: 500 }
+        );
       }
     } catch (openaiError: any) {
       console.error('OpenAI API error:', openaiError);
@@ -356,47 +322,27 @@ export async function POST(req: Request) {
           openaiError.name === 'AbortError' ||
           openaiError.code === 'ETIMEDOUT') {
         return NextResponse.json(
-          { error: 'OpenAI request timed out. Please try again.' },
+          { error: 'GPT-4o request timed out. Please try again.' },
           { status: 504 }
         );
       }
       
-      // Use fallback enhancements if there's an error
-      console.log('Using fallback enhancements due to OpenAI error');
-      
-      // Determine workout type and use appropriate fallback
-      let workoutType = workout.type || 'aerobic';
-      
-      // Map 'military' type to the appropriate enhancement
-      if (workoutType === 'military') {
-        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.military } });
-      } else if (workoutType === 'strength') {
-        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.strength } });
-      } else {
-        return NextResponse.json({ enhancedWorkout: { ...workout, ...defaultEnhancements.aerobic } });
-      }
+      // Return error instead of fallback
+      return NextResponse.json(
+        { error: 'Error communicating with GPT-4o: ' + openaiError.message, details: 'Please try again later.' },
+        { status: 500 }
+      );
     }
     
   } catch (error: any) {
     console.error('Error enhancing workout details:', error);
     
-    // Always return fallback enhancements on error in production
-    if (process.env.NODE_ENV === 'production') {
-      try {
-        const workout = await req.json().then(body => body.workout).catch(() => ({}));
-        const workoutType = workout?.type || 'aerobic';
-        console.log('Using fallback enhancements due to general error');
-        return NextResponse.json(defaultEnhancements[workoutType as 'aerobic' | 'strength']);
-      } catch (fallbackError) {
-        console.error('Error generating fallback enhancements:', fallbackError);
-      }
-    }
-    
+    // Return error instead of fallback
     return NextResponse.json(
       { 
-        error: 'Failed to enhance workout details',
+        error: 'Failed to enhance workout details with GPT-4o',
         message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        details: 'Please try again later.'
       },
       { status: 500 }
     );

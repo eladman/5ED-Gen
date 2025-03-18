@@ -3,10 +3,5 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["iad1"],
-  "functions": {
-    "src/app/api/**/*": {
-      "maxDuration": 90
-    }
-  }
+  "regions": ["iad1"]
 } 

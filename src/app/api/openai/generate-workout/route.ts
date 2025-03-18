@@ -172,11 +172,22 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    // Check if API key is available
+    // Check if API key is available and valid
     if (!process.env.OPENAI_API_KEY) {
       console.error('OpenAI API key is missing');
       return NextResponse.json(
-        { error: 'מפתח ה-API של OpenAI לא מוגדר' },
+        { error: 'OpenAI API key is not configured' },
+        { status: 500 }
+      );
+    }
+    
+    // Validate API key format (basic check)
+    // Support both standard API keys (sk-...) and project-based API keys (sk-proj-...)
+    if (!(process.env.OPENAI_API_KEY.startsWith('sk-') || process.env.OPENAI_API_KEY.startsWith('sk-proj-')) || 
+        process.env.OPENAI_API_KEY.length < 20) {
+      console.error('OpenAI API key appears to be invalid');
+      return NextResponse.json(
+        { error: 'Invalid OpenAI API key format. Please check your environment variables.' },
         { status: 500 }
       );
     }
@@ -192,7 +203,7 @@ export async function POST(req: Request) {
     } catch (parseError: any) {
       console.error('Error parsing request body:', parseError);
       return NextResponse.json(
-        { error: 'תבנית הבקשה אינה חוקית', details: parseError.message },
+        { error: 'Invalid request format', details: parseError.message },
         { status: 400 }
       );
     }
@@ -201,104 +212,105 @@ export async function POST(req: Request) {
     if (!userAnswers) {
       console.error('Missing userAnswers in request');
       return NextResponse.json(
-        { error: 'חסרות תשובות המשתמש בבקשה' },
+        { error: 'Missing user answers in request' },
         { status: 400 }
       );
     }
 
-    const prompt = `בקשה בעברית - תכניות אימון - יש להשיב בעברית בלבד!
-    תכנן תוכנית אימון מותאמת אישית בשיטת האימון חמישי האצבעות הפיזי-מנטלי בהתבסס על המידע הבא:
-    - מגדר: ${userAnswers.gender || 'לא צוין'}
-    - קבוצת גיל: ${userAnswers.group || 'לא צוין'}
-    - רמת ניסיון: ${userAnswers.experienceLevel || 'לא צוין'}
-    - זמן ריצה 3 ק"מ: ${userAnswers.threeKmTime || 'לא צוין'}
-    - מקסימום מתח: ${userAnswers.pullUps || 'לא צוין'}
-    - מטרת אימון: ${userAnswers.goal || 'לא צוין'}
-    - תדירות אימון שבועית: ${userAnswers.workoutFrequency || '3'} פעמים
+    const prompt = `Generate a personalized workout program using the Five Fingers Physical-Mental Training method based on the following user information:
+    - Gender: ${userAnswers.gender || 'Not specified'}
+    - Age Group: ${userAnswers.group || 'Not specified'}
+    - Experience Level: ${userAnswers.experienceLevel || 'Not specified'}
+    - 3km Run Time: ${userAnswers.threeKmTime || 'Not specified'}
+    - Max Pull-ups: ${userAnswers.pullUps || 'Not specified'}
+    - Training Goal: ${userAnswers.goal || 'Not specified'}
+    - Weekly Workout Frequency: ${userAnswers.workoutFrequency || '3'} times
 
-    חשוב מאוד: התשובה כולה חייבת להיות בעברית בלבד כולל כל שמות השדות והערכים.
+    VERY IMPORTANT: ALL CONTENT MUST BE IN HEBREW (עברית) ONLY. DO NOT USE ANY ENGLISH AT ALL.
+
+    Please generate a comprehensive weekly workout schedule following these guidelines:
     
-    נא ליצור לוח זמנים שבועי מקיף לאימונים על פי ההנחיות הבאות:
+    1. Each workout should be between 45-60 minutes and include:
+       - A 10-minute warm-up (no need to specify the warm-up details)
+       - A structured workout that combines physical effort and mental resilience challenges to build both physical fitness and mental toughness
+       - Exercises that push the user's limits, embracing discomfort as a tool for growth
+       - A mix of strength, endurance, and mental focus challenges
+       - A clear, motivational title that reflects the workout's focus (IN HEBREW)
+       - A specific workout goal that explains the purpose, benefits, and expected outcomes (IN HEBREW)
+       - Precise intensity level (קל/בינוני/גבוה)
+       - Accurate duration (between 45-60 minutes total)
     
-    1. כל אימון צריך להיות בין 45-60 דקות ולכלול:
-       - חימום של 10 דקות (אין צורך לפרט את פרטי החימום)
-       - אימון מובנה המשלב מאמץ פיזי ואתגרי חוסן מנטלי כדי לבנות כושר גופני וקשיחות מנטלית
-       - תרגילים הדוחפים את גבולות המשתמש, אימוץ אי-נוחות ככלי לצמיחה
-       - שילוב של אתגרי כוח, סיבולת ומיקוד מנטלי
-       - כותרת ברורה ומעוררת מוטיבציה המשקפת את מוקד האימון
-       - מטרת אימון ספציפית המסבירה את המטרה, היתרונות והתוצאות הצפויות
-       - רמת עצימות מדויקת (קל/בינוני/גבוה)
-       - משך זמן מדויק (בין 45-60 דקות בסך הכל)
+    2. For each exercise, include:
+       - Exact repetitions, sets, and timing (IN HEBREW)
+       - Moments that challenge mental strength — such as holding positions under fatigue, maintaining focus under pressure, or setting and achieving small targets during workouts
+       - Specific rest periods between sets (IN HEBREW)
     
-    2. עבור כל תרגיל, כלול:
-       - חזרות, סטים ותזמון מדויקים
-       - רגעים המאתגרים חוזק מנטלי — כגון החזקת עמדות תחת עייפות, שמירה על מיקוד תחת לחץ, או הגדרה והשגה של יעדים קטנים במהלך האימונים
-       - זמני מנוחה ספציפיים בין סטים
-    
-    3. ודא שהתוכנית עוקבת אחר העקרונות הבאים:
-       - המשתמש כבר מבצע שני אימוני חמישי האצבעות אינטנסיביים מדי שבוע, כך שתוכנית זו צריכה לספק אימון משלים מבלי להעמיס יתר על הגוף
-       - תעדוף תנועות פונקציונליות, תרגילי משקל גוף ויעדים מאתגרים אך ברי השגה
-       - התאמת הקושי לרמת הכושר הנוכחית של המשתמש, עם אפשרויות להגברת העצימות
-       - שילוב רגעים המאתגרים חוזק מנטלי לאורך האימונים
-       - איזון בין קבוצות שרירים שונות לאורך השבוע
-       - התחשבות ברמת הניסיון של המשתמש לבחירת תרגילים
-       - התאמה למטרות הספציפיות של המשתמש (הכנה צבאית, שיפור אירובי, בניית כוח)
+    3. Ensure the program follows these principles:
+       - The user already performs two intense Five Fingers workouts per week, so this program should provide complementary training without overloading their body
+       - Prioritize functional movements, bodyweight exercises, and challenging yet achievable goals
+       - Adapt the difficulty to suit the user's current fitness level, with options to scale intensity
+       - Incorporate moments that challenge mental strength throughout the workouts
+       - Balance different muscle groups throughout the week
+       - Consider the user's experience level for exercise selection
+       - Align with the user's specific goals (military preparation, aerobic improvement, strength building)
     ${userAnswers.goal === 'army' ? `
-    4. חשוב - מכיוון שהמשתמש בחר ב"הכנה לצבא" כמטרה שלו:
-       - ליצור אימונים בסגנון צבאי אינטנסיביים המכינים ספציפית למבחני כושר של צה"ל וכושר קרבי
-       - לכלול תרגילים המדמים פעילויות צבאיות כגון זחילה, ספרינטים בשטח משתנה (כולל חול אם אפשר), נשיאת חפצים כבדים ומרכיבי מסלול מכשולים
-       - להתמקד בבניית סיבולת, כוח נפיצות וחוסן מנטלי תחת לחץ
-       - לשלב אימון אינטרוולים עם זמני מנוחה מינימליים כדי לדמות לחץ קרבי
-       - לכלול תרגילים הבונים חוזק פלג גוף עליון לפעילויות כמו טיפוס ומשיכה
-       - להוסיף תרגילי דריל בסגנון צבאי כמו זחילת דוב, זחילות נמוכות, זחילות גבוהות ותנועות טקטיות
-       - להבטיח שהאימונים בונים יכולת אנאירובית ואירובית הנדרשת למבחני כושר צבאיים
-       - לכלול תרגילי שותפים כאשר אפשר כדי לדמות פעילויות צבאיות מבוססות צוות
-       - לתכנן אימונים עם עצימות פרוגרסיבית להכנה לדרישות הפיזיות של הטירונות
-       - להתמקד בחוזק וייצוב הליבה שהם חיוניים לפעילויות צבאיות` : ''}
+    4. IMPORTANT - Since the user selected "הכנה לצבא" (Military Preparation) as their goal:
+       - Create intense, military-style training workouts that specifically prepare for IDF physical tests and combat fitness
+       - Include exercises that mimic military activities such as crawling, sprinting on varied terrain (including sand if possible), carrying heavy objects, and obstacle course elements
+       - Focus on building endurance, explosive power, and mental resilience under pressure
+       - Incorporate interval training with minimal rest periods to simulate combat stress
+       - Include exercises that build upper body strength for activities like climbing and pulling
+       - Add specific military-style drills like bear crawls, low crawls, high crawls, and tactical movements
+       - Ensure workouts build both anaerobic and aerobic capacity needed for military fitness tests
+       - Include partner exercises when possible to simulate team-based military activities
+       - Design workouts with progressive intensity to prepare for the physical demands of basic training
+       - Focus on core strength and stability which is essential for military activities` : ''}
     
-    ${userAnswers.goal === 'army' ? '5' : '4'}. עבור כל אימון, כלול גם:
-       - ציוד נדרש (אם יש)
-       - זמן מנוחה מומלץ בין תרגילים
-       - מדדי ביצוע למעקב אחר התקדמות
+    ${userAnswers.goal === 'army' ? '5' : '4'}. For each workout, also include:
+       - Equipment needed (if any) (IN HEBREW)
+       - Recommended resting time between exercises (IN HEBREW)
+       - Performance metrics to track progress (IN HEBREW)
 
-    פרמט את התשובה כאובייקט JSON עם מערך 'אימונים', כאשר כל אימון מכיל:
+    REMINDER: ALL CONTENT MUST BE IN HEBREW (עברית) ONLY.
+
+    Format the response as a JSON object with a 'workouts' array, where each workout contains:
     {
-      "אימונים": [
+      "workouts": [
         {
-          "מספר_אימון": "מספר (מספר האימון)",
-          "סוג": "אירובי" או "כוח",
-          "כותרת": "מחרוזת (כותרת ברורה ומעוררת מוטיבציה)",
-          "ציוד": "מחרוזת (ציוד נדרש, אם יש)",
-          "תרגילים": ["מערך של תיאורי תרגילים מפורטים עם סטים, חזרות והנחיות צורה"],
-          "משך": "מחרוזת (בדקות, בין 45-60 דקות)",
-          "עצימות": "קל" או "בינוני" או "גבוה",
-          "מטרת_אימון": "מחרוזת המתארת את המטרה הספציפית, היתרונות והתוצאות הצפויות",
-          "תרגילים_מורחבים": [
+          "workoutNumber": "number (workout number)",
+          "type": "aerobic" or "strength",
+          "title": "string (clear, motivational title IN HEBREW)",
+          "equipment": "string (equipment needed, if any IN HEBREW)",
+          "exercises": ["array of detailed exercise descriptions with sets, reps, and form cues IN HEBREW"],
+          "duration": "string (in minutes, between 45-60 minutes)",
+          "intensity": "קל" or "בינוני" or "גבוה",
+          "workoutGoal": "string describing the specific purpose, benefits, and expected outcomes IN HEBREW",
+          "enhancedExercises": [
             {
-              "זמן_מנוחה": "מחרוזת (לדוגמה, '30 שניות', 'דקה אחת')"
+              "restingTime": "string (e.g., '30 seconds', '1 minute' IN HEBREW)"
             }
           ]
         }
       ]
     }
 
-    חשוב מאוד: כל הטקסט בתשובה חייב להיות בעברית בלבד, כולל כל שמות השדות והערכים.
-    ודא שהאימונים הם גם תובעניים פיזית וגם מאתגרים מנטלית, מטפחים חוסן, מיקוד ושיפור עצמי.`;
+    Ensure the workouts are both physically demanding and mentally challenging, fostering resilience, focus, and self-improvement. ALL TEXT MUST BE IN HEBREW.`;
 
     console.log('Sending request to OpenAI');
     
+    // Set a timeout for the OpenAI request
+    const timeoutMs = 60000; // Increase to 60 seconds
+    
     try {
-      // Set a timeout for the OpenAI request
-      const timeoutMs = 40000; // Increased from 25000 to 40000 ms (40 seconds)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o", // Using GPT-4o exclusively
         messages: [
           {
             role: "system",
-            content: "אתה מאמן כושר עילית בעל מומחיות בשיטת האימון החמישי האצבעות הפיזי-מנטלי, פיזיולוגיה של אימון, מדעי הספורט, ואימון מותאם אישית. ההתמחות שלך היא ביצירת תוכניות אימון מקצועיות ומבוססות ראיות המותאמות לצרכים ויעדים אישיים המשלבות אתגר פיזי עם בניית חוסן מנטלי. כל תוכנית אימון שאתה יוצר מובנית בקפידה עם התקדמות נכונה, תקופתיות, והתאוששות, תוך שילוב אתגרים מנטליים המטפחים חוסן, מיקוד, ושיפור עצמי. יש לך ניסיון רב באימון הכנה צבאית, כולל דרישות כושר קרבי של צה״ל, מבחני כושר צבאיים, ואימון טקטי. זכור שהמשתמש גם עושה 2 אימוני צוות חמישי האצבעות אינטנסיביים בכל שבוע. חשוב מאוד: אתה חייב להגיב רק בעברית, כולל כל שמות השדות והערכים ב-JSON. הגב רק עם JSON תקין הכולל מערך 'אימונים' או 'workouts'."
+            content: "You are an elite fitness coach with expertise in the Five Fingers Physical-Mental Training method, exercise physiology, sports science, and personalized training. Your specialty is creating professional, evidence-based workout programs tailored to individual needs and goals that combine physical challenge with mental resilience building. Each workout plan you create is meticulously structured with proper progression, periodization, and recovery, while also incorporating mental challenges that foster resilience, focus, and self-improvement. You have extensive experience in military preparation training, including IDF combat fitness requirements, military physical tests, and tactical conditioning. Keep in mind that the user is also doing 2 intense Five Fingers team workouts every week. VERY IMPORTANT: All workout titles, exercises, descriptions and content MUST be in Hebrew (עברית) only. Keep descriptions concise but effective - too much text can cause timeout errors. Respond only with valid JSON that includes a 'workouts' array."
           },
           {
             role: "user",
@@ -317,113 +329,28 @@ export async function POST(req: Request) {
       if (!content) {
         console.error('No content received from OpenAI');
         return NextResponse.json(
-          { error: 'לא התקבל תוכן מ-OpenAI' },
+          { error: 'No content received from GPT-4o. Please try again.' },
           { status: 500 }
         );
       }
 
-      // Fallback to predefined workouts if parsing fails
+      // Try to parse the response
       try {
         const workoutProgram = JSON.parse(content);
         console.log('Successfully parsed OpenAI response');
         
-        // Validate the response structure and ensure Hebrew output
-        if (!workoutProgram.workouts && !workoutProgram.אימונים) {
-          console.error('Invalid response structure from OpenAI, missing workouts array:', workoutProgram);
-          
-          // Try to fix the structure - if there's any array that might be the workouts
-          const possibleWorkoutsArrays = Object.values(workoutProgram).filter(val => Array.isArray(val));
-          if (possibleWorkoutsArrays.length > 0) {
-            // Use the first array found as workouts
-            workoutProgram.אימונים = possibleWorkoutsArrays[0];
-          } else {
-            throw new Error('Invalid response structure: No workouts array found');
-          }
+        // Validate the response structure
+        if (!workoutProgram.workouts || !Array.isArray(workoutProgram.workouts)) {
+          console.error('Invalid response structure from OpenAI:', workoutProgram);
+          return NextResponse.json(
+            { error: 'GPT-4o returned an invalid response structure. Please try again.' },
+            { status: 500 }
+          );
         }
         
-        // Ensure we have a Hebrew-named array
-        if (workoutProgram.workouts && !workoutProgram.אימונים) {
-          workoutProgram.אימונים = workoutProgram.workouts;
-          delete workoutProgram.workouts;
-        }
-        
-        // Transform any English field names to Hebrew for each workout
-        const hebrewFieldMap = {
-          'workoutNumber': 'מספר_אימון',
-          'type': 'סוג',
-          'title': 'כותרת',
-          'equipment': 'ציוד',
-          'exercises': 'תרגילים',
-          'duration': 'משך',
-          'intensity': 'עצימות',
-          'workoutGoal': 'מטרת_אימון',
-          'enhancedExercises': 'תרגילים_מורחבים',
-          'restingTime': 'זמן_מנוחה'
-        };
-        
-        // Type values translation
-        const typeTranslation = {
-          'aerobic': 'אירובי',
-          'strength': 'כוח'
-        };
-        
-        // Intensity values translation
-        const intensityTranslation = {
-          'easy': 'קל',
-          'medium': 'בינוני',
-          'hard': 'גבוה',
-          'light': 'קל',
-          'moderate': 'בינוני',
-          'high': 'גבוה'
-        };
-        
-        // Process each workout to ensure Hebrew fields and values
-        if (workoutProgram.אימונים && Array.isArray(workoutProgram.אימונים)) {
-          workoutProgram.אימונים = workoutProgram.אימונים.map((workout: any) => {
-            const hebrewWorkout: any = {};
-            
-            // Transform field names to Hebrew
-            Object.entries(workout).forEach(([key, value]) => {
-              const hebrewKey = hebrewFieldMap[key as keyof typeof hebrewFieldMap] || key;
-              let processedValue = value;
-              
-              // Special handling for type field - translate values if needed
-              if (key === 'type' || key === 'סוג') {
-                const englishType = String(value).toLowerCase();
-                processedValue = typeTranslation[englishType as keyof typeof typeTranslation] || value;
-              }
-              
-              // Special handling for intensity field - translate values if needed
-              if (key === 'intensity' || key === 'עצימות') {
-                const englishIntensity = String(value).toLowerCase();
-                processedValue = intensityTranslation[englishIntensity as keyof typeof intensityTranslation] || value;
-              }
-              
-              hebrewWorkout[hebrewKey] = processedValue;
-            });
-            
-            // Process nested enhancedExercises array if it exists
-            if (hebrewWorkout.תרגילים_מורחבים && Array.isArray(hebrewWorkout.תרגילים_מורחבים)) {
-              hebrewWorkout.תרגילים_מורחבים = hebrewWorkout.תרגילים_מורחבים.map((exercise: any) => {
-                const hebrewExercise: any = {};
-                
-                Object.entries(exercise).forEach(([key, value]) => {
-                  const hebrewKey = hebrewFieldMap[key as keyof typeof hebrewFieldMap] || key;
-                  hebrewExercise[hebrewKey] = value;
-                });
-                
-                return hebrewExercise;
-              });
-            }
-            
-            return hebrewWorkout;
-          });
-        }
-        
-        console.log('Processed response to ensure Hebrew fields');
         return NextResponse.json(workoutProgram);
       } catch (jsonError) {
-        console.error('Error parsing or processing OpenAI response:', jsonError, 'Content:', content);
+        console.error('Error parsing OpenAI response:', jsonError, 'Content:', content);
         
         // Try to extract JSON from the response if it's wrapped in markdown or other text
         try {
@@ -442,15 +369,11 @@ export async function POST(req: Request) {
           console.error('Failed to extract JSON from response:', extractError);
         }
         
-        // Fallback to predefined workouts
-        const frequency = userAnswers.workoutFrequency || 3;
-        const fallbackWorkouts = generateWorkoutSchedule(
-          Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5,
-          userAnswers.goal
+        // Return error instead of fallback
+        return NextResponse.json(
+          { error: 'Failed to parse GPT-4o response. Please try again.' },
+          { status: 500 }
         );
-        
-        console.log('Using fallback workouts');
-        return NextResponse.json({ workouts: fallbackWorkouts });
       }
     } catch (openaiError: any) {
       console.error('OpenAI API error:', openaiError);
@@ -460,47 +383,29 @@ export async function POST(req: Request) {
           openaiError.type === 'request_timeout' ||
           openaiError.name === 'AbortError' ||
           openaiError.code === 'ETIMEDOUT') {
+        console.error('Request timed out after', timeoutMs/1000, 'seconds');
         return NextResponse.json(
-          { error: 'OpenAI request timed out. Please try again.' },
+          { error: 'GPT-4o request timed out. Please try again.' },
           { status: 504 }
         );
       }
       
-      // Fallback to predefined workouts
-      const frequency = userAnswers.workoutFrequency || 3;
-      const fallbackWorkouts = generateWorkoutSchedule(
-        Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5,
-        userAnswers.goal
+      // Return error instead of fallback
+      return NextResponse.json(
+        { error: 'Error communicating with GPT-4o: ' + openaiError.message, details: 'Please try again later.' },
+        { status: 500 }
       );
-      
-      console.log('Using fallback workouts due to OpenAI error');
-      return NextResponse.json({ workouts: fallbackWorkouts });
     }
     
   } catch (error: any) {
     console.error('Error generating workout program:', error);
     
-    // Always return fallback workouts on error in production
-    if (process.env.NODE_ENV === 'production') {
-      try {
-        const userAnswers = await req.json().then(body => body.userAnswers).catch(() => ({}));
-        const frequency = userAnswers?.workoutFrequency || 3;
-        const fallbackWorkouts = generateWorkoutSchedule(
-          Math.min(Math.max(frequency, 2), 5) as 2 | 3 | 4 | 5,
-          userAnswers.goal
-        );
-        console.log('Using fallback workouts due to general error');
-        return NextResponse.json({ workouts: fallbackWorkouts });
-      } catch (fallbackError) {
-        console.error('Error generating fallback workouts:', fallbackError);
-      }
-    }
-    
+    // Return error instead of fallback
     return NextResponse.json(
       { 
-        error: 'Failed to generate workout program',
+        error: 'Failed to generate workout program with GPT-4o',
         message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        details: 'Please try again later.'
       },
       { status: 500 }
     );

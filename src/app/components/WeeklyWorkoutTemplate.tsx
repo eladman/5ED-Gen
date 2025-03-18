@@ -191,7 +191,7 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
     }
   }, [userAnswers]);
 
-  const generateWorkoutProgram = async (retryCount = 0, maxRetries = 2) => {
+  const generateWorkoutProgram = async (retryCount = 0, maxRetries = 3) => {
     setLoading(true);
     
     try {
@@ -201,40 +201,51 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ userAnswers }),
-        signal: AbortSignal.timeout(60000)
+        signal: AbortSignal.timeout(90000)
       });
 
       if (!response.ok) {
-        if (response.status === 504) {
-          console.error('Request timed out');
+        const errorData = await response.json().catch(() => ({}));
+        
+        if (response.status === 504 || errorData?.error?.includes('timeout') || errorData?.error?.includes('aborted')) {
+          console.error('Request timed out or aborted');
           if (retryCount < maxRetries) {
-            toast.loading(`ניסיון נוסף... (${retryCount + 1}/${maxRetries + 1})`);
+            toast.loading(`ניסיון נוסף... (${retryCount + 1}/${maxRetries + 1})`, { duration: 3000 });
+            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
             return generateWorkoutProgram(retryCount + 1, maxRetries);
           } else {
-            toast.error('בקשה לשרת נכשלה בגלל זמן תגובה ארוך. אנא נסה שוב.');
+            toast.error('בקשה לשרת נכשלה בגלל זמן תגובה ארוך. אנא נסה שוב מאוחר יותר.');
+            if (userAnswers.goal === 'army') {
+              setWorkoutSchedule(generateWorkoutSchedule(userAnswers.workoutFrequency, 'army'));
+              toast.success('נוצרה תוכנית אימונים בסיסית (ללא AI) כמוצא אחרון');
+            } else {
+              setWorkoutSchedule(generateWorkoutSchedule(userAnswers.workoutFrequency));
+              toast.success('נוצרה תוכנית אימונים בסיסית (ללא AI) כמוצא אחרון');
+            }
             setLoading(false);
             return;
           }
         }
-      }
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        if (data.error && (
-            data.error.includes('API key') || 
-            data.error.includes('authentication') || 
-            data.message?.includes('API key') ||
-            data.message?.includes('authentication')
+        
+        if (errorData.error && (
+            errorData.error.includes('API key') || 
+            errorData.error.includes('authentication') || 
+            errorData.error.includes('401') ||
+            errorData.error.includes('Incorrect API key') ||
+            errorData.message?.includes('API key') ||
+            errorData.message?.includes('authentication') ||
+            errorData.details?.includes('API key')
           )) {
-          console.error('OpenAI API key error:', data);
-          toast.error('שגיאת אימות מול שרת ה-AI. אנא פנה למנהל המערכת.');
+          console.error('OpenAI API key error:', errorData);
+          toast.error('שגיאת אימות מול שרת ה-AI. אנא פנה למנהל המערכת לבדיקת מפתח ה-API.');
           setLoading(false);
           return;
         }
         
-        throw new Error(data.message || data.error || 'אירעה שגיאה ביצירת תוכנית האימונים');
+        throw new Error(errorData.message || errorData.error || 'אירעה שגיאה ביצירת תוכנית האימונים');
       }
+
+      const data = await response.json();
 
       if (!data.workouts || !Array.isArray(data.workouts)) {
         console.error('Invalid response format:', data);
@@ -244,11 +255,34 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
       setWorkoutSchedule(data.workouts);
     } catch (error: any) {
       console.error('Error generating workout program:', error);
-      toast.error('לא ניתן ליצור תוכנית אימונים כרגע, אנא נסה שוב מאוחר יותר');
-      // Use fallback workout schedule for any error
-      const fallbackSchedule = generateWorkoutSchedule(userAnswers.workoutFrequency, userAnswers.goal);
-      setWorkoutSchedule(fallbackSchedule);
-      toast.success('נוצרה תוכנית אימונים בסיסית');
+      
+      if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+        if (retryCount < maxRetries) {
+          toast.loading(`ניסיון נוסף... (${retryCount + 1}/${maxRetries + 1})`, { duration: 3000 });
+          return generateWorkoutProgram(retryCount + 1, maxRetries);
+        } else {
+          if (userAnswers.goal === 'army') {
+            setWorkoutSchedule(generateWorkoutSchedule(userAnswers.workoutFrequency, 'army'));
+            toast.success('נוצרה תוכנית אימונים בסיסית (ללא AI) כמוצא אחרון');
+          } else {
+            setWorkoutSchedule(generateWorkoutSchedule(userAnswers.workoutFrequency));
+            toast.success('נוצרה תוכנית אימונים בסיסית (ללא AI) כמוצא אחרון');
+          }
+        }
+      } else if (error.message && (
+          error.message.includes('API key') || 
+          error.message.includes('authentication') ||
+          error.message.includes('401') ||
+          error.message.includes('Incorrect API key')
+        )) {
+        toast.error('שגיאת אימות מול שרת ה-AI. אנא פנה למנהל המערכת לבדיקת מפתח ה-API.');
+      } else if (error.message.includes('GPT-4o')) {
+        toast.error('שגיאה בעת יצירת תוכנית אימונים עם GPT-4o. אנא נסה שוב מאוחר יותר.');
+      } else {
+        toast.error('לא ניתן ליצור תוכנית אימונים כרגע, אנא נסה שוב מאוחר יותר');
+      }
+      
+      setWorkoutSchedule([]);
     } finally {
       setLoading(false);
     }
