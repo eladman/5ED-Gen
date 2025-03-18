@@ -250,7 +250,7 @@ export async function POST(req: Request) {
       VERY IMPORTANT: ALL CONTENT MUST BE IN HEBREW (עברית) ONLY.`;
       
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // Using GPT-4o-mini for enhanced workout generation
+        model: "gpt-4o", // Using GPT-4o for better exercise enhancement
         messages: [
           {
             role: "system",

@@ -386,7 +386,7 @@ export async function POST(req: Request) {
       console.log('Calling OpenAI');
       
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // Using GPT-4o-mini for workout generation
+        model: "gpt-4o", // Using GPT-4o for better workout generation
         messages: [
           {
             role: "system",
