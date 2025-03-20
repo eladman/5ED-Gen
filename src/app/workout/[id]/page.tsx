@@ -698,33 +698,27 @@ export default function WorkoutDetails() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="container-custom pt-32 pb-16">
       {/* Header Section */}
-      <div className="relative mb-12 overflow-hidden rounded-2xl bg-gradient-to-r from-[#ff8714] to-[#e67200] py-10 px-8 shadow-lg">
-        <div className="absolute top-0 right-0 w-64 h-64 -mr-20 -mt-20 rounded-full opacity-20 bg-white"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 -ml-20 -mb-20 rounded-full opacity-10 bg-white"></div>
-        <div className="relative z-10">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3 text-white">
-            תוכנית אימונים <span className="text-white">שבועית</span>
-          </h1>
-          <div className="w-24 h-1 bg-white rounded-full mb-4"></div>
-          <p className="text-white/90 max-w-2xl">
-            תוכנית אימונים מותאמת אישית שנבנתה במיוחד עבורך, בהתאם ליכולות ולמטרות שלך.
-          </p>
-        </div>
-      </div>
-      
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col items-center mb-12">
+        <h1 className="heading-2 mb-6 text-center">
+          תוכנית אימונים שבועית
+        </h1>
+        <div className="w-24 h-1 bg-[#ff8714] rounded-full mb-6"></div>
+        <p className="text-gray-600 text-center max-w-2xl mb-8">
+          תוכנית אימונים מותאמת אישית שנבנתה במיוחד עבורך, בהתאם ליכולות ולמטרות שלך.
+        </p>
+        
         <button
           onClick={() => router.push('/programs')}
-          className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-all bg-[#ff8714] hover:bg-[#e67200] shadow-md"
+          className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-all bg-[#ff8714] hover:bg-[#e67200]"
         >
           <FaArrowRight className="w-5 h-5" />
           <span>חזור לתוכניות</span>
         </button>
         
         {isSaving && (
-          <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-md border border-green-200">
+          <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-md border border-green-200">
             <div className="w-4 h-4 border-2 border-t-green-500 border-r-green-500 border-b-green-200 border-l-green-200 rounded-full animate-spin"></div>
             <span>שומר שינויים...</span>
           </div>
@@ -733,26 +727,24 @@ export default function WorkoutDetails() {
 
       {/* User Profile Card */}
       {workout && workout.userAnswers && (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-10 border border-gray-200">
-          <div className="p-0">
-            <div className="flex items-center bg-gradient-to-r from-[#ff8714] to-[#e67200] p-6">
-              <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mr-5">
-                <FaBullseye className="text-white w-7 h-7" />
-              </div>
-              <div>
-                <h2 className="text-lg text-white/80 font-medium mb-1">מטרת התוכנית</h2>
-                <h3 className="text-2xl font-bold text-white">
-                  {workout.userAnswers.goal === 'army' 
-                    ? 'הכנה לצבא' 
-                    : workout.userAnswers.goal === 'aerobic' 
-                      ? 'שיפור יכולת אירובית' 
-                      : workout.userAnswers.goal === 'strength' 
-                        ? 'חיזוק ובניית שרירים' 
-                        : workout.userAnswers.goal === 'weight' 
-                          ? 'ירידה במשקל' 
-                          : workout.userAnswers.goal || 'שיפור כושר כללי'}
-                </h3>
-              </div>
+        <div className="bg-gradient-to-r from-[#fff5eb] to-white rounded-lg p-5 mb-8 border border-[#ffead3]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#ff8714] rounded-full flex items-center justify-center flex-shrink-0">
+              <FaBullseye className="text-white w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-800 mb-1">מטרת התוכנית</h4>
+              <p className="font-medium text-gray-700">
+                {workout.userAnswers.goal === 'army' 
+                  ? 'הכנה לצבא' 
+                  : workout.userAnswers.goal === 'aerobic' 
+                    ? 'שיפור יכולת אירובית' 
+                    : workout.userAnswers.goal === 'strength' 
+                      ? 'חיזוק ובניית שרירים' 
+                      : workout.userAnswers.goal === 'weight' 
+                        ? 'ירידה במשקל' 
+                        : workout.userAnswers.goal || 'שיפור כושר כללי'}
+              </p>
             </div>
           </div>
         </div>
@@ -770,58 +762,55 @@ export default function WorkoutDetails() {
             return (
               <div 
                 key={index}
-                className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 hover:shadow-xl transition-all duration-300"
+                className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 hover:shadow-md transition-all duration-300"
               >
                 {/* Header */}
-                <div className={`relative p-6 bg-gradient-to-r from-[#ff8714] to-[#e67200]`}>
-                  <div className="absolute top-0 right-0 w-32 h-32 -mr-10 -mt-10 rounded-full opacity-20 bg-white"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                          {workoutDay.type === 'aerobic' ? (
-                            <FaRunning className="w-6 h-6 text-white" />
-                          ) : workoutDay.type === 'strength' ? (
-                            <FaDumbbell className="w-6 h-6 text-white" />
-                          ) : (
-                            <FaBullseye className="w-6 h-6 text-white" />
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-xl text-white">{translateToHebrew(workoutDay.title || '')}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-white/80 text-sm">אימון {index + 1}</span>
-                            <span className="w-1 h-1 rounded-full bg-white/60"></span>
-                            <span className="text-white/80 text-sm">{workoutDay.duration || '45 דקות'}</span>
-                          </div>
+                <div className="p-6 bg-[#fff5eb] border-b border-[#ffead3]">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#ff8714] flex items-center justify-center">
+                        {workoutDay.type === 'aerobic' ? (
+                          <FaRunning className="w-5 h-5 text-white" />
+                        ) : workoutDay.type === 'strength' ? (
+                          <FaDumbbell className="w-5 h-5 text-white" />
+                        ) : (
+                          <FaBullseye className="w-5 h-5 text-white" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-xl text-gray-800">{translateToHebrew(workoutDay.title || '')}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-gray-500 text-sm">אימון {index + 1}</span>
+                          <span className="w-1 h-1 rounded-full bg-gray-400"></span>
+                          <span className="text-gray-500 text-sm">{workoutDay.duration || '45 דקות'}</span>
                         </div>
                       </div>
-                      <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${
-                        workoutDay.intensity === 'קל' 
-                          ? 'bg-green-100 text-green-800' 
-                          : workoutDay.intensity === 'בינוני' 
-                            ? 'bg-yellow-100 text-yellow-800' 
-                            : 'bg-red-100 text-red-800'
-                      }`}>
-                        {workoutDay.intensity || 'בינוני'}
-                      </span>
                     </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      workoutDay.intensity === 'קל' 
+                        ? 'bg-green-100 text-green-800' 
+                        : workoutDay.intensity === 'בינוני' 
+                          ? 'bg-yellow-100 text-yellow-800' 
+                          : 'bg-red-100 text-red-800'
+                    }`}>
+                      {workoutDay.intensity || 'בינוני'}
+                    </span>
                   </div>
                 </div>
                 
                 {/* Workout Goal */}
                 {enhancingWorkout[index] ? (
-                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 animate-pulse">
+                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 animate-pulse">
                     <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
                     <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                   </div>
                 ) : workoutDay.workoutGoal && (
-                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                  <div className="px-6 py-4 bg-white border-b border-gray-100">
                     <div className="flex items-start gap-2">
                       <FaBullseye className="w-5 h-5 text-[#ff8714] mt-0.5 flex-shrink-0" />
                       <div>
                         <h4 className="font-bold text-gray-800 text-sm">מטרת האימון:</h4>
-                        <p className="text-gray-700 text-sm mt-1">{workoutDay.workoutGoal}</p>
+                        <p className="text-gray-600 text-sm mt-1">{workoutDay.workoutGoal}</p>
                       </div>
                     </div>
                   </div>
@@ -837,7 +826,7 @@ export default function WorkoutDetails() {
                     <span>תרגילים</span>
                   </h4>
                   
-                  <ul className="space-y-4">
+                  <ul className="space-y-3">
                     {Array.isArray(workoutDay.exercises) && workoutDay.exercises
                       .filter(exercise => exercise && !isWarmupOrCooldown(exercise))
                       .map((exercise, i) => {
@@ -847,18 +836,13 @@ export default function WorkoutDetails() {
                         const enhancedExercise = safelyFindEnhancedExercise(workoutDay.enhancedExercises, exerciseName);
                         
                         return (
-                          <li key={i} className="border border-gray-200 rounded-lg overflow-hidden">
-                            {/* Exercise Header */}
-                            <div 
-                              className="p-4 bg-[#fff5eb] flex justify-between items-center hover:bg-[#ffefe0] transition-colors"
-                            >
-                              <div className="flex items-start gap-3">
-                                <div className="w-6 h-6 rounded-full bg-[#ff8714] text-white flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
-                                  {i + 1}
-                                </div>
-                                <div>
-                                  <p className="font-medium text-gray-800">{typeof exercise === 'string' ? exercise : JSON.stringify(exercise)}</p>
-                                </div>
+                          <li key={i} className="border border-gray-100 rounded-lg p-4 hover:bg-[#fff5eb] transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 rounded-full bg-[#ff8714] text-white flex items-center justify-center text-sm flex-shrink-0">
+                                {i + 1}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-800">{typeof exercise === 'string' ? exercise : JSON.stringify(exercise)}</p>
                               </div>
                             </div>
                           </li>
