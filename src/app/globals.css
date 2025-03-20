@@ -48,4 +48,37 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  
+  .section-padding {
+    @apply px-4 md:px-8;
+  }
+  
+  .container-custom {
+    @apply max-w-7xl mx-auto w-full;
+  }
+  
+  .heading-1 {
+    @apply text-4xl md:text-5xl font-bold leading-tight;
+  }
+  
+  .heading-2 {
+    @apply text-3xl md:text-4xl font-bold;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#ff8714] to-[#ffa149];
+  }
+  
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-lg bg-[#ff8714] hover:bg-[#e67200] transition-colors duration-200 text-white font-semibold shadow-sm;
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 }
