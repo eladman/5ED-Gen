@@ -151,7 +151,7 @@ function generateWorkoutSchedule(frequency: 2 | 3 | 4 | 5, goal?: string) {
         day: (i + 1).toString()
       });
     } else {
-      // Standard alternating workout pattern for other goals
+      // Standard alternating workout pattern for other goals - more athlete-focused
       const isStrengthDay = i % 2 === 1;
       const workoutTemplates = isStrengthDay ? strengthWorkouts : aerobicWorkouts;
       const randomWorkout = workoutTemplates[Math.floor(Math.random() * workoutTemplates.length)];
@@ -264,9 +264,20 @@ export async function POST(req: Request) {
        - Ensure workouts build both anaerobic and aerobic capacity needed for military fitness tests
        - Include partner exercises when possible to simulate team-based military activities
        - Design workouts with progressive intensity to prepare for the physical demands of basic training
-       - Focus on core strength and stability which is essential for military activities` : ''}
+       - Focus on core strength and stability which is essential for military activities` : `
+    4. IMPORTANT - Create athlete-style training workouts that focus on:
+       - Building overall functional strength, endurance, and mobility
+       - Developing athletic performance with balanced full-body training
+       - Incorporating compound movements that engage multiple muscle groups
+       - Including progressive overload principles to continuously improve performance
+       - Adding athletic movements like jumping, sprinting, and dynamic exercises
+       - Focusing on proper form and technique to maximize results and prevent injury
+       - Developing core stability and rotational strength for athletic movement
+       - Including mobility work to improve range of motion and prevent injury
+       - Adding periodized training to optimize performance gains
+       - Developing sports-specific skills based on the user's preferences and goals`}
     
-    ${userAnswers.goal === 'army' ? '5' : '4'}. For each workout, also include:
+    ${userAnswers.goal === 'army' ? '5' : '5'}. For each workout, also include:
        - Equipment needed (if any) (IN HEBREW)
        - Recommended resting time between exercises (IN HEBREW)
        - Performance metrics to track progress (IN HEBREW)
@@ -306,7 +317,7 @@ export async function POST(req: Request) {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       // System message
-      const systemMessage = "You are an elite fitness coach with expertise in the Five Fingers Physical-Mental Training method, exercise physiology, sports science, and personalized training. Your specialty is creating professional, evidence-based workout programs tailored to individual needs and goals that combine physical challenge with mental resilience building. Each workout plan you create is meticulously structured with proper progression, periodization, and recovery, while also incorporating mental challenges that foster resilience, focus, and self-improvement. You have extensive experience in military preparation training, including IDF combat fitness requirements, military physical tests, and tactical conditioning. Keep in mind that the user is also doing 2 intense Five Fingers team workouts every week. VERY IMPORTANT: All workout titles, exercises, descriptions and content MUST be in Hebrew (עברית) only. Respond only with valid JSON that includes a 'workouts' array.";
+      const systemMessage = "You are an elite fitness coach with expertise in the Five Fingers Physical-Mental Training method, exercise physiology, sports science, and personalized training. Your specialty is creating professional, evidence-based workout programs tailored to individual needs and goals that combine physical challenge with mental resilience building. Each workout plan you create is meticulously structured with proper progression, periodization, and recovery. Keep in mind that the user is also doing 2 intense Five Fingers team workouts every week. VERY IMPORTANT: All workout titles, exercises, descriptions and content MUST be in Hebrew (עברית) only. Respond only with valid JSON that includes a 'workouts' array.";
 
       // Full detailed prompt
       const detailedPrompt = `Generate a personalized workout program using the Five Fingers Physical-Mental Training method based on the following user information:
@@ -324,9 +335,6 @@ export async function POST(req: Request) {
       
       1. Each workout should be between 45-60 minutes and include:
          - A 10-minute warm-up (no need to specify the warm-up details)
-         - A structured workout that combines physical effort and mental resilience challenges to build both physical fitness and mental toughness
-         - Exercises that push the user's limits, embracing discomfort as a tool for growth
-         - A mix of strength, endurance, and mental focus challenges
          - A clear, motivational title that reflects the workout's focus (IN HEBREW)
          - A specific workout goal that explains the purpose, benefits, and expected outcomes (IN HEBREW)
          - Precise intensity level (קל/בינוני/גבוה)
@@ -334,19 +342,17 @@ export async function POST(req: Request) {
       
       2. For each exercise, include:
          - Exact repetitions, sets, and timing (IN HEBREW)
-         - Moments that challenge mental strength — such as holding positions under fatigue, maintaining focus under pressure, or setting and achieving small targets during workouts
          - Specific rest periods between sets (IN HEBREW)
       
       3. Ensure the program follows these principles:
          - The user already performs two intense Five Fingers workouts per week, so this program should provide complementary training without overloading their body
          - Prioritize functional movements, bodyweight exercises, and challenging yet achievable goals
          - Adapt the difficulty to suit the user's current fitness level, with options to scale intensity
-         - Incorporate moments that challenge mental strength throughout the workouts
          - Balance different muscle groups throughout the week
          - Consider the user's experience level for exercise selection
          - Align with the user's specific goals (military preparation, aerobic improvement, strength building)
       
-      4. IMPORTANT - Since the user selected "הכנה לצבא" (Military Preparation) as their goal:
+      ${userAnswers.goal === 'army' ? `4. IMPORTANT - Since the user selected "הכנה לצבא" (Military Preparation) as their goal:
          - Create intense, military-style training workouts that specifically prepare for IDF physical tests and combat fitness
          - Include exercises that mimic military activities such as crawling, sprinting on varied terrain (including sand if possible), carrying heavy objects, and obstacle course elements
          - Focus on building endurance, explosive power, and mental resilience under pressure
@@ -356,7 +362,17 @@ export async function POST(req: Request) {
          - Ensure workouts build both anaerobic and aerobic capacity needed for military fitness tests
          - Include partner exercises when possible to simulate team-based military activities
          - Design workouts with progressive intensity to prepare for the physical demands of basic training
-         - Focus on core strength and stability which is essential for military activities
+         - Focus on core strength and stability which is essential for military activities` : `4. IMPORTANT - Create athlete-style training workouts that focus on:
+         - Building overall functional strength, endurance, and mobility
+         - Developing athletic performance with balanced full-body training
+         - Incorporating compound movements that engage multiple muscle groups
+         - Including progressive overload principles to continuously improve performance
+         - Adding athletic movements like jumping, sprinting, and dynamic exercises
+         - Focusing on proper form and technique to maximize results and prevent injury
+         - Developing core stability and rotational strength for athletic movement
+         - Including mobility work to improve range of motion and prevent injury
+         - Adding periodized training to optimize performance gains
+         - Developing sports-specific skills based on the user's preferences and goals`}
       
       5. For each workout, also include:
          - Equipment needed (if any) (IN HEBREW)

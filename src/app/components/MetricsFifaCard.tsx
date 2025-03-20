@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { FaRunning, FaBolt, FaDumbbell } from "react-icons/fa";
 import { getProfile } from "@/lib/firebase/profileUtils";
 import Image from "next/image";
+import { threeKRunScore } from "@/lib/fitnessUtils";
 
 interface MetricsFifaCardProps {
   metrics: Metrics;
@@ -21,7 +22,6 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
           const profile = await getProfile(user.uid);
           if (profile) {
             setUserName(profile.name || user.displayName || "");
-            // Use profile photoData first, then fallback to photoURL from profile or user
             if (profile.photoData) {
               setProfileImage(profile.photoData);
             } else if (profile.photoURL) {
@@ -50,13 +50,9 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
       
       if (isNaN(totalSeconds)) return 0;
       
-      // For 3000m run (lower is better)
+      // For 3000m run - use the threeKRunScore function
       if (metricType === '3000m' || value === metrics.run3000m) {
-        if (totalSeconds < 600) return 99; // Under 10 minutes is exceptional
-        if (totalSeconds > 1500) return 40; // Over 25 minutes is below average
-        
-        // Linear scale between 10 and 25 minutes
-        return Math.round(99 - ((totalSeconds - 600) / 900) * 59);
+        return threeKRunScore(minutes, seconds);
       }
       
       // For 400m run (lower is better)
@@ -108,6 +104,15 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
     calculateRating(metrics.sitUps2min, 'reps', 'sitUps')) / 5
   );
 
+  // Calculate category ratings
+  const aerobicRating = calculateRating(metrics.run3000m, 'time', '3000m');
+  const anaerobicRating = calculateRating(metrics.run400m, 'time', '400m');
+  const strengthRating = Math.round(
+    (calculateRating(metrics.pullUps, 'reps', 'pullUps') +
+     calculateRating(metrics.pushUps, 'reps', 'pushUps') +
+     calculateRating(metrics.sitUps2min, 'reps', 'sitUps')) / 3
+  );
+
   // Get rating color based on value
   const getRatingColor = (rating: number) => {
     if (rating >= 90) return "text-green-500";
@@ -116,6 +121,16 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
     if (rating >= 60) return "text-yellow-500";
     if (rating >= 50) return "text-orange-500";
     return "text-red-500";
+  };
+
+  // Get accent color for the card
+  const getAccentColor = (rating: number) => {
+    if (rating >= 90) return "#22c55e"; // green-500
+    if (rating >= 80) return "#4ade80"; // green-400
+    if (rating >= 70) return "#84cc16"; // lime-500
+    if (rating >= 60) return "#eab308"; // yellow-500
+    if (rating >= 50) return "#f97316"; // orange-500
+    return "#ef4444"; // red-500
   };
 
   const formatDate = (dateString: string) => {
@@ -132,206 +147,96 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
   };
 
   return (
-    <div className="relative w-full overflow-hidden rounded-xl">
-      {/* Card Background */}
-      <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg">
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-[#ff8714]/10 border-2 border-white shadow flex items-center justify-center">
-                {profileImage ? (
-                  <Image 
-                    src={profileImage} 
-                    alt={userName || "User"} 
-                    width={48} 
-                    height={48} 
-                    className="object-cover w-full h-full"
-                  />
-                ) : (
-                  <div className="text-[#ff8714] text-xl font-bold">
-                    {userName?.charAt(0) || "U"}
-                  </div>
-                )}
-              </div>
-              <div>
-                <div className="font-bold text-gray-800 text-lg">{userName || "משתמש"}</div>
-                <div className="text-xs text-gray-500">{formatDate(metrics.createdAt)}</div>
-              </div>
-            </div>
-            
-            {/* Overall Rating */}
-            <div className="relative group">
-              <div className="relative w-24 h-24 flex items-center justify-center">
-                {/* Background Circle */}
-                <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 36 36">
-                  <circle
-                    cx="18"
-                    cy="18"
-                    r="15.91549430918954"
-                    fill="none"
-                    stroke="#f3f4f6"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  />
-                  {/* Progress Circle */}
-                  <circle
-                    cx="18"
-                    cy="18"
-                    r="15.91549430918954"
-                    fill="none"
-                    stroke="#ff8714"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeDasharray={`${overallRating}, 100`}
-                    className="transition-all duration-1000 ease-out"
-                    style={{
-                      strokeDashoffset: 'calc(100 - var(--rating))',
-                      '--rating': overallRating
-                    } as any}
-                  />
-                </svg>
-                
-                {/* Rating Display */}
-                <div className="relative flex flex-col items-center">
-                  <div className={`text-2xl font-bold ${getRatingColor(overallRating)} transition-colors duration-300`}>
-                    {overallRating}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">דירוג כללי</div>
+    <div className="w-full max-w-sm mx-auto">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        {/* Top Profile Bar - Minimal */}
+        <div className="p-3 flex items-center justify-between border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-white flex items-center justify-center shadow-sm">
+              {profileImage ? (
+                <Image 
+                  src={profileImage} 
+                  alt={userName || "User"} 
+                  width={32} 
+                  height={32} 
+                  className="object-cover w-full h-full"
+                />
+              ) : (
+                <div className="text-slate-700 text-sm font-bold">
+                  {userName?.charAt(0) || "U"}
                 </div>
-              </div>
-              
-              {/* Hover Effect - Rating Description */}
-              <div className="absolute top-full right-0 mt-2 w-48 p-2 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 text-right z-10">
-                <div className="text-sm font-medium text-gray-800 mb-1">דירוג כללי</div>
-                <div className="text-xs text-gray-500">
-                  ממוצע משוקלל של כל המדדים שלך
-                </div>
-              </div>
+              )}
             </div>
+            <div className="text-sm text-slate-600">{userName || "משתמש"}</div>
           </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
-            {/* Aerobic */}
-            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 transition-all duration-300 hover:shadow hover:border-[#ff8714]/30">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-[#ff8714]/10 flex items-center justify-center">
-                  <FaRunning className="text-[#ff8714]" />
+          <div className="text-xs text-slate-400">{formatDate(metrics.createdAt)}</div>
+        </div>
+        
+        {/* Main Rating Focus */}
+        <div className="p-5 flex justify-center items-center">
+          <div 
+            className="w-28 h-28 rounded-full flex items-center justify-center" 
+            style={{ 
+              background: `conic-gradient(${getAccentColor(overallRating)} ${overallRating}%, #f1f5f9 0)`,
+              boxShadow: `0 0 0 6px #ffffff, 0 0 0 7px ${getAccentColor(overallRating)}20`
+            }}
+          >
+            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
+              <div className="text-center">
+                <div className={`text-4xl font-bold ${getRatingColor(overallRating)}`}>
+                  {overallRating}
                 </div>
-                <div className="text-sm font-medium">אירובי</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`text-2xl font-bold ${getRatingColor(calculateRating(metrics.run3000m, 'time', '3000m'))}`}>
-                  {calculateRating(metrics.run3000m, 'time', '3000m')}
-                </div>
-                <div className="text-xs text-gray-500 mt-1 flex-1">
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#ff8714]" 
-                      style={{ 
-                        width: `${calculateRating(metrics.run3000m, 'time', '3000m')}%`,
-                        transition: 'width 1s ease-out'
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Anaerobic */}
-            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 transition-all duration-300 hover:shadow hover:border-[#ff8714]/30">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-[#ff8714]/10 flex items-center justify-center">
-                  <FaBolt className="text-[#ff8714]" />
-                </div>
-                <div className="text-sm font-medium">אנאירובי</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`text-2xl font-bold ${getRatingColor(calculateRating(metrics.run400m, 'time', '400m'))}`}>
-                  {calculateRating(metrics.run400m, 'time', '400m')}
-                </div>
-                <div className="text-xs text-gray-500 mt-1 flex-1">
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#ff8714]" 
-                      style={{ 
-                        width: `${calculateRating(metrics.run400m, 'time', '400m')}%`,
-                        transition: 'width 1s ease-out'
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Strength */}
-            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 transition-all duration-300 hover:shadow hover:border-[#ff8714]/30">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-[#ff8714]/10 flex items-center justify-center">
-                  <FaDumbbell className="text-[#ff8714]" />
-                </div>
-                <div className="text-sm font-medium">כוח</div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <div className={`text-2xl font-bold ${getRatingColor(
-                  Math.round((
-                    calculateRating(metrics.pullUps, 'reps', 'pullUps') +
-                    calculateRating(metrics.pushUps, 'reps', 'pushUps') +
-                    calculateRating(metrics.sitUps2min, 'reps', 'sitUps')
-                  ) / 3)
-                )}`}>
-                  {Math.round((
-                    calculateRating(metrics.pullUps, 'reps', 'pullUps') +
-                    calculateRating(metrics.pushUps, 'reps', 'pushUps') +
-                    calculateRating(metrics.sitUps2min, 'reps', 'sitUps')
-                  ) / 3)}
-                </div>
-                <div className="text-xs text-gray-500 mt-1 flex-1">
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#ff8714]" 
-                      style={{ 
-                        width: `${Math.round((
-                          calculateRating(metrics.pullUps, 'reps', 'pullUps') +
-                          calculateRating(metrics.pushUps, 'reps', 'pushUps') +
-                          calculateRating(metrics.sitUps2min, 'reps', 'sitUps')
-                        ) / 3)}%`,
-                        transition: 'width 1s ease-out'
-                      }}
-                    ></div>
-                  </div>
-                </div>
+                <div className="text-xs text-slate-500">דירוג כללי</div>
               </div>
             </div>
           </div>
         </div>
+        
+        {/* Category Ratings Grid */}
+        <div className="px-5 pb-5 grid grid-cols-3 gap-4">
+          <RatingBlock 
+            label="אירובי" 
+            rating={aerobicRating} 
+            accent={getAccentColor(aerobicRating)}
+            icon={<FaRunning size={12} />} 
+          />
+          <RatingBlock 
+            label="אנאירובי" 
+            rating={anaerobicRating} 
+            accent={getAccentColor(anaerobicRating)}
+            icon={<FaBolt size={12} />} 
+          />
+          <RatingBlock 
+            label="כוח" 
+            rating={strengthRating} 
+            accent={getAccentColor(strengthRating)}
+            icon={<FaDumbbell size={12} />} 
+          />
+        </div>
       </div>
-      
-      {/* Add CSS animations */}
-      <style jsx global>{`
-        @keyframes dashOffset {
-          from {
-            stroke-dasharray: 0, 100;
-          }
-        }
-        
-        .animate-dashOffset {
-          animation: dashOffset 1.5s ease-out forwards;
-        }
-      `}</style>
-      <style jsx>{`
-        @property --rating {
-          syntax: '<number>';
-          initial-value: 0;
-          inherits: false;
-        }
-        
-        circle {
-          transition: stroke-dashoffset 1.5s ease-in-out;
-        }
-      `}</style>
+    </div>
+  );
+}
+
+// Rating block with emphasis on the score
+function RatingBlock({ 
+  label, 
+  rating, 
+  accent,
+  icon
+}: { 
+  label: string; 
+  rating: number; 
+  accent: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center p-3 rounded-lg" style={{ backgroundColor: `${accent}10` }}>
+      <div className="text-2xl font-bold" style={{ color: accent }}>{rating}</div>
+      <div className="flex items-center gap-1 mt-1">
+        <span className="text-slate-600">{icon}</span>
+        <span className="text-xs text-slate-600">{label}</span>
+      </div>
     </div>
   );
 }

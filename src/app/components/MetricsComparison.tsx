@@ -6,6 +6,7 @@ import {
   FaRunning, FaBolt, FaDumbbell, FaChevronUp, 
   FaChevronDown, FaEquals, FaSearch, FaTrophy, FaUsers
 } from 'react-icons/fa';
+import { threeKRunScore } from '@/lib/fitnessUtils';
 
 interface MetricsComparisonProps {
   userMetrics: Metrics;
@@ -75,11 +76,7 @@ export default function MetricsComparison({
       
       // For 3000m run (lower is better)
       if (metricType === '3000m') {
-        if (totalSeconds < 600) return 99; // Under 10 minutes is exceptional
-        if (totalSeconds > 1500) return 40; // Over 25 minutes is below average
-        
-        // Linear scale between 10 and 25 minutes
-        return Math.round(99 - ((totalSeconds - 600) / 900) * 59);
+        return threeKRunScore(minutes, seconds);
       }
       
       // For 400m run (lower is better)

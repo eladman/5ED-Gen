@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { getDocuments, deleteDocument } from '@/lib/firebase/firebaseUtils';
-import { FaCalendarAlt, FaRunning, FaDumbbell, FaTrash } from 'react-icons/fa';
+import { FaCalendarAlt, FaRunning, FaDumbbell, FaTrash, FaBullseye } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 interface WorkoutDay {
@@ -23,6 +23,7 @@ interface UserAnswers {
   experienceLevel: '0-4months' | 'upto1year' | '1-2years' | '2-3years' | '3plusYears';
   threeKmTime: string;
   pullUps: number;
+  goal?: string;
 }
 
 interface WorkoutProgram {
@@ -154,28 +155,24 @@ export default function SavedWorkouts() {
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-              <h4 className="font-semibold mb-3">פרטי המתאמן:</h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <span className="text-gray-600">מין:</span>
-                  <p className="font-medium">{workout.userAnswers.gender === 'male' ? 'זכר' : 'נקבה'}</p>
+            <div className="bg-gradient-to-r from-[#fff5eb] to-white rounded-lg p-5 mb-4 border border-[#ffead3]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#ff8714] rounded-full flex items-center justify-center flex-shrink-0">
+                  <FaBullseye className="text-white w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-gray-600">קבוצת גיל:</span>
-                  <p className="font-medium">{getGroupLabel(workout.userAnswers.group)}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">ניסיון:</span>
-                  <p className="font-medium">{getExperienceLabel(workout.userAnswers.experienceLevel)}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">זמן ריצת 3 ק&quot;מ:</span>
-                  <p className="font-medium">{workout.userAnswers.threeKmTime}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">מספר עליות מתח:</span>
-                  <p className="font-medium">{workout.userAnswers.pullUps}</p>
+                  <h4 className="font-semibold text-gray-800 mb-1">מטרת התוכנית</h4>
+                  <p className="font-medium text-gray-700">
+                    {workout.userAnswers.goal === 'army' 
+                      ? 'הכנה לצבא' 
+                      : workout.userAnswers.goal === 'aerobic' 
+                        ? 'שיפור יכולת אירובית' 
+                        : workout.userAnswers.goal === 'strength' 
+                          ? 'חיזוק ובניית שרירים' 
+                          : workout.userAnswers.goal === 'weight' 
+                            ? 'ירידה במשקל' 
+                            : workout.userAnswers.goal || 'שיפור כושר כללי'}
+                  </p>
                 </div>
               </div>
             </div>

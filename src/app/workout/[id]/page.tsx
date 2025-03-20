@@ -46,6 +46,7 @@ interface UserAnswers {
   experienceLevel: '0-4months' | 'upto1year' | '1-2years' | '2-3years' | '3plusYears';
   threeKmTime: string;
   pullUps: number;
+  goal?: string;
 }
 
 interface WorkoutProgram {
@@ -733,30 +734,24 @@ export default function WorkoutDetails() {
       {/* User Profile Card */}
       {workout && workout.userAnswers && (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-10 border border-gray-200">
-          <div className="bg-gradient-to-r from-[#fff5eb] to-white px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-800">פרופיל המתאמן</h2>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
-              <div className="bg-[#fff5eb] p-4 rounded-lg">
-                <span className="text-gray-500 text-sm">מין</span>
-                <p className="font-medium text-gray-800 mt-1">{workout.userAnswers.gender === 'male' ? 'זכר' : 'נקבה'}</p>
+          <div className="p-0">
+            <div className="flex items-center bg-gradient-to-r from-[#ff8714] to-[#e67200] p-6">
+              <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mr-5">
+                <FaBullseye className="text-white w-7 h-7" />
               </div>
-              <div className="bg-[#fff5eb] p-4 rounded-lg">
-                <span className="text-gray-500 text-sm">קבוצת גיל</span>
-                <p className="font-medium text-gray-800 mt-1">{getGroupLabel(workout.userAnswers.group)}</p>
-              </div>
-              <div className="bg-[#fff5eb] p-4 rounded-lg">
-                <span className="text-gray-500 text-sm">ניסיון</span>
-                <p className="font-medium text-gray-800 mt-1">{getExperienceLabel(workout.userAnswers.experienceLevel)}</p>
-              </div>
-              <div className="bg-[#fff5eb] p-4 rounded-lg">
-                <span className="text-gray-500 text-sm">זמן ריצת 3 ק&quot;מ</span>
-                <p className="font-medium text-gray-800 mt-1">{workout.userAnswers.threeKmTime}</p>
-              </div>
-              <div className="bg-[#fff5eb] p-4 rounded-lg">
-                <span className="text-gray-500 text-sm">מספר עליות מתח</span>
-                <p className="font-medium text-gray-800 mt-1">{workout.userAnswers.pullUps}</p>
+              <div>
+                <h2 className="text-lg text-white/80 font-medium mb-1">מטרת התוכנית</h2>
+                <h3 className="text-2xl font-bold text-white">
+                  {workout.userAnswers.goal === 'army' 
+                    ? 'הכנה לצבא' 
+                    : workout.userAnswers.goal === 'aerobic' 
+                      ? 'שיפור יכולת אירובית' 
+                      : workout.userAnswers.goal === 'strength' 
+                        ? 'חיזוק ובניית שרירים' 
+                        : workout.userAnswers.goal === 'weight' 
+                          ? 'ירידה במשקל' 
+                          : workout.userAnswers.goal || 'שיפור כושר כללי'}
+                </h3>
               </div>
             </div>
           </div>
@@ -863,68 +858,6 @@ export default function WorkoutDetails() {
                                 </div>
                                 <div>
                                   <p className="font-medium text-gray-800">{typeof exercise === 'string' ? exercise : JSON.stringify(exercise)}</p>
-                                  <div className="text-sm text-gray-500 mt-1 space-y-1">
-                                    {enhancedExercise ? (
-                                      <>
-                                        <p>זמן מנוחה: {enhancedExercise.restingTime || "60 שניות"}</p>
-                                        {isRunningExercise(enhancedExercise.name || "") ? (
-                                          isIntervalRunning(enhancedExercise.name || "") ? (
-                                            <p>אינטרוולים: {enhancedExercise.intervals || 5}</p>
-                                          ) : (
-                                            <p>משך: {enhancedExercise.duration || 20} דקות | קצב: {enhancedExercise.pace || "5:30"} דקות/ק״מ</p>
-                                          )
-                                        ) : (
-                                          <p>סטים: {enhancedExercise.sets || 3} | חזרות: {enhancedExercise.reps || 10}</p>
-                                        )}
-                                        {enhancedExercise.formCues && (
-                                          <p>דגשי ביצוע: {typeof enhancedExercise.formCues === 'string' ? enhancedExercise.formCues : JSON.stringify(enhancedExercise.formCues)}</p>
-                                        )}
-                                        {enhancedExercise.commonMistakes && (
-                                          <p>טעויות נפוצות: {typeof enhancedExercise.commonMistakes === 'string' ? enhancedExercise.commonMistakes : JSON.stringify(enhancedExercise.commonMistakes)}</p>
-                                        )}
-                                        {enhancedExercise.breathingPattern && (
-                                          <p>דפוס נשימה: {typeof enhancedExercise.breathingPattern === 'string' ? enhancedExercise.breathingPattern : JSON.stringify(enhancedExercise.breathingPattern)}</p>
-                                        )}
-                                        {enhancedExercise.progressionMetrics && (
-                                          <p>מדדי התקדמות: {typeof enhancedExercise.progressionMetrics === 'string' ? enhancedExercise.progressionMetrics : JSON.stringify(enhancedExercise.progressionMetrics)}</p>
-                                        )}
-                                        {enhancedExercise.variations && (
-                                          <div className="mt-2">
-                                            <p className="font-medium">וריאציות:</p>
-                                            <ul className="list-disc pl-5 mt-1 space-y-1 text-sm">
-                                              {Object.entries(enhancedExercise.variations || {}).map(([key, value]) => (
-                                                <li key={key}>
-                                                  <span className="font-medium">{key === 'easy' ? 'קל' : key === 'medium' ? 'בינוני' : 'מתקדם'}: </span>
-                                                  {typeof value === 'string' ? value : JSON.stringify(value)}
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          </div>
-                                        )}
-                                      </>
-                                    ) : (
-                                      // Fallback if enhanced exercise is not available
-                                      <>
-                                        <p>זמן מנוחה: 60 שניות</p>
-                                        <p>סטים: 3 | חזרות: 10</p>
-                                        <div className="mt-2">
-                                          <p className="font-medium">וריאציות:</p>
-                                          <ul className="list-disc pl-5 mt-1 space-y-1 text-sm">
-                                            <li><span className="font-medium">קל: </span>גרסה קלה של התרגיל</li>
-                                            <li><span className="font-medium">בינוני: </span>ביצוע רגיל של התרגיל</li>
-                                            <li><span className="font-medium">מתקדם: </span>גרסה מאתגרת של התרגיל</li>
-                                          </ul>
-                                        </div>
-                                        {/* Button to manually enhance the exercise if data is missing */}
-                                        <button
-                                          onClick={() => handleRefreshAttempt()}
-                                          className="mt-3 px-3 py-1 text-xs bg-white border border-[#ff8714] text-[#ff8714] rounded hover:bg-[#fff8f1] transition-colors"
-                                        >
-                                          שפר את המידע
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
                                 </div>
                               </div>
                             </div>
