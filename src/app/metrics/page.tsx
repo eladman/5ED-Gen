@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
 import { FaRunning, FaDumbbell, FaStopwatch, FaPlus, FaTrash, FaUsers } from "react-icons/fa";
 import { GiSittingDog } from "react-icons/gi";
@@ -28,6 +29,8 @@ export interface Metrics extends MetricsForm {
 
 export default function MetricsPage() {
   const { user } = useAuth();
+  const router = useRouter();
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'personal' | 'social'>('personal');
@@ -47,6 +50,33 @@ export default function MetricsPage() {
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userGroup, setUserGroup] = useState<string>("כיתה א");
 
+  // Check user authentication and profile completion
+  useEffect(() => {
+    if (!user) {
+      router.push('/');
+      return;
+    }
+
+    const checkProfile = async () => {
+      try {
+        const profile = await getProfile(user.uid);
+        if (!profile || !profile.name || !profile.phone || !profile.team) {
+          // Profile doesn't exist or is incomplete, redirect to profile page
+          router.push("/profile");
+        }
+      } catch (error) {
+        console.error("Error checking profile:", error);
+        // In case of error, still redirect to profile to be safe
+        router.push("/profile");
+      } finally {
+        setIsCheckingProfile(false);
+      }
+    };
+
+    checkProfile();
+  }, [user, router]);
+
+  // Fetch metrics
   useEffect(() => {
     const fetchMetrics = async () => {
       if (!user) return;
@@ -65,7 +95,7 @@ export default function MetricsPage() {
     fetchMetrics();
   }, [user]);
 
-  // Fetch user profile data for name and photo
+  // Fetch user profile data
   useEffect(() => {
     const loadProfileData = async () => {
       if (user) {
@@ -74,7 +104,6 @@ export default function MetricsPage() {
           if (profile) {
             setUserName(profile.name || user.displayName || "");
             
-            // Use profile photoData first, then fallback to photoURL
             if (profile.photoData) {
               setUserPhoto(profile.photoData);
             } else if (profile.photoURL) {
@@ -83,11 +112,9 @@ export default function MetricsPage() {
               setUserPhoto(user.photoURL);
             }
             
-            // Set group if available - use group property first, then team as fallback
             if (profile.group) {
               setUserGroup(profile.group);
             } else if (profile.team) {
-              // Convert team ID to team name
               setUserGroup(getTeamNameById(profile.team));
             }
           } else if (user.displayName) {
@@ -104,6 +131,23 @@ export default function MetricsPage() {
 
     loadProfileData();
   }, [user]);
+
+  // Handle time inputs updates
+  useEffect(() => {
+    if (metrics.run3000m) {
+      setTimeInputs(prev => ({
+        ...prev,
+        run3000m: parseTimeToInputs(metrics.run3000m)
+      }));
+    }
+    
+    if (metrics.run400m) {
+      setTimeInputs(prev => ({
+        ...prev,
+        run400m: parseTimeToInputs(metrics.run400m)
+      }));
+    }
+  }, [metrics.run3000m, metrics.run400m]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,7 +217,6 @@ export default function MetricsPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
-    // For number inputs, ensure only positive numbers
     if (name === 'pullUps' || name === 'pushUps' || name === 'sitUps2min') {
       const numValue = value === '' ? '' : Math.max(0, parseInt(value)).toString();
       setMetrics(prev => ({
@@ -189,10 +232,8 @@ export default function MetricsPage() {
   };
 
   const handleTimeChange = (metricName: 'run3000m' | 'run400m', field: 'minutes' | 'seconds', value: string) => {
-    // Allow only numbers
     if (value !== '' && !/^\d+$/.test(value)) return;
     
-    // Enforce limits: minutes (0-99), seconds (0-59)
     if (field === 'minutes' && value !== '' && parseInt(value) > 99) return;
     if (field === 'seconds' && value !== '' && parseInt(value) > 59) return;
     
@@ -212,29 +253,8 @@ export default function MetricsPage() {
     return { minutes, seconds };
   };
 
-  useEffect(() => {
-    if (metrics.run3000m) {
-      setTimeInputs(prev => ({
-        ...prev,
-        run3000m: parseTimeToInputs(metrics.run3000m)
-      }));
-    }
-    
-    if (metrics.run400m) {
-      setTimeInputs(prev => ({
-        ...prev,
-        run400m: parseTimeToInputs(metrics.run400m)
-      }));
-    }
-  }, [metrics.run3000m, metrics.run400m]);
-
-  const nextStep = () => {
-    setCurrentStep(prev => Math.min(prev + 1, 3));
-  };
-
-  const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
-  };
+  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 3));
+  const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -250,13 +270,8 @@ export default function MetricsPage() {
   const handleDelete = async (metricId: string) => {
     try {
       const loadingToast = toast.loading('מוחק מדד...') as string;
-      
-      // Delete from Firebase
       await deleteDocument('metrics', metricId);
-      
-      // Update local state
       setPreviousMetrics(prev => prev.filter(metric => metric.id !== metricId));
-      
       toast.success('המדד נמחק בהצלחה!', { id: loadingToast });
     } catch (error) {
       console.error('Error deleting metric:', error);
@@ -264,17 +279,8 @@ export default function MetricsPage() {
     }
   };
 
-  if (!user) {
-    return (
-      <>
-        <Navbar />
-        <div className="container-custom min-h-screen pt-32">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">יש להתחבר כדי לצפות בדף זה</h1>
-          </div>
-        </div>
-      </>
-    );
+  if (!user || isCheckingProfile) {
+    return null;
   }
 
   return (

@@ -22,7 +22,7 @@ export default function LoginButton() {
           console.log("Please ensure popup blockers are disabled for this site");
           
           await signInWithGoogle();
-          router.push("/create-program");
+          router.push("/profile");
         } else {
           throw new Error("Authentication requires a browser environment");
         }

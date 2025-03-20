@@ -138,7 +138,11 @@ export default function ProfilePage() {
       console.log('Profile data saved successfully');
 
       setSaveStatus('success');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      setTimeout(() => {
+        setSaveStatus('idle');
+        // Redirect to main page after successful save
+        router.push('/');
+      }, 1500);
     } catch (error: any) {
       console.error('Error saving profile:', error);
       setSaveStatus('error');

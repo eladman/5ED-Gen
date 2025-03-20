@@ -1,20 +1,43 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { getProfile } from "@/lib/firebase/profileUtils";
 
 export default function TrainingPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
       router.push("/");
+      return;
+    }
+
+    if (user) {
+      const checkProfile = async () => {
+        try {
+          const profile = await getProfile(user.uid);
+          if (!profile || !profile.name || !profile.phone || !profile.team) {
+            // Profile doesn't exist or is incomplete, redirect to profile page
+            router.push("/profile");
+          }
+        } catch (error) {
+          console.error("Error checking profile:", error);
+          // In case of error, still redirect to profile to be safe
+          router.push("/profile");
+        } finally {
+          setIsCheckingProfile(false);
+        }
+      };
+
+      checkProfile();
     }
   }, [user, loading, router]);
 
-  if (loading) {
+  if (loading || isCheckingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>

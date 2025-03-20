@@ -75,12 +75,12 @@ export default function MetricsComparison({
       if (isNaN(totalSeconds)) return 0;
       
       // For 3000m run (lower is better)
-      if (metricType === '3000m') {
+      if (metricType === '3000m' || value === userMetrics.run3000m) {
         return threeKRunScore(minutes, seconds);
       }
       
       // For 400m run (lower is better)
-      if (metricType === '400m') {
+      if (metricType === '400m' || value === userMetrics.run400m) {
         if (totalSeconds < 60) return 99; // Under 1 minute is exceptional
         if (totalSeconds > 180) return 40; // Over 3 minutes is below average
         
@@ -95,21 +95,21 @@ export default function MetricsComparison({
       if (isNaN(reps)) return 0;
       
       // Pull-ups
-      if (metricType === 'pullUps') {
+      if (metricType === 'pullUps' || value === userMetrics.pullUps) {
         if (reps > 20) return 99;
         if (reps < 1) return 40;
         return Math.round(40 + (reps / 20) * 59);
       }
       
       // Push-ups
-      if (metricType === 'pushUps') {
+      if (metricType === 'pushUps' || value === userMetrics.pushUps) {
         if (reps > 50) return 99;
         if (reps < 5) return 40;
         return Math.round(40 + (reps / 50) * 59);
       }
       
       // Sit-ups
-      if (metricType === 'sitUps') {
+      if (metricType === 'sitUps' || value === userMetrics.sitUps2min) {
         if (reps > 70) return 99;
         if (reps < 10) return 40;
         return Math.round(40 + (reps / 70) * 59);
