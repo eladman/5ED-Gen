@@ -11,30 +11,27 @@ const recommendedBooks = [
     title: 'אמנות המלחמה',
     author: 'סון דזה',
     description: 'ספר קלאסי על אסטרטגיה צבאית שמיושם גם בעסקים ובחיים האישיים. הספר מלמד על חשיבה אסטרטגית, מנהיגות, וניהול משאבים.',
-    imageUrl: 'https://m.media-amazon.com/images/I/71JUJ7nQ-GL._AC_UF1000,1000_QL80_.jpg',
     rating: 5,
-    amazonLink: 'https://www.amazon.com/Art-War-Sun-Tzu/dp/1599869772',
-    category: 'אסטרטגיה'
+    category: 'אסטרטגיה',
+    likes: 124
   },
   {
     id: '2',
     title: 'גוף ונפש של לוחם',
     author: 'פיט בלייבר',
     description: 'מדריך מקיף לאימון מנטלי וגופני של לוחמים. הספר מתמקד בבניית חוסן נפשי, מוטיבציה, והתמודדות עם לחץ.',
-    imageUrl: 'https://m.media-amazon.com/images/I/61KI7oL+dYL._AC_UF1000,1000_QL80_.jpg',
     rating: 4,
-    amazonLink: 'https://www.amazon.com/Warriors-Mind-Body-Pete-Blaber/dp/0425236579',
-    category: 'אימון מנטלי'
+    category: 'אימון מנטלי',
+    likes: 89
   },
   {
     id: '3',
     title: 'כושר קרבי',
     author: 'מארק דה לוקה',
     description: 'מדריך מעשי לבניית כושר קרבי. כולל תוכניות אימון, תזונה, והכנה פיזית ומנטלית למשימות מבצעיות.',
-    imageUrl: 'https://m.media-amazon.com/images/I/71QR7+t+THL._AC_UF1000,1000_QL80_.jpg',
     rating: 5,
-    amazonLink: 'https://www.amazon.com/Combat-Fitness-Guide-Military-Training/dp/1544941835',
-    category: 'אימון גופני'
+    category: 'אימון גופני',
+    likes: 156
   }
 ];
 
@@ -56,7 +53,7 @@ export default function RecommendedBooksPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center mb-8">ספרים מומלצים</h1>
+      <h1 className="text-3xl font-bold text-center mb-8">ספרייה</h1>
       
       {/* Search and Filter */}
       <div className="flex flex-col md:flex-row gap-4 mb-8">

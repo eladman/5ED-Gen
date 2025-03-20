@@ -31,8 +31,8 @@ export default function Navbar() {
             <Link href="/metrics" className="text-gray-600 hover:text-[#ff8714]">
               מדדים
             </Link>
-            <Link href="/recommended-books" className="text-gray-600 hover:text-[#ff8714]">
-              ספרים מומלצים
+            <Link href="/library" className="text-gray-600 hover:text-[#ff8714]">
+              ספרייה
             </Link>
             <Link href="/profile" className="text-gray-600 hover:text-[#ff8714]">
               פרופיל
