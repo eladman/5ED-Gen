@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
-import { FaRunning, FaDumbbell, FaStopwatch, FaPlus, FaTrash, FaUsers } from "react-icons/fa";
+import { FaRunning, FaDumbbell, FaStopwatch, FaPlus, FaTrash, FaUsers, FaChartBar } from "react-icons/fa";
 import { GiSittingDog } from "react-icons/gi";
 import toast from "react-hot-toast";
 import { addDocument, getDocuments, deleteDocument } from "@/lib/firebase/firebaseUtils";
@@ -293,13 +293,14 @@ export default function MetricsPage() {
           <div className="flex justify-center mb-8 mt-4">
             <div className="bg-gray-100 p-1.5 rounded-full inline-flex shadow-md">
               <button 
-                className={`px-6 py-2.5 rounded-full font-medium text-base transition-all duration-200 ${
+                className={`px-6 py-2.5 rounded-full font-medium text-base flex items-center gap-2 transition-all duration-200 ${
                   activeTab === 'personal' 
                     ? 'bg-white text-[#ff8714] shadow-sm' 
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
                 onClick={() => setActiveTab('personal')}
               >
+                <FaChartBar className="text-lg" />
                 המדדים שלי
               </button>
               <button 

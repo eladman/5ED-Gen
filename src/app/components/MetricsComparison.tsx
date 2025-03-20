@@ -4,7 +4,7 @@ import { getAllMockMetrics } from '@/lib/mock/mockUserData';
 import Image from 'next/image';
 import { 
   FaRunning, FaBolt, FaDumbbell, FaChevronUp, 
-  FaChevronDown, FaEquals, FaSearch, FaTrophy, FaUsers
+  FaChevronDown, FaEquals, FaSearch, FaTrophy, FaUsers, FaChartBar
 } from 'react-icons/fa';
 import { threeKRunScore } from '@/lib/fitnessUtils';
 
@@ -17,6 +17,7 @@ interface MetricsComparisonProps {
 
 // Extended metrics with user info for comparison
 interface ComparisonMetrics extends Metrics {
+  id: string;
   userName: string;
   userGroup: string;
   photoURL: string | null;
@@ -245,6 +246,17 @@ export default function MetricsComparison({
     strength: 0
   };
   const groupRank = getUserGroupRank();
+
+  // Add this function to handle user selection/deselection
+  const handleUserSelection = (user: ComparisonMetrics) => {
+    if (selectedUser?.id === user.id) {
+      // If clicking the same user again, deselect them
+      setSelectedUser(null);
+    } else {
+      // Otherwise, select the new user
+      setSelectedUser(user);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -522,35 +534,43 @@ export default function MetricsComparison({
               {/* User selection - Enhanced with better cards */}
               <h3 className="text-lg font-medium mb-4">בחר משתמש להשוואה</h3>
               
+              {/* User selection grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
                 {filteredUsers.map((user) => (
-                  <button
-                    key={user.userName}
-                    onClick={() => setSelectedUser(user)}
-                    className={`p-4 rounded-xl border transition-all ${
-                      selectedUser?.userName === user.userName
-                        ? 'border-[#ff8714] bg-[#ff8714]/5 shadow-md transform scale-105'
+                  <div 
+                    key={user.id} 
+                    className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                      selectedUser?.id === user.id 
+                        ? 'border-[#ff8714] bg-[#ff8714]/5 shadow-md transform scale-105' 
                         : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow'
-                    } flex flex-col items-center`}
+                    } flex flex-col items-center relative`}
+                    onClick={() => handleUserSelection(user)}
                   >
                     <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200 mb-2 border-2 border-white shadow">
                       {user.photoURL ? (
-                        <Image 
-                          src={user.photoURL} 
-                          alt={user.userName} 
-                          width={56} 
-                          height={56} 
+                        <Image
+                          src={user.photoURL}
+                          alt={user.userName}
+                          width={56}
+                          height={56}
                           className="object-cover w-full h-full"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xl">
-                          {user.userName.charAt(0)}
+                        <div className="w-full h-full flex items-center justify-center bg-gray-300">
+                          <span className="text-2xl text-gray-600">
+                            {user.userName.charAt(0)}
+                          </span>
                         </div>
                       )}
                     </div>
                     <div className="text-sm font-medium text-center">{user.userName}</div>
                     <div className="text-xs text-gray-500">{user.userGroup}</div>
-                  </button>
+                    {selectedUser?.id === user.id && (
+                      <div className="absolute top-2 right-2 text-[#ff8714]">
+                        <FaTrophy size={16} />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
               
@@ -629,13 +649,10 @@ export default function MetricsComparison({
                           </div>
                         </div>
                         
-                        <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
-                          <div className="absolute inset-y-0 left-0 bg-[#ff8714]" style={{ width: `${userRatings.aerobic}%` }}></div>
-                          <div className="absolute inset-y-0 left-0 bg-gray-400" style={{ width: `${selectedUserRatings.aerobic}%` }}></div>
-                        </div>
-                        
-                        <div className="text-xs text-gray-500">
-                          {getComparisonInfo(userRatings.aerobic, selectedUserRatings.aerobic).text}
+                        <div className="flex justify-between items-center">
+                          <div className={`${getRatingColor(userRatings.aerobic)}`}>
+                            {getComparisonInfo(userRatings.aerobic, selectedUserRatings.aerobic).text}
+                          </div>
                         </div>
                       </div>
                       
@@ -658,13 +675,10 @@ export default function MetricsComparison({
                           </div>
                         </div>
                         
-                        <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
-                          <div className="absolute inset-y-0 left-0 bg-[#ff8714]" style={{ width: `${userRatings.anaerobic}%` }}></div>
-                          <div className="absolute inset-y-0 left-0 bg-gray-400" style={{ width: `${selectedUserRatings.anaerobic}%` }}></div>
-                        </div>
-                        
-                        <div className="text-xs text-gray-500">
-                          {getComparisonInfo(userRatings.anaerobic, selectedUserRatings.anaerobic).text}
+                        <div className="flex justify-between items-center">
+                          <div className={`${getRatingColor(userRatings.anaerobic)}`}>
+                            {getComparisonInfo(userRatings.anaerobic, selectedUserRatings.anaerobic).text}
+                          </div>
                         </div>
                       </div>
                       
@@ -687,64 +701,9 @@ export default function MetricsComparison({
                           </div>
                         </div>
                         
-                        <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
-                          <div className="absolute inset-y-0 left-0 bg-[#ff8714]" style={{ width: `${userRatings.strength}%` }}></div>
-                          <div className="absolute inset-y-0 left-0 bg-gray-400" style={{ width: `${selectedUserRatings.strength}%` }}></div>
-                        </div>
-                        
-                        <div className="text-xs text-gray-500">
-                          {getComparisonInfo(userRatings.strength, selectedUserRatings.strength).text}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Raw metrics comparison */}
-                    <div className="mt-6 pt-6 border-t border-gray-200">
-                      <h4 className="text-sm font-medium mb-4">השוואת מדדים גולמיים</h4>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <div className="text-xs text-gray-500 mb-1">ריצת 3,000 מטר</div>
-                          <div className="flex justify-between items-center">
-                            <div className="font-medium">{userMetrics.run3000m}</div>
-                            <div className="text-gray-400 text-xs">vs</div>
-                            <div className="font-medium">{selectedUser.run3000m}</div>
-                          </div>
-                        </div>
-                        
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <div className="text-xs text-gray-500 mb-1">ריצת 400 מטר</div>
-                          <div className="flex justify-between items-center">
-                            <div className="font-medium">{userMetrics.run400m}</div>
-                            <div className="text-gray-400 text-xs">vs</div>
-                            <div className="font-medium">{selectedUser.run400m}</div>
-                          </div>
-                        </div>
-                        
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <div className="text-xs text-gray-500 mb-1">מתח</div>
-                          <div className="flex justify-between items-center">
-                            <div className="font-medium">{userMetrics.pullUps}</div>
-                            <div className="text-gray-400 text-xs">vs</div>
-                            <div className="font-medium">{selectedUser.pullUps}</div>
-                          </div>
-                        </div>
-                        
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <div className="text-xs text-gray-500 mb-1">שכיבות שמיכה</div>
-                          <div className="flex justify-between items-center">
-                            <div className="font-medium">{userMetrics.pushUps}</div>
-                            <div className="text-gray-400 text-xs">vs</div>
-                            <div className="font-medium">{selectedUser.pushUps}</div>
-                          </div>
-                        </div>
-                        
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <div className="text-xs text-gray-500 mb-1">בטן 2 דקות</div>
-                          <div className="flex justify-between items-center">
-                            <div className="font-medium">{userMetrics.sitUps2min}</div>
-                            <div className="text-gray-400 text-xs">vs</div>
-                            <div className="font-medium">{selectedUser.sitUps2min}</div>
+                        <div className="flex justify-between items-center">
+                          <div className={`${getRatingColor(userRatings.strength)}`}>
+                            {getComparisonInfo(userRatings.strength, selectedUserRatings.strength).text}
                           </div>
                         </div>
                       </div>
@@ -758,4 +717,4 @@ export default function MetricsComparison({
       </div>
     </div>
   );
-} 
+}
