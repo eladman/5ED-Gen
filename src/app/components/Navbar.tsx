@@ -39,7 +39,7 @@ export default function Navbar() {
               מדדים
             </Link>
             <Link href="/library" className="text-gray-600 hover:text-[#ff8714]">
-              ספרייה
+              האקדמיה
             </Link>
             <Link href="/profile" className="text-gray-600 hover:text-[#ff8714]">
               פרופיל
