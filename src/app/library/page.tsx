@@ -1,103 +1,40 @@
 "use client";
 
-import { useState } from 'react';
-import BookCard from '@/app/components/BookCard';
-import { FaSearch, FaFilter } from 'react-icons/fa';
+import Navbar from '../components/Navbar';
+import AcademyCard from '../components/AcademyCard';
+import TeamRecommendations from '../components/TeamRecommendations';
+import { FaPlay, FaBook, FaMicrophone } from 'react-icons/fa';
 
-// נתונים לדוגמה - בהמשך נעביר למקום מסודר יותר
-const recommendedBooks = [
-  {
-    id: '1',
-    title: 'אמנות המלחמה',
-    author: 'סון דזה',
-    description: 'ספר קלאסי על אסטרטגיה צבאית שמיושם גם בעסקים ובחיים האישיים. הספר מלמד על חשיבה אסטרטגית, מנהיגות, וניהול משאבים.',
-    rating: 5,
-    category: 'אסטרטגיה',
-    likes: 124
-  },
-  {
-    id: '2',
-    title: 'גוף ונפש של לוחם',
-    author: 'פיט בלייבר',
-    description: 'מדריך מקיף לאימון מנטלי וגופני של לוחמים. הספר מתמקד בבניית חוסן נפשי, מוטיבציה, והתמודדות עם לחץ.',
-    rating: 4,
-    category: 'אימון מנטלי',
-    likes: 89
-  },
-  {
-    id: '3',
-    title: 'כושר קרבי',
-    author: 'מארק דה לוקה',
-    description: 'מדריך מעשי לבניית כושר קרבי. כולל תוכניות אימון, תזונה, והכנה פיזית ומנטלית למשימות מבצעיות.',
-    rating: 5,
-    category: 'אימון גופני',
-    likes: 156
-  }
-];
-
-const categories = ['הכל', 'אסטרטגיה', 'אימון מנטלי', 'אימון גופני'];
-
-export default function RecommendedBooksPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('הכל');
-
-  const filteredBooks = recommendedBooks.filter(book => {
-    const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         book.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = selectedCategory === 'הכל' || book.category === selectedCategory;
-    
-    return matchesSearch && matchesCategory;
-  });
-
+export default function LibraryPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center mb-8">ספרייה</h1>
-      
-      {/* Search and Filter */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
-        <div className="relative flex-1">
-          <FaSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="חפש לפי כותרת, מחבר או תיאור..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full py-2 pr-10 pl-4 text-right bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff8714] text-black shadow-sm"
+    <main className="min-h-screen">
+      <Navbar />
+      <div className="container mx-auto px-4 py-8 pt-32">
+        <h1 className="text-4xl font-bold text-center mb-12 text-[#ff8714]">ברוכים הבאים לאקדמיה של חמש - המקום שישדרג אתכם</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <AcademyCard
+            title="סרטים"
+            description="צפה בסרטוני הדרכה מקצועיים בנושאי אימון, טכניקות לחימה ואימון מנטלי"
+            icon={FaPlay}
+            href="/academy/videos"
+          />
+          <AcademyCard
+            title="ספרים"
+            description="גלה ספרים מומלצים בנושאי אסטרטגיה, אימון מנטלי וכושר גופני"
+            icon={FaBook}
+            href="/academy/books"
+          />
+          <AcademyCard
+            title="פודקאסטים"
+            description="האזן לפודקאסטים מעשירים עם מומחים מתחומי האימון והלחימה"
+            icon={FaMicrophone}
+            href="/academy/podcasts"
           />
         </div>
-        
-        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
-          {categories.map(category => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                selectedCategory === category
-                  ? 'bg-[#ff8714] text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Books Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredBooks.map(book => (
-          <BookCard key={book.id} {...book} />
-        ))}
+        <TeamRecommendations />
       </div>
-
-      {/* Empty State */}
-      {filteredBooks.length === 0 && (
-        <div className="text-center py-16">
-          <div className="text-gray-500 text-lg">לא נמצאו ספרים מתאימים לחיפוש שלך</div>
-        </div>
-      )}
-    </div>
+    </main>
   );
 } 
