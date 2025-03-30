@@ -22,7 +22,7 @@ const trainers: Trainer[] = [
   {
     id: '1',
     name: 'יוסי כהן',
-    image: '/trainers/yossi.jpg',
+    image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=500',
     expertise: 'טכניקות לחימה מתקדמות',
     experience: '15 שנות ניסיון באימון לוחמים',
     icon: 'combat',
@@ -42,7 +42,7 @@ const trainers: Trainer[] = [
   {
     id: '2',
     name: 'מיכל גולן',
-    image: '/trainers/michal.jpg',
+    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=500',
     expertise: 'אימון מנטלי',
     experience: '12 שנות ניסיון באימון מנטלי',
     icon: 'mental',
@@ -62,7 +62,7 @@ const trainers: Trainer[] = [
   {
     id: '3',
     name: 'דני אבידן',
-    image: '/trainers/dani.jpg',
+    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=500',
     expertise: 'כושר גופני',
     experience: '10 שנות ניסיון באימון כושר',
     icon: 'fitness',
