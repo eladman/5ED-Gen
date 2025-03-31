@@ -15,6 +15,7 @@ import {
   query,
   where,
   DocumentData,
+  setDoc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -96,6 +97,40 @@ export const updateDocument = (collectionName: string, id: string, data: any) =>
 
 export const deleteDocument = (collectionName: string, id: string) =>
   deleteDoc(doc(db, collectionName, id));
+
+export const addToFavorites = async (userId: string, itemId: string) => {
+  try {
+    const favoritesRef = doc(db, 'users', userId, 'favorites', itemId);
+    await setDoc(favoritesRef, {
+      itemId,
+      addedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error adding to favorites:', error);
+    throw error;
+  }
+};
+
+export const removeFromFavorites = async (userId: string, itemId: string) => {
+  try {
+    const favoritesRef = doc(db, 'users', userId, 'favorites', itemId);
+    await deleteDoc(favoritesRef);
+  } catch (error) {
+    console.error('Error removing from favorites:', error);
+    throw error;
+  }
+};
+
+export const isInFavorites = async (userId: string): Promise<string[]> => {
+  try {
+    const favoritesRef = collection(db, 'users', userId, 'favorites');
+    const querySnapshot = await getDocs(favoritesRef);
+    return querySnapshot.docs.map(doc => doc.id);
+  } catch (error) {
+    console.error('Error checking favorites:', error);
+    throw error;
+  }
+};
 
 // Storage functions
 export const uploadFile = async (file: File, path: string) => {

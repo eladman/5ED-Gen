@@ -2,192 +2,176 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { FaStar, FaFistRaised, FaBrain, FaDumbbell } from 'react-icons/fa';
+import Link from 'next/link';
+import { FaStar, FaFistRaised, FaBrain, FaDumbbell, FaBook, FaPlay, FaMicrophone, FaHeart } from 'react-icons/fa';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { addToFavorites, removeFromFavorites, isInFavorites } from '@/lib/firebase/firebaseUtils';
+
+interface Recommendation {
+  id: string;
+  title: string;
+  description: string;
+  type: 'book' | 'movie' | 'podcast';
+  href: string;
+}
 
 interface Trainer {
   id: string;
   name: string;
+  role: string;
   image: string;
-  expertise: string;
-  experience: string;
-  icon: 'combat' | 'mental' | 'fitness';
   recommendations: {
+    id: string;
     title: string;
     description: string;
-    type: 'book' | 'movie' | 'podcast';
+    link: string;
   }[];
 }
 
-const trainers: Trainer[] = [
-  {
-    id: '1',
-    name: 'יוסי כהן',
-    image: '/trainers/yossi.jpg',
-    expertise: 'טכניקות לחימה מתקדמות',
-    experience: '15 שנות ניסיון באימון לוחמים',
-    icon: 'combat',
-    recommendations: [
-      {
-        title: 'ספר המלחמה של סון טסו',
-        description: 'ספר עתיק יומין על אסטרטגיה צבאית שמכיל תובנות רלוונטיות גם היום',
-        type: 'book'
-      },
-      {
-        title: 'סרט המלחמה',
-        description: 'סרט מרתק על מנהיגות בשדה הקרב',
-        type: 'movie'
-      }
-    ]
-  },
-  {
-    id: '2',
-    name: 'מיכל גולן',
-    image: '/trainers/michal.jpg',
-    expertise: 'אימון מנטלי',
-    experience: '12 שנות ניסיון באימון מנטלי',
-    icon: 'mental',
-    recommendations: [
-      {
-        title: 'ספר המנהיגות',
-        description: 'ספר על מנהיגות והתמודדות עם אתגרים',
-        type: 'book'
-      },
-      {
-        title: 'פודקאסט על אימון מנטלי',
-        description: 'שיחה מרתקת על חשיבות האימון המנטלי',
-        type: 'podcast'
-      }
-    ]
-  },
-  {
-    id: '3',
-    name: 'דני אבידן',
-    image: '/trainers/dani.jpg',
-    expertise: 'כושר גופני',
-    experience: '10 שנות ניסיון באימון כושר',
-    icon: 'fitness',
-    recommendations: [
-      {
-        title: 'סרט על טכניקות לחימה',
-        description: 'סרט הדרכה על טכניקות לחימה מתקדמות',
-        type: 'movie'
-      },
-      {
-        title: 'ספר על כושר גופני',
-        description: 'מדריך מקיף לאימון גופני מקצועי',
-        type: 'book'
-      }
-    ]
-  }
-];
-
-interface RecommendationModalProps {
-  trainer: Trainer;
-  onClose: () => void;
+interface TeamRecommendationsProps {
+  trainers: Trainer[];
 }
 
-function RecommendationModal({ trainer, onClose }: RecommendationModalProps) {
+const colors = {
+  primary: '#FF8C42',
+  secondary: '#FFF0E5',
+  hover: '#FF7A2E',
+  bg: '#FFF8F0'
+};
+
+const getRecommendationIcon = (type: Recommendation['type']) => {
+  switch (type) {
+    case 'book':
+      return FaBook;
+    case 'movie':
+      return FaPlay;
+    case 'podcast':
+      return FaMicrophone;
+  }
+};
+
+const getTrainerIcon = (icon: Trainer['icon']) => {
+  switch (icon) {
+    case 'combat':
+      return FaFistRaised;
+    case 'mental':
+      return FaBrain;
+    case 'fitness':
+      return FaDumbbell;
+  }
+};
+
+const getActionText = (type: Recommendation['type']) => {
+  switch (type) {
+    case 'book':
+      return 'קרא';
+    case 'movie':
+      return 'צפה';
+    case 'podcast':
+      return 'האזן';
+  }
+};
+
+export default function TeamRecommendations({ trainers }: TeamRecommendationsProps) {
+  const { user } = useAuth();
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [showAll, setShowAll] = useState(false);
+
+  const displayedTrainers = showAll ? trainers : trainers.slice(0, 2);
+  const hasMoreTrainers = trainers.length > 2;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="relative w-12 h-12 rounded-full overflow-hidden">
-              <Image
-                src={trainer.image}
-                alt={trainer.name}
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">המלצות של {trainer.name}</h2>
-              <p className="text-sm text-gray-600">מאמן בכיר</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
-            ✕
-          </button>
-        </div>
-        
-        <div className="space-y-5">
-          {trainer.recommendations.map((rec, index) => (
-            <div key={index} className="border-b border-gray-100 pb-5 last:border-0">
-              <h3 className="text-lg font-semibold mb-2 text-gray-900">{rec.title}</h3>
-              <p className="text-gray-600 mb-3 text-sm">{rec.description}</p>
-              <div className="flex items-center gap-2">
-                <span className="inline-block px-2.5 py-1 bg-[#ff8714]/10 text-[#ff8714] text-xs rounded-full font-medium">
-                  {rec.type === 'book' ? 'ספר' : rec.type === 'movie' ? 'סרט' : 'פודקאסט'}
-                </span>
+    <section className="rounded-xl shadow-sm p-4 h-[400px] flex flex-col" style={{ backgroundColor: colors.bg }}>
+      <div className="flex items-center gap-3 mb-4">
+        <h2 className="text-lg font-bold text-gray-900">המלצות מהצוות</h2>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+        {displayedTrainers.map((trainer) => (
+          <div key={trainer.id} className="bg-white rounded-lg p-3">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="relative w-12 h-12 rounded-full overflow-hidden">
+                <Image
+                  src={trainer.image}
+                  alt={trainer.name}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">{trainer.name}</h3>
+                <p className="text-sm text-gray-600">{trainer.role}</p>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function TeamRecommendations() {
-  const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
-
-  const getIcon = (type: 'combat' | 'mental' | 'fitness') => {
-    switch (type) {
-      case 'combat':
-        return <FaFistRaised className="w-4 h-4" />;
-      case 'mental':
-        return <FaBrain className="w-4 h-4" />;
-      case 'fitness':
-        return <FaDumbbell className="w-4 h-4" />;
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="mt-20">
-      <h2 className="text-2xl font-bold text-center mb-3">המלצות הצוות</h2>
-      <p className="text-gray-600 text-center mb-10 max-w-2xl mx-auto text-sm">
-        המאמנים שלנו בחרו עבורכם את התוכן הטוב ביותר בתחומי האימון, הלחימה והמנהיגות
-      </p>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-        {trainers.map((trainer) => (
-          <div
-            key={trainer.id}
-            className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer border border-gray-100"
-            onClick={() => setSelectedTrainer(trainer)}
-          >
-            <div className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="relative w-14 h-14 rounded-full overflow-hidden border border-[#ff8714]/20">
-                  <Image
-                    src={trainer.image}
-                    alt={trainer.name}
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-10 flex items-center justify-center">
-                    {getIcon(trainer.icon)}
+            
+            {trainer.recommendations.slice(0, 1).map((rec) => {
+              const itemId = `trainer-${trainer.id}-${rec.id}`;
+              const isFavorite = favorites.has(itemId);
+              
+              return (
+                <div key={rec.id} className="bg-gray-50 rounded-lg p-2.5">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 mb-1 text-sm">{rec.title}</h4>
+                      <p className="text-xs text-gray-600 line-clamp-2">{rec.description}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (!user) return;
+                        if (isFavorite) {
+                          removeFromFavorites(user.uid, itemId);
+                          setFavorites(prev => {
+                            const newFavorites = new Set(prev);
+                            newFavorites.delete(itemId);
+                            return newFavorites;
+                          });
+                        } else {
+                          addToFavorites(user.uid, itemId);
+                          setFavorites(prev => new Set([...prev, itemId]));
+                        }
+                      }}
+                      className={`p-1.5 rounded-full transition-colors ${
+                        isFavorite 
+                          ? 'text-red-500 hover:text-red-600' 
+                          : 'text-gray-400 hover:text-red-500'
+                      }`}
+                      title={isFavorite ? 'הסר ממועדפים' : 'הוסף למועדפים'}
+                    >
+                      <FaHeart className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">{trainer.name}</h3>
-                  <p className="text-xs text-[#ff8714] font-medium">{trainer.expertise}</p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-600">{trainer.experience}</p>
-            </div>
+              );
+            })}
           </div>
         ))}
       </div>
 
-      {selectedTrainer && (
-        <RecommendationModal
-          trainer={selectedTrainer}
-          onClose={() => setSelectedTrainer(null)}
-        />
+      {hasMoreTrainers && (
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="mt-3 text-sm font-medium transition-colors"
+          style={{ color: colors.primary }}
+        >
+          {showAll ? 'הצג פחות' : `הצג עוד ${trainers.length - 2} מאמנים`}
+        </button>
       )}
-    </div>
+
+      <style jsx>{`
+        .overflow-y-auto::-webkit-scrollbar {
+          width: 4px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+          background: ${colors.primary};
+          border-radius: 2px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+          background: ${colors.hover};
+        }
+      `}</style>
+    </section>
   );
 } 
