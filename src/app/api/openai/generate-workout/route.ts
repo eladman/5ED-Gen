@@ -352,7 +352,7 @@ export async function POST(req: Request) {
          - Consider the user's experience level for exercise selection
          - Align with the user's specific goals (military preparation, aerobic improvement, strength building)
       
-      ${userAnswers.goal === 'army' ? `4. IMPORTANT - Since the user selected "הכנה לצבא" (Military Preparation) as their goal:
+      4. IMPORTANT - Since the user selected "הכנה לצבא" (Military Preparation) as their goal:
          - Create intense, military-style training workouts that specifically prepare for IDF physical tests and combat fitness
          - Include exercises that mimic military activities such as crawling, sprinting on varied terrain (including sand if possible), carrying heavy objects, and obstacle course elements
          - Focus on building endurance, explosive power, and mental resilience under pressure
@@ -362,17 +362,7 @@ export async function POST(req: Request) {
          - Ensure workouts build both anaerobic and aerobic capacity needed for military fitness tests
          - Include partner exercises when possible to simulate team-based military activities
          - Design workouts with progressive intensity to prepare for the physical demands of basic training
-         - Focus on core strength and stability which is essential for military activities` : `4. IMPORTANT - Create athlete-style training workouts that focus on:
-         - Building overall functional strength, endurance, and mobility
-         - Developing athletic performance with balanced full-body training
-         - Incorporating compound movements that engage multiple muscle groups
-         - Including progressive overload principles to continuously improve performance
-         - Adding athletic movements like jumping, sprinting, and dynamic exercises
-         - Focusing on proper form and technique to maximize results and prevent injury
-         - Developing core stability and rotational strength for athletic movement
-         - Including mobility work to improve range of motion and prevent injury
-         - Adding periodized training to optimize performance gains
-         - Developing sports-specific skills based on the user's preferences and goals`}
+         - Focus on core strength and stability which is essential for military activities
       
       5. For each workout, also include:
          - Equipment needed (if any) (IN HEBREW)

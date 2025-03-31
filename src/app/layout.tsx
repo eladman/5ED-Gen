@@ -2,7 +2,9 @@ import './globals.css'
 import type { Metadata } from 'next'
 import { Heebo } from 'next/font/google'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
+import { ProfileProvider } from '@/lib/contexts/ProfileContext'
 import { Toaster } from 'react-hot-toast'
+import NavbarWrapper from './components/NavbarWrapper'
 
 const heebo = Heebo({ 
   subsets: ['hebrew', 'latin'],
@@ -24,15 +26,18 @@ export default function RootLayout({
     <html lang="he" dir="rtl">
       <body className={`${heebo.className} bg-white min-h-screen`}>
         <AuthProvider>
-          {children}
-          <Toaster position="top-center" toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#333',
-              color: '#fff',
-              direction: 'rtl'
-            },
-          }} />
+          <ProfileProvider>
+            <NavbarWrapper />
+            {children}
+            <Toaster position="top-center" toastOptions={{
+              duration: 3000,
+              style: {
+                background: '#333',
+                color: '#fff',
+                direction: 'rtl'
+              },
+            }} />
+          </ProfileProvider>
         </AuthProvider>
       </body>
     </html>

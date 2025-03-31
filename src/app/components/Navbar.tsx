@@ -13,14 +13,6 @@ export default function Navbar() {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  if (!user) {
-    return (
-      <div className="fixed w-full z-50 flex justify-center items-center h-16">
-        <LoginButton />
-      </div>
-    );
-  }
-
   return (
     <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-sm border-b">
       <div className="container-custom">

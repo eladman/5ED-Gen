@@ -1,11 +1,13 @@
 "use client";
 
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useProfile } from '@/lib/contexts/ProfileContext';
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function LoginButton() {
   const { user, signInWithGoogle, signOut, error: authError } = useAuth();
+  const { hasCompleteProfile, refreshProfile } = useProfile();
   const router = useRouter();
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -22,7 +24,18 @@ export default function LoginButton() {
           console.log("Please ensure popup blockers are disabled for this site");
           
           await signInWithGoogle();
-          router.push("/profile");
+          
+          // Refresh profile state from context
+          await refreshProfile();
+          
+          // Check if user has a complete profile
+          if (!hasCompleteProfile) {
+            // New user or incomplete profile - redirect to signup
+            router.push("/signup");
+          } else {
+            // Existing user with complete profile - redirect to home
+            router.push("/");
+          }
         } else {
           throw new Error("Authentication requires a browser environment");
         }
