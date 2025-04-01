@@ -3,9 +3,16 @@
  * 
  * @param minutes - Minutes portion of the run time
  * @param seconds - Seconds portion of the run time
+ * @param gender - Optional user gender ('male' or 'female')
  * @returns Fitness score (0-100)
  */
-export function threeKRunScore(minutes: number, seconds: number): number {
+export function threeKRunScore(minutes: number, seconds: number, gender?: string): number {
+  // Use gender-specific calculation if provided
+  if (gender === 'female') {
+    return threeKRunScoreFemale(minutes, seconds);
+  }
+
+  // Default male calculation (original logic)
   // Convert total time to decimal minutes
   const T = minutes + seconds / 60.0;
   
@@ -39,17 +46,57 @@ export function threeKRunScore(minutes: number, seconds: number): number {
 }
 
 /**
+ * Calculates aerobic score for females based on 3K run time
+ * 
+ * @param minutes - Minutes portion of the run time
+ * @param seconds - Seconds portion of the run time
+ * @returns Fitness score (0-100)
+ */
+export function threeKRunScoreFemale(minutes: number, seconds: number): number {
+  // Convert total time to decimal minutes
+  const T = minutes + (seconds / 60.0);
+
+  // Key times in minutes
+  const t100 = 11.5;    // 11:30 => score 100
+  const tPass = 17.25;  // 17:15 => score 60
+  const tZero = 21.0;   // 21:00 => score 0
+
+  // Slopes for each segment
+  // Segment 1: 100 -> 60
+  const slope1 = (60 - 100) / (tPass - t100); // -40 / 5.75
+  // Segment 2: 60 -> 0
+  const slope2 = (0 - 60) / (tZero - tPass);  // -60 / 3.75
+
+  // Piecewise logic
+  if (T <= t100) {
+    return 100;        // 11:30 or faster
+  } else if (T < tPass) {
+    // 11:30 < T < 17:15
+    return Math.round(100 + slope1 * (T - t100));
+  } else if (T < tZero) {
+    // 17:15 <= T < 21:00
+    return Math.round(60 + slope2 * (T - tPass));
+  } else {
+    return 0;          // 21:00 or slower
+  }
+}
+
+/**
  * Calculates aerobic score based on 3K run time string formatted as "MM:SS"
  * 
  * @param timeString - Run time in format "9:30" or "10:45"
+ * @param gender - Optional user gender ('male' or 'female')
  * @returns Fitness score (0-100)
  */
-export function threeKRunScoreFromString(timeString: string): number {
+export function threeKRunScoreFromString(timeString: string, gender?: string): number {
   const [minutes, seconds] = timeString.split(':').map(Number);
   
   if (isNaN(minutes) || isNaN(seconds)) {
     throw new Error('Invalid time format. Please use MM:SS format (e.g., "9:30")');
   }
   
+  if (gender === 'female') {
+    return threeKRunScore(minutes, seconds, 'female');
+  }
   return threeKRunScore(minutes, seconds);
 } 
