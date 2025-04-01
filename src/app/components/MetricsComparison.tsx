@@ -80,7 +80,10 @@ export default function MetricsComparison({
       
       // For 3000m run (lower is better)
       if (metricType === '3000m' || value === userMetrics.run3000m) {
-        return threeKRunScore(minutes, seconds, gender);
+        const runScore = gender === 'female' 
+          ? threeKRunScore(minutes, seconds, 'female') 
+          : threeKRunScore(minutes, seconds);
+        return runScore;
       }
       
       // For 400m run (lower is better)
