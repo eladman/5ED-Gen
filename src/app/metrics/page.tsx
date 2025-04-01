@@ -70,7 +70,7 @@ export default function MetricsPage() {
           router.push("/profile");
         } else {
           // Store user gender from profile
-          setUserGender(profile.gender || "male");
+          setUserGender((profile as any).gender || "male");
         }
       } catch (error) {
         console.error("Error checking profile:", error);
@@ -100,7 +100,7 @@ export default function MetricsPage() {
         if (profile) {
           setUserName(profile.name || user.displayName || "");
           setUserGroup(profile.group || "כיתה א");
-          setUserGender(profile.gender || "male");
+          setUserGender((profile as any).gender || "male");
           if (profile.photoData) {
             setUserPhoto(profile.photoData);
           } else if (profile.photoURL) {
