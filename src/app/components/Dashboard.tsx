@@ -13,7 +13,7 @@ export default function Dashboard() {
     workoutsCompleted: 0,
     streakDays: 0,
     upcomingWorkouts: 0,
-    progress: 0
+    gritScore: 0
   });
 
   // Fetch user data
@@ -37,7 +37,7 @@ export default function Dashboard() {
             workoutsCompleted: Math.floor(Math.random() * 30),
             streakDays: Math.floor(Math.random() * 14),
             upcomingWorkouts: Math.floor(Math.random() * 5),
-            progress: Math.floor(Math.random() * 100)
+            gritScore: Math.floor(Math.random() * 41) + 60 // Random score between 60-100
           });
           setIsLoading(false);
         }, 1000);
@@ -127,9 +127,9 @@ export default function Dashboard() {
             delay={0.3}
           />
           <StatCard 
-            title="התקדמות כללית" 
-            value={`${stats.progress}%`} 
-            icon="📈" 
+            title="ציון גריט" 
+            value={stats.gritScore} 
+            icon="💪" 
             color="bg-purple-50" 
             delay={0.4}
           />
