@@ -86,7 +86,7 @@ export default function TeamRecommendations({ trainers }: TeamRecommendationsPro
                           });
                         } else {
                           addToFavorites(user.uid, itemId);
-                          setFavorites(prev => new Set([...prev, itemId]));
+                          setFavorites(prev => new Set(Array.from(prev).concat(itemId)));
                         }
                       }}
                       className={`p-1.5 rounded-full transition-colors ${
