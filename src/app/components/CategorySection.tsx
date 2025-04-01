@@ -88,7 +88,7 @@ export default function CategorySection({ title, icon: Icon, items, color }: Cat
       });
     } else {
       await addToFavorites(user.uid, itemId);
-      setFavorites(prev => new Set([...prev, itemId]));
+      setFavorites(prev => new Set(Array.from(prev).concat(itemId)));
     }
   };
 
@@ -141,7 +141,7 @@ export default function CategorySection({ title, icon: Icon, items, color }: Cat
                           });
                         } else {
                           addToFavorites(user.uid, itemId);
-                          setFavorites(prev => new Set([...prev, itemId]));
+                          setFavorites(prev => new Set(Array.from(prev).concat(itemId)));
                         }
                       }}
                       className={`p-1.5 rounded-full transition-colors ${
