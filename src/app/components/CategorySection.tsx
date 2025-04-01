@@ -13,7 +13,7 @@ interface CategoryItem {
   title: string;
   description: string;
   href: string;
-  category: string;
+  category?: string;
   actionText?: string;
   image?: string;
 }
@@ -78,7 +78,7 @@ export default function CategorySection({ title, icon: Icon, items, color }: Cat
   const handleFavoriteClick = async (item: CategoryItem) => {
     if (!user) return;
 
-    const itemId = `${item.category}-${item.id}`;
+    const itemId = `${item.category || ''}-${item.id}`;
     if (favorites.has(itemId)) {
       await removeFromFavorites(user.uid, itemId);
       setFavorites(prev => {
@@ -107,7 +107,7 @@ export default function CategorySection({ title, icon: Icon, items, color }: Cat
       
       <div className="flex-1 overflow-y-auto pr-2 space-y-2">
         {displayedItems.map((item) => {
-          const itemId = `${item.category}-${item.id}`;
+          const itemId = `${item.category || ''}-${item.id}`;
           const isFavorite = favorites.has(itemId);
           
           return (
@@ -159,7 +159,7 @@ export default function CategorySection({ title, icon: Icon, items, color }: Cat
                     className="inline-flex items-center text-xs font-medium mt-2 transition-colors"
                     style={{ color: categoryColors[color as keyof typeof categoryColors].primary }}
                   >
-                    {item.actionText || getActionText(item.category)} עכשיו
+                    {item.actionText || getActionText(item.category || '')} עכשיו
                   </Link>
                 </div>
               </div>
