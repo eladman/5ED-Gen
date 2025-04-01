@@ -42,7 +42,8 @@ export default function AcademyPage() {
           description: 'שיחה עם מומחים לטכניקות לחימה מודרניות',
           actionText: 'האזן',
           href: '/academy/podcasts/4',
-          image: '/images/podcasts/combat.jpg'
+          image: '/images/podcasts/combat.jpg',
+          category: 'podcasts'
         },
         {
           id: '5',
@@ -50,7 +51,8 @@ export default function AcademyPage() {
           description: 'מדריך לאימון כוח מותאם ללוחמים',
           actionText: 'האזן',
           href: '/academy/podcasts/5',
-          image: '/images/podcasts/strength.jpg'
+          image: '/images/podcasts/strength.jpg',
+          category: 'podcasts'
         }
       ]
     },
@@ -90,7 +92,8 @@ export default function AcademyPage() {
           description: 'ניתוח פסיכולוגי של מצבי לחימה',
           actionText: 'קרא',
           href: '/academy/books/4',
-          image: '/images/books/psychology.jpg'
+          image: '/images/books/psychology.jpg',
+          category: 'books'
         },
         {
           id: '5',
@@ -98,7 +101,8 @@ export default function AcademyPage() {
           description: 'מדריך לתזונה מותאמת ללוחמים',
           actionText: 'קרא',
           href: '/academy/books/5',
-          image: '/images/books/nutrition.jpg'
+          image: '/images/books/nutrition.jpg',
+          category: 'books'
         }
       ]
     },
@@ -138,7 +142,8 @@ export default function AcademyPage() {
           description: 'מדריך וידאו לתזונה מותאמת ללוחמים',
           actionText: 'צפה',
           href: '/academy/videos/4',
-          image: '/images/videos/nutrition.jpg'
+          image: '/images/videos/nutrition.jpg',
+          category: 'videos'
         },
         {
           id: '5',
@@ -146,7 +151,8 @@ export default function AcademyPage() {
           description: 'מדריך להתאוששות מהירה אחרי אימונים',
           actionText: 'צפה',
           href: '/academy/videos/5',
-          image: '/images/videos/recovery.jpg'
+          image: '/images/videos/recovery.jpg',
+          category: 'videos'
         }
       ]
     }
