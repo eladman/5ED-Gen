@@ -6,7 +6,7 @@ import {
   FaRunning, FaBolt, FaDumbbell, FaChevronUp, 
   FaChevronDown, FaEquals, FaSearch, FaTrophy, FaUsers, FaChartBar
 } from 'react-icons/fa';
-import { threeKRunScore } from '@/lib/fitnessUtils';
+import { threeKRunScore, threeKRunScoreFemale } from '@/lib/fitnessUtils';
 
 export interface MetricsComparisonProps {
   userMetrics: Metrics;
@@ -81,7 +81,7 @@ export default function MetricsComparison({
       // For 3000m run (lower is better)
       if (metricType === '3000m' || value === userMetrics.run3000m) {
         const runScore = gender === 'female' 
-          ? threeKRunScore(minutes, seconds, 'female') 
+          ? threeKRunScoreFemale(minutes, seconds) 
           : threeKRunScore(minutes, seconds);
         return runScore;
       }
