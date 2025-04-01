@@ -8,11 +8,12 @@ import {
 } from 'react-icons/fa';
 import { threeKRunScore } from '@/lib/fitnessUtils';
 
-interface MetricsComparisonProps {
+export interface MetricsComparisonProps {
   userMetrics: Metrics;
   userName: string;
   userPhoto?: string | null;
   userGroup?: string;
+  userGender?: string;
 }
 
 // Extended metrics with user info for comparison
@@ -21,13 +22,15 @@ interface ComparisonMetrics extends Metrics {
   userName: string;
   userGroup: string;
   photoURL: string | null;
+  gender?: string;
 }
 
 export default function MetricsComparison({ 
   userMetrics, 
   userName, 
   userPhoto,
-  userGroup = 'כיתה א' // Default group if not provided
+  userGroup = 'כיתה א', // Default group if not provided
+  userGender = 'male' // Default gender if not provided
 }: MetricsComparisonProps) {
   const [otherUsers, setOtherUsers] = useState<ComparisonMetrics[]>([]);
   const [selectedUser, setSelectedUser] = useState<ComparisonMetrics | null>(null);
@@ -46,9 +49,9 @@ export default function MetricsComparison({
   }, []);
 
   // Calculate ratings for a user
-  const calculateUserRatings = (metrics: Metrics) => {
+  const calculateUserRatings = (metrics: Metrics, gender: string = 'male') => {
     // Calculate individual ratings
-    const run3000Rating = calculateRating(metrics.run3000m, 'time', '3000m');
+    const run3000Rating = calculateRating(metrics.run3000m, 'time', '3000m', gender);
     const run400Rating = calculateRating(metrics.run400m, 'time', '400m');
     const pullUpsRating = calculateRating(metrics.pullUps, 'reps', 'pullUps');
     const pushUpsRating = calculateRating(metrics.pushUps, 'reps', 'pushUps');
@@ -68,7 +71,7 @@ export default function MetricsComparison({
   };
 
   // Convert metrics to ratings (0-99) - match the calculation in MetricsFifaCard
-  const calculateRating = (value: string, type: 'time' | 'reps', metricType: string) => {
+  const calculateRating = (value: string, type: 'time' | 'reps', metricType: string, gender: string = 'male') => {
     if (type === 'time') {
       const [minutes, seconds] = value.split(':').map(Number);
       const totalSeconds = minutes * 60 + seconds;
@@ -77,7 +80,7 @@ export default function MetricsComparison({
       
       // For 3000m run (lower is better)
       if (metricType === '3000m' || value === userMetrics.run3000m) {
-        return threeKRunScore(minutes, seconds);
+        return threeKRunScore(minutes, seconds, gender);
       }
       
       // For 400m run (lower is better)
@@ -175,29 +178,30 @@ export default function MetricsComparison({
 
   // Sort users by selected category for leaderboard
   const sortedUsers = [...filteredUsers].sort((a, b) => {
-    const aRatings = calculateUserRatings(a);
-    const bRatings = calculateUserRatings(b);
+    const aRatings = calculateUserRatings(a, a.gender || 'male');
+    const bRatings = calculateUserRatings(b, b.gender || 'male');
     
     return bRatings[leaderboardCategory] - aRatings[leaderboardCategory];
   });
 
   // User's rank in each category
   const userRankData = (() => {
-    const userRatings = calculateUserRatings(userMetrics);
+    const userRatings = calculateUserRatings(userMetrics, userGender);
     const allUsersWithCurrent = [...otherUsers, {
       ...userMetrics,
       userName,
       userGroup: userGroup || 'כיתה א',
-      photoURL: userPhoto || null
+      photoURL: userPhoto || null,
+      gender: userGender
     }];
     
     // Sort everyone by category and find user's position
     const overallRank = [...allUsersWithCurrent]
-      .sort((a, b) => calculateUserRatings(b).overall - calculateUserRatings(a).overall)
+      .sort((a, b) => calculateUserRatings(b, b.gender || 'male').overall - calculateUserRatings(a, a.gender || 'male').overall)
       .findIndex(u => u.userName === userName) + 1;
       
     const aerobicRank = [...allUsersWithCurrent]
-      .sort((a, b) => calculateUserRatings(b).aerobic - calculateUserRatings(a).aerobic)
+      .sort((a, b) => calculateUserRatings(b, b.gender || 'male').aerobic - calculateUserRatings(a, a.gender || 'male').aerobic)
       .findIndex(u => u.userName === userName) + 1;
       
     const anaerobicRank = [...allUsersWithCurrent]
@@ -227,19 +231,20 @@ export default function MetricsComparison({
       ...userMetrics,
       userName,
       userGroup: userGroup || 'כיתה א',
-      photoURL: userPhoto || null
+      photoURL: userPhoto || null,
+      gender: userGender
     }];
     
     // Sort by overall rating and find user position
     const groupRank = [...allGroupUsers]
-      .sort((a, b) => calculateUserRatings(b).overall - calculateUserRatings(a).overall)
+      .sort((a, b) => calculateUserRatings(b, b.gender || 'male').overall - calculateUserRatings(a, a.gender || 'male').overall)
       .findIndex(u => u.userName === userName) + 1;
       
     return { rank: groupRank, total: allGroupUsers.length };
   };
 
-  const userRatings = calculateUserRatings(userMetrics);
-  const selectedUserRatings = selectedUser ? calculateUserRatings(selectedUser) : {
+  const userRatings = calculateUserRatings(userMetrics, userGender);
+  const selectedUserRatings = selectedUser ? calculateUserRatings(selectedUser, selectedUser.gender || 'male') : {
     overall: 0,
     aerobic: 0,
     anaerobic: 0,
@@ -470,7 +475,7 @@ export default function MetricsComparison({
                   <tbody className="divide-y divide-gray-200">
                     {sortedUsers.map((user, index) => {
                       const isCurrentUser = user.userName === userName;
-                      const userRating = calculateUserRatings(user)[leaderboardCategory];
+                      const userRating = calculateUserRatings(user, user.gender || 'male')[leaderboardCategory];
                       return (
                         <tr 
                           key={index} 
