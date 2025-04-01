@@ -12,6 +12,8 @@ import MetricsFifaCard from "@/app/components/MetricsFifaCard";
 import MetricsComparison from "@/app/components/MetricsComparison";
 import { getProfile } from "@/lib/firebase/profileUtils";
 import { getTeamNameById } from '@/lib/teamUtils';
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase/firebase";
 
 interface MetricsForm {
   run3000m: string;
@@ -49,6 +51,9 @@ export default function MetricsPage() {
   const [userName, setUserName] = useState<string>("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userGroup, setUserGroup] = useState<string>("כיתה א");
+  const [userGender, setUserGender] = useState<string>("male");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Check user authentication and profile completion
   useEffect(() => {
@@ -63,6 +68,9 @@ export default function MetricsPage() {
         if (!profile || !profile.name || !profile.phone || !profile.team) {
           // Profile doesn't exist or is incomplete, redirect to profile page
           router.push("/profile");
+        } else {
+          // Store user gender from profile
+          setUserGender(profile.gender || "male");
         }
       } catch (error) {
         console.error("Error checking profile:", error);
@@ -76,61 +84,96 @@ export default function MetricsPage() {
     checkProfile();
   }, [user, router]);
 
-  // Fetch metrics
+  // Load user metrics
   useEffect(() => {
-    const fetchMetrics = async () => {
-      if (!user) return;
+    if (!user || isCheckingProfile) return;
+    
+    const loadUserMetrics = async () => {
+      console.log("Starting to load user metrics");
       try {
-        const docs = await getDocuments<Metrics>('metrics');
-        const userMetrics = docs
-          .filter(doc => doc.userId === user.uid)
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setPreviousMetrics(userMetrics);
-      } catch (error) {
-        console.error('Error fetching metrics:', error);
-        toast.error('אירעה שגיאה בטעינת המדדים');
-      }
-    };
-
-    fetchMetrics();
-  }, [user]);
-
-  // Fetch user profile data
-  useEffect(() => {
-    const loadProfileData = async () => {
-      if (user) {
-        try {
-          const profile = await getProfile(user.uid);
-          if (profile) {
-            setUserName(profile.name || user.displayName || "");
-            
-            if (profile.photoData) {
-              setUserPhoto(profile.photoData);
-            } else if (profile.photoURL) {
-              setUserPhoto(profile.photoURL);
-            } else if (user.photoURL) {
-              setUserPhoto(user.photoURL);
-            }
-            
-            if (profile.group) {
-              setUserGroup(profile.group);
-            } else if (profile.team) {
-              setUserGroup(getTeamNameById(profile.team));
-            }
-          } else if (user.displayName) {
-            setUserName(user.displayName);
-            if (user.photoURL) {
-              setUserPhoto(user.photoURL);
-            }
+        setIsLoading(true);
+        
+        // Get user profile for name and photo
+        const profile = await getProfile(user.uid);
+        console.log("Loaded user profile:", profile ? "success" : "not found");
+        
+        if (profile) {
+          setUserName(profile.name || user.displayName || "");
+          setUserGroup(profile.group || "כיתה א");
+          setUserGender(profile.gender || "male");
+          if (profile.photoData) {
+            setUserPhoto(profile.photoData);
+          } else if (profile.photoURL) {
+            setUserPhoto(profile.photoURL);
+          } else if (user.photoURL) {
+            setUserPhoto(user.photoURL);
           }
-        } catch (error) {
-          console.error("Error fetching profile:", error);
         }
+        
+        // Get user metrics from Firestore
+        console.log("Fetching metrics for user:", user.uid);
+        const metricsRef = collection(db, "metrics");
+        const q = query(
+          metricsRef,
+          where("userId", "==", user.uid)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        console.log("Metrics query returned size:", querySnapshot.size);
+        
+        const metricsData: Metrics[] = [];
+        
+        querySnapshot.forEach((doc) => {
+          console.log("Processing metric document:", doc.id);
+          metricsData.push({
+            id: doc.id,
+            ...doc.data()
+          } as Metrics);
+        });
+        
+        // Sort by createdAt on the client-side
+        metricsData.sort((a, b) => {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+        
+        console.log("Total metrics loaded:", metricsData.length);
+        setPreviousMetrics(metricsData);
+        
+        // If there are metrics, pre-fill form with most recent values
+        if (metricsData.length > 0) {
+          console.log("Pre-filling form with latest metrics");
+          const latestMetrics = metricsData[0];
+          
+          // Pre-fill the form if the user wants to add a new entry
+          // For 3K run
+          const [run3000mMinutes, run3000mSeconds] = latestMetrics.run3000m.split(':');
+          // For 400m
+          const [run400mMinutes, run400mSeconds] = latestMetrics.run400m.split(':');
+          
+          setTimeInputs({
+            run3000m: {
+              minutes: run3000mMinutes,
+              seconds: run3000mSeconds
+            },
+            run400m: {
+              minutes: run400mMinutes,
+              seconds: run400mSeconds
+            }
+          });
+        } else {
+          console.log("No metrics found to pre-fill the form");
+        }
+      } catch (error) {
+        console.error("Error loading metrics:", error);
+        setError("אירעה שגיאה בטעינת המדדים");
+      } finally {
+        setIsLoading(false);
+        console.log("Completed loading user metrics");
       }
     };
-
-    loadProfileData();
-  }, [user]);
+    
+    loadUserMetrics();
+  }, [user, isCheckingProfile]);
 
   // Handle time inputs updates
   useEffect(() => {
@@ -162,35 +205,58 @@ export default function MetricsPage() {
         run400m: `${timeInputs.run400m.minutes || "0"}:${timeInputs.run400m.seconds.padStart(2, '0')}`,
       };
 
-      // Check if all fields are filled
-      const isAllFieldsFilled = Object.values(formattedMetrics).every(value => value !== "" && value !== "0:00");
-      if (!isAllFieldsFilled) {
-        toast.error('יש למלא את כל המדדים לפני השמירה', { id: loadingToast });
-        return;
-      }
+      // Only proceed with the save if all fields are filled properly
+      // This validation only runs when clicking the save button on step 3
       
-      // Validate time format
+      // Check run times
       if (formattedMetrics.run3000m === "0:00") {
         toast.error('יש להזין זמן תקין עבור ריצת 3,000 מטר', { id: loadingToast });
         return;
       }
+      
       if (formattedMetrics.run400m === "0:00") {
         toast.error('יש להזין זמן תקין עבור ריצת 400 מטר', { id: loadingToast });
+        return;
+      }
+      
+      // Check strength fields
+      if (!formattedMetrics.pullUps) {
+        toast.error('יש להזין את מספר המתחים', { id: loadingToast });
+        return;
+      }
+      
+      if (!formattedMetrics.pushUps) {
+        toast.error('יש להזין את מספר השכיבות שמיכה', { id: loadingToast });
+        return;
+      }
+      
+      if (!formattedMetrics.sitUps2min) {
+        toast.error('יש להזין את מספר הבטן', { id: loadingToast });
         return;
       }
 
       // Add timestamp and user ID to metrics
       const metricsData = {
         ...formattedMetrics,
-        userId: user?.uid,
+        userId: user?.uid || '',
         createdAt: new Date().toISOString(),
       };
 
+      console.log("Saving metrics data:", metricsData);
+      
       // Save to Firebase
       const savedMetric = await addDocument('metrics', metricsData);
+      console.log("Successfully saved metric with ID:", savedMetric.id);
+      
+      // Create a complete metrics object
+      const completeMetric: Metrics = {
+        ...metricsData,
+        id: savedMetric.id,
+        userId: user?.uid || '' // Ensure userId is not undefined
+      };
       
       // Update local state
-      setPreviousMetrics(prev => [{ ...metricsData, id: savedMetric.id } as Metrics, ...prev]);
+      setPreviousMetrics(prev => [completeMetric, ...prev]);
       
       // Reset form
       setMetrics({
@@ -208,6 +274,38 @@ export default function MetricsPage() {
       setShowForm(false);
 
       toast.success('המדדים נשמרו בהצלחה!', { id: loadingToast });
+      
+      // Fetch the latest metrics again to ensure we have the latest data
+      console.log("Re-fetching metrics after save...");
+      try {
+        // Use a simpler query that doesn't require a composite index
+        const metricsRef = collection(db, "metrics");
+        const q = query(
+          metricsRef,
+          where("userId", "==", user?.uid || '')
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const refreshedMetricsData: Metrics[] = [];
+        
+        querySnapshot.forEach((doc) => {
+          refreshedMetricsData.push({
+            id: doc.id,
+            ...doc.data()
+          } as Metrics);
+        });
+        
+        // Sort the metrics by createdAt on the client-side
+        refreshedMetricsData.sort((a, b) => {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+        
+        console.log("Fetched updated metrics:", refreshedMetricsData.length);
+        setPreviousMetrics(refreshedMetricsData);
+      } catch (error) {
+        console.error("Error fetching updated metrics:", error);
+      }
+      
     } catch (error) {
       console.error('Error saving metrics:', error);
       toast.error('אירעה שגיאה בשמירת המדדים');
@@ -253,7 +351,36 @@ export default function MetricsPage() {
     return { minutes, seconds };
   };
 
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 3));
+  const nextStep = () => {
+    // To prevent validation issues, explicitly handle just the step change
+    if (currentStep === 1) {
+      // Only validate the 3000m field
+      const run3000Time = `${timeInputs.run3000m.minutes || "0"}:${timeInputs.run3000m.seconds.padStart(2, '0')}`;
+      if (run3000Time === "0:00") {
+        toast.error('יש להזין זמן תקין עבור ריצת 3,000 מטר');
+        return;
+      }
+      setCurrentStep(2);
+      return;
+    }
+    
+    if (currentStep === 2) {
+      // Only validate the 400m field
+      const run400Time = `${timeInputs.run400m.minutes || "0"}:${timeInputs.run400m.seconds.padStart(2, '0')}`;
+      if (run400Time === "0:00") {
+        toast.error('יש להזין זמן תקין עבור ריצת 400 מטר');
+        return;
+      }
+      setCurrentStep(3);
+      return;
+    }
+  };
+  
+  // A direct step selector that doesn't validate
+  const selectStep = (step: number) => {
+    setCurrentStep(step);
+  };
+  
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const formatDate = (dateString: string) => {
@@ -347,7 +474,7 @@ export default function MetricsPage() {
                               ? 'bg-[#ff8714] text-white' 
                               : 'text-gray-500 hover:bg-gray-200'
                           }`}
-                          onClick={() => setCurrentStep(step)}
+                          onClick={() => selectStep(step)}
                         >
                           {step}
                         </div>
@@ -774,12 +901,13 @@ export default function MetricsPage() {
           ) : (
             <div className="animate-fadeIn">
               {/* Social Comparison Tab Content */}
-              {previousMetrics.length > 0 ? (
+              {previousMetrics && previousMetrics.length > 0 ? (
                 <MetricsComparison 
                   userMetrics={previousMetrics[0]} 
                   userName={userName}
                   userPhoto={userPhoto}
                   userGroup={userGroup}
+                  userGender={userGender}
                 />
               ) : (
                 <div className="text-center py-16 bg-gray-50 rounded-xl border border-gray-200">
