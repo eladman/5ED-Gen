@@ -9,7 +9,7 @@ import { GiSittingDog } from "react-icons/gi";
 import toast from "react-hot-toast";
 import { addDocument, getDocuments, deleteDocument } from "@/lib/firebase/firebaseUtils";
 import MetricsFifaCard from "@/app/components/MetricsFifaCard";
-import MetricsComparison from "@/app/components/MetricsComparison";
+import MetricsComparison, { MetricsComparisonProps } from "@/app/components/MetricsComparison";
 import { getProfile } from "@/lib/firebase/profileUtils";
 import { getTeamNameById } from '@/lib/teamUtils';
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
@@ -28,6 +28,7 @@ export interface Metrics extends MetricsForm {
   userId: string;
   createdAt: string;
 }
+
 
 export default function MetricsPage() {
   const { user } = useAuth();
