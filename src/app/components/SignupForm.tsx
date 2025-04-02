@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { saveProfile } from '@/lib/firebase/profileUtils';
 import TeamSelector from '@/components/TeamSelector';
+import { getTeamById, getTeamType } from '@/lib/teamUtils';
 
 export default function SignupForm() {
   const { user, signOut } = useAuth();
@@ -16,6 +17,7 @@ export default function SignupForm() {
     name: '',
     phone: '',
     team: '',
+    teamType: '',
     gender: '',
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -45,9 +47,12 @@ export default function SignupForm() {
   };
 
   const handleTeamChange = (teamId: string) => {
+    const team = getTeamById(teamId);
+    const teamType = team ? getTeamType(team.name) : '';
     setFormData(prev => ({
       ...prev,
-      team: teamId
+      team: teamId,
+      teamType
     }));
   };
 

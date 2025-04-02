@@ -6,6 +6,7 @@ interface ProfileData {
   name: string;
   phone: string;
   team: string;
+  teamType?: string; // Added for team type (נוער/נערים/ילדים)
   gender?: string; // Added for gender selection (male/female)
   group?: string; // Added for metrics comparison feature
   photoURL?: string;

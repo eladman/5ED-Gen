@@ -53,6 +53,7 @@ export default function MetricsPage() {
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userGroup, setUserGroup] = useState<string>("כיתה א");
   const [userGender, setUserGender] = useState<string>("male");
+  const [userTeamType, setUserTeamType] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,6 +103,7 @@ export default function MetricsPage() {
           setUserName(profile.name || user.displayName || "");
           setUserGroup(profile.group || "כיתה א");
           setUserGender((profile as any).gender || "male");
+          setUserTeamType(profile.teamType || "");
           if (profile.photoData) {
             setUserPhoto(profile.photoData);
           } else if (profile.photoURL) {
@@ -819,7 +821,9 @@ export default function MetricsPage() {
                       </div>
                     </div>
                     
-                    <MetricsFifaCard metrics={previousMetrics[0]} />
+                    {userTeamType === 'נוער' && (
+                      <MetricsFifaCard metrics={previousMetrics[0]} />
+                    )}
                   </div>
                   
                   {/* Previous Metrics History */}
@@ -902,30 +906,40 @@ export default function MetricsPage() {
           ) : (
             <div className="animate-fadeIn">
               {/* Social Comparison Tab Content */}
-              {previousMetrics && previousMetrics.length > 0 ? (
-                <MetricsComparison 
-                  userMetrics={previousMetrics[0]} 
-                  userName={userName}
-                  userPhoto={userPhoto}
-                  userGroup={userGroup}
-                  userGender={userGender}
-                />
+              {userTeamType === 'נוער' ? (
+                previousMetrics && previousMetrics.length > 0 ? (
+                  <MetricsComparison 
+                    userMetrics={previousMetrics[0]} 
+                    userName={userName}
+                    userPhoto={userPhoto}
+                    userGroup={userGroup}
+                    userGender={userGender}
+                  />
+                ) : (
+                  <div className="text-center py-16 bg-gray-50 rounded-xl border border-gray-200">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#ff8714]/10 mb-4">
+                      <FaUsers className="text-[#ff8714] w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-medium mb-2">אין לך עדיין מדדים להשוואה</h3>
+                    <p className="text-gray-500 mb-6">הוסף מדדים חדשים כדי להשוות את עצמך לאחרים</p>
+                    <button
+                      onClick={() => {
+                        setActiveTab('personal');
+                        setShowForm(true);
+                      }}
+                      className="px-6 py-3 bg-[#ff8714] text-white rounded-full font-medium hover:bg-[#e67200] transition-colors inline-flex items-center gap-2"
+                    >
+                      <FaPlus /> הזן מדדים חדשים
+                    </button>
+                  </div>
+                )
               ) : (
                 <div className="text-center py-16 bg-gray-50 rounded-xl border border-gray-200">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#ff8714]/10 mb-4">
                     <FaUsers className="text-[#ff8714] w-8 h-8" />
                   </div>
-                  <h3 className="text-xl font-medium mb-2">אין לך עדיין מדדים להשוואה</h3>
-                  <p className="text-gray-500 mb-6">הוסף מדדים חדשים כדי להשוות את עצמך לאחרים</p>
-                  <button
-                    onClick={() => {
-                      setActiveTab('personal');
-                      setShowForm(true);
-                    }}
-                    className="px-6 py-3 bg-[#ff8714] text-white rounded-full font-medium hover:bg-[#e67200] transition-colors inline-flex items-center gap-2"
-                  >
-                    <FaPlus /> הזן מדדים חדשים
-                  </button>
+                  <h3 className="text-xl font-medium mb-2">השוואה חברתית זמינה רק לקבוצות נוער</h3>
+                  <p className="text-gray-500 mb-6">אתה יכול להמשיך להזין מדדים ולראות את ההיסטוריה שלך</p>
                 </div>
               )}
             </div>

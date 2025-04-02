@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { saveProfile, getProfile, processProfileImage } from '@/lib/firebase/profileUtils';
 import Navbar from '@/app/components/Navbar';
 import TeamSelector from '@/components/TeamSelector';
+import { getTeamById, getTeamType } from '@/lib/teamUtils';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ export default function ProfilePage() {
     phone: '',
     team: '',
     gender: '',
+    teamType: '',
   });
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -39,6 +41,7 @@ export default function ProfilePage() {
             phone: profile.phone,
             team: profile.team,
             gender: profile.gender || '',
+            teamType: profile.teamType || '',
           });
           // Use photoData (base64) first, then fallback to photoURL if available
           if (profile.photoData) {
@@ -65,7 +68,9 @@ export default function ProfilePage() {
   };
 
   const handleTeamChange = (teamId: string) => {
-    setFormData(prev => ({ ...prev, team: teamId }));
+    const team = getTeamById(teamId);
+    const teamType = team ? getTeamType(team.name) : '';
+    setFormData(prev => ({ ...prev, team: teamId, teamType }));
     setSaveStatus('idle');
   };
 

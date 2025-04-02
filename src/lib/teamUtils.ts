@@ -82,8 +82,21 @@ export const getTeamNameById = (teamId: string): string => {
   return team ? team.name : '';
 };
 
+/**
+ * Get the team type (נוער/נערים/ילדים) based on the team name
+ * @param teamName The team name to analyze
+ * @returns The team type as a string
+ */
+export const getTeamType = (teamName: string): string => {
+  if (teamName.includes('נוער')) return 'נוער';
+  if (teamName.includes('נערים') || teamName.includes('נערות')) return 'נערים';
+  if (teamName.includes('ילדים') || teamName.includes('חטיבות')) return 'ילדים';
+  return '';
+};
+
 export default {
   teams,
   getTeamById,
   getTeamNameById,
+  getTeamType,
 }; 
