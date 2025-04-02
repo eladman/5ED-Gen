@@ -15,8 +15,29 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.pravatar.cc',
+      },
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
       }
     ],
+  },
+  // Add fallback for dynamic routes and client-side routing
+  async rewrites() {
+    return [
+      {
+        source: '/:path*',
+        destination: '/',
+      },
+    ];
   },
 }
 

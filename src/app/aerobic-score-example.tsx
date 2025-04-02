@@ -5,11 +5,12 @@ import { threeKRunScore, threeKRunScoreFromString } from '@/lib/fitnessUtils';
 
 export default function AerobicScoreCalculator() {
   const [timeString, setTimeString] = useState('12:00');
-  const [score, setScore] = useState(() => threeKRunScoreFromString('12:00'));
+  const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [score, setScore] = useState(() => threeKRunScoreFromString('12:00', 'male'));
 
   const handleCalculate = () => {
     try {
-      const newScore = threeKRunScoreFromString(timeString);
+      const newScore = threeKRunScoreFromString(timeString, gender);
       setScore(newScore);
     } catch (error) {
       alert('Please enter a valid time in MM:SS format (e.g., 12:00)');
@@ -31,6 +32,34 @@ export default function AerobicScoreCalculator() {
         />
       </div>
       
+      <div className="mb-4">
+        <label className="block text-gray-700 mb-2">Gender</label>
+        <div className="flex gap-4">
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="gender"
+              value="male"
+              checked={gender === 'male'}
+              onChange={() => setGender('male')}
+              className="mr-2"
+            />
+            <span>Male</span>
+          </label>
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="gender"
+              value="female"
+              checked={gender === 'female'}
+              onChange={() => setGender('female')}
+              className="mr-2"
+            />
+            <span>Female</span>
+          </label>
+        </div>
+      </div>
+      
       <button
         onClick={handleCalculate}
         className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600"
@@ -50,12 +79,21 @@ export default function AerobicScoreCalculator() {
 
       <div className="mt-6 text-sm text-gray-600">
         <h2 className="font-semibold">How the score is calculated:</h2>
-        <ul className="list-disc pl-5 space-y-1 mt-2">
-          <li>9:30 or faster: Score = 100</li>
-          <li>Between 9:30 and 14:15: Score decreases linearly from 100 to 60</li>
-          <li>Between 14:15 and 18:00: Score decreases linearly from 60 to 0</li>
-          <li>18:00 or slower: Score = 0</li>
-        </ul>
+        {gender === 'male' ? (
+          <ul className="list-disc pl-5 space-y-1 mt-2">
+            <li>9:30 or faster: Score = 100</li>
+            <li>Between 9:30 and 14:15: Score decreases linearly from 100 to 60</li>
+            <li>Between 14:15 and 18:00: Score decreases linearly from 60 to 0</li>
+            <li>18:00 or slower: Score = 0</li>
+          </ul>
+        ) : (
+          <ul className="list-disc pl-5 space-y-1 mt-2">
+            <li>11:30 or faster: Score = 100</li>
+            <li>Between 11:30 and 17:15: Score decreases linearly from 100 to 60</li>
+            <li>Between 17:15 and 21:00: Score decreases linearly from 60 to 0</li>
+            <li>21:00 or slower: Score = 0</li>
+          </ul>
+        )}
       </div>
     </div>
   );

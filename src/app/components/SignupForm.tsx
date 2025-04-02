@@ -16,6 +16,7 @@ export default function SignupForm() {
     name: '',
     phone: '',
     team: '',
+    gender: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
@@ -55,7 +56,7 @@ export default function SignupForm() {
     if (!user) return;
 
     // Validate form
-    if (!formData.name || !formData.phone || !formData.team) {
+    if (!formData.name || !formData.phone || !formData.team || !formData.gender) {
       alert('נא למלא את כל השדות הנדרשים');
       return;
     }
@@ -119,6 +120,35 @@ export default function SignupForm() {
               placeholder="05X-XXXXXXX"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 mb-1">מגדר</label>
+            <div className="flex gap-4 mt-1">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="gender"
+                  value="male"
+                  checked={formData.gender === 'male'}
+                  onChange={handleInputChange}
+                  className="mr-2"
+                  required
+                />
+                <span>זכר</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="gender"
+                  value="female"
+                  checked={formData.gender === 'female'}
+                  onChange={handleInputChange}
+                  className="mr-2"
+                />
+                <span>נקבה</span>
+              </label>
+            </div>
           </div>
 
           <div>

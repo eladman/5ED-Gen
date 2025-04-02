@@ -14,6 +14,7 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
   const { user } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
+  const [userGender, setUserGender] = useState<string>("");
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -22,6 +23,7 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
           const profile = await getProfile(user.uid);
           if (profile) {
             setUserName(profile.name || user.displayName || "");
+            setUserGender(profile.gender || "male"); // Default to male if not specified
             if (profile.photoData) {
               setProfileImage(profile.photoData);
             } else if (profile.photoURL) {
@@ -50,9 +52,9 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
       
       if (isNaN(totalSeconds)) return 0;
       
-      // For 3000m run - use the threeKRunScore function
+      // For 3000m run - use the threeKRunScore function with gender
       if (metricType === '3000m' || value === metrics.run3000m) {
-        return threeKRunScore(minutes, seconds);
+        return threeKRunScore(minutes, seconds, userGender);
       }
       
       // For 400m run (lower is better)
