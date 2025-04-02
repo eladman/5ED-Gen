@@ -8,8 +8,9 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { useProfile } from '@/lib/contexts/ProfileContext';
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
-export default function Home() {
+export default function Home(): JSX.Element {
   const { user, loading } = useAuth();
   const { hasCompleteProfile, isLoading: profileLoading } = useProfile();
   const [mounted, setMounted] = useState(false);
@@ -25,7 +26,7 @@ export default function Home() {
     if (mounted && !loading && !profileLoading && user && !hasCompleteProfile) {
       router.push('/signup');
     }
-  }, [user, loading, mounted, router, hasCompleteProfile, profileLoading]);
+  }, [mounted, loading, profileLoading, user, hasCompleteProfile, router]);
 
   // Show loading state while auth state is determined, checking profile, or during hydration
   if (!mounted || loading || profileLoading) {

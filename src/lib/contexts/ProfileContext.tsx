@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { getProfile } from '@/lib/firebase/profileUtils';
 
@@ -16,12 +16,12 @@ const ProfileContext = createContext<ProfileContextType>({
   refreshProfile: async () => {},
 });
 
-export function ProfileProvider({ children }: { children: React.ReactNode }) {
+export function ProfileProvider({ children }: { children: React.ReactNode }): JSX.Element {
   const { user } = useAuth();
   const [hasCompleteProfile, setHasCompleteProfile] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkUserProfile = async () => {
+  const checkUserProfile = useCallback(async () => {
     if (!user) {
       setHasCompleteProfile(false);
       setIsLoading(false);
@@ -38,15 +38,15 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
 
   // Check profile when user changes
   useEffect(() => {
     checkUserProfile();
-  }, [user]);
+  }, [checkUserProfile]);
 
   // Provide method to manually refresh profile
-  const refreshProfile = async () => {
+  const refreshProfile = async (): Promise<void> => {
     await checkUserProfile();
   };
 

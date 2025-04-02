@@ -4,6 +4,7 @@ import { addDocument } from '@/lib/firebase/firebaseUtils';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 interface WorkoutDay {
   day: string;
@@ -185,13 +186,7 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
   const { user } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (userAnswers) {
-      generateWorkoutProgram();
-    }
-  }, [userAnswers]);
-
-  const generateWorkoutProgram = async (retryCount = 0, maxRetries = 3) => {
+  const generateWorkoutProgram = async (retryCount = 0, maxRetries = 3): Promise<void> => {
     setLoading(true);
     
     try {
@@ -248,45 +243,23 @@ export default function WeeklyWorkoutTemplate({ userAnswers, answersId }: Weekly
       const data = await response.json();
 
       if (!data.workouts || !Array.isArray(data.workouts)) {
-        console.error('Invalid response format:', data);
-        throw new Error('התקבל פורמט לא תקין מהשרת');
+        throw new Error('Invalid response format from server');
       }
 
       setWorkoutSchedule(data.workouts);
+      setLoading(false);
     } catch (error: any) {
       console.error('Error generating workout program:', error);
-      
-      if (error.name === 'AbortError' || error.message?.includes('aborted')) {
-        if (retryCount < maxRetries) {
-          toast.loading(`ניסיון נוסף... (${retryCount + 1}/${maxRetries + 1})`, { duration: 3000 });
-          return generateWorkoutProgram(retryCount + 1, maxRetries);
-        } else {
-          if (userAnswers.goal === 'army') {
-            setWorkoutSchedule(generateWorkoutSchedule(userAnswers.workoutFrequency, 'army'));
-            toast.success('נוצרה תוכנית אימונים בסיסית (ללא AI) כמוצא אחרון');
-          } else {
-            setWorkoutSchedule(generateWorkoutSchedule(userAnswers.workoutFrequency));
-            toast.success('נוצרה תוכנית אימונים בסיסית (ללא AI) כמוצא אחרון');
-          }
-        }
-      } else if (error.message && (
-          error.message.includes('API key') || 
-          error.message.includes('authentication') ||
-          error.message.includes('401') ||
-          error.message.includes('Incorrect API key')
-        )) {
-        toast.error('שגיאת אימות מול שרת ה-AI. אנא פנה למנהל המערכת לבדיקת מפתח ה-API.');
-      } else if (error.message.includes('GPT-4o')) {
-        toast.error('שגיאה בעת יצירת תוכנית אימונים עם GPT-4o. אנא נסה שוב מאוחר יותר.');
-      } else {
-        toast.error('לא ניתן ליצור תוכנית אימונים כרגע, אנא נסה שוב מאוחר יותר');
-      }
-      
-      setWorkoutSchedule([]);
-    } finally {
+      toast.error(error.message || 'אירעה שגיאה ביצירת תוכנית האימונים');
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (userAnswers) {
+      generateWorkoutProgram();
+    }
+  }, [userAnswers, generateWorkoutProgram]);
 
   const handleSave = async () => {
     if (!user) {

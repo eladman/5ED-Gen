@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { useProfile } from '@/lib/contexts/ProfileContext';
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from 'next/image';
 
 export default function LoginButton() {
   const { user, signInWithGoogle, signOut, error: authError } = useAuth();
@@ -75,10 +76,12 @@ export default function LoginButton() {
       >
         {user ? (
           <>
-            <img
+            <Image
               src={user.photoURL || ""}
               alt="תמונת פרופיל"
-              className="w-6 h-6 rounded-full"
+              width={24}
+              height={24}
+              className="rounded-full"
             />
             <span>התנתק</span>
           </>
