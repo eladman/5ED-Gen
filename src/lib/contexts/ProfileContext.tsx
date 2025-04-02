@@ -31,7 +31,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       const profile = await getProfile(user.uid);
-      setHasCompleteProfile(Boolean(profile && profile.name && profile.phone && profile.team && profile.gender));
+      setHasCompleteProfile(Boolean(profile && profile.name && profile.phone && profile.team));
     } catch (error) {
       console.error('Error checking profile:', error);
       setHasCompleteProfile(false);
