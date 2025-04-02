@@ -8,7 +8,7 @@ export default function Hero() {
   const router = useRouter();
 
   return (
-    <section className="relative min-h-[90vh] flex items-center section-padding overflow-hidden bg-gradient-to-b from-[#fff5eb] to-white">
+    <section className="relative min-h-[90vh] flex items-center section-padding overflow-hidden bg-gradient-to-b from-[#ff8714] via-[#fff5eb] to-white">
       <div className="container-custom relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <motion.div 
@@ -66,7 +66,7 @@ export default function Hero() {
             transition={{ duration: 1 }}
           >
             <motion.div 
-              className="absolute inset-0 bg-gradient-to-r from-[#ff8714] to-[#ffa149] rounded-full opacity-20 blur-3xl"
+              className="absolute inset-0 bg-gradient-to-r from-[#ff8714] to-[#ffa149] rounded-full opacity-30 blur-3xl"
               animate={{
                 scale: [1, 1.2, 1],
                 opacity: [0.2, 0.3, 0.2],
@@ -101,7 +101,7 @@ export default function Hero() {
         </div>
       </div>
       <motion.div 
-        className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white to-transparent"
+        className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white via-[#fff5eb] to-transparent"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1, delay: 0.8 }}
