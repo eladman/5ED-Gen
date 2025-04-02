@@ -15,6 +15,7 @@ export default function ProfilePage() {
     name: '',
     phone: '',
     team: '',
+    gender: '',
   });
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -37,6 +38,7 @@ export default function ProfilePage() {
             name: profile.name,
             phone: profile.phone,
             team: profile.team,
+            gender: profile.gender || '',
           });
           // Use photoData (base64) first, then fallback to photoURL if available
           if (profile.photoData) {
@@ -235,6 +237,37 @@ export default function ProfilePage() {
                   className="w-full p-2 border rounded-md text-right focus:ring-2 focus:ring-[#ff8714] focus:border-transparent"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-right mb-1 text-gray-700">
+                  מגדר
+                </label>
+                <div className="flex gap-4 mt-1 justify-right">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="gender"
+                      value="male"
+                      checked={formData.gender === 'male'}
+                      onChange={handleInputChange}
+                      className="ml-2"
+                      required
+                    />
+                    <span>זכר</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="gender"
+                      value="female"
+                      checked={formData.gender === 'female'}
+                      onChange={handleInputChange}
+                      className="ml-2"
+                    />
+                    <span>נקבה</span>
+                  </label>
+                </div>
               </div>
 
               <div>
