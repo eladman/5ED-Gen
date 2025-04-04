@@ -94,9 +94,11 @@ export const getTeamType = (teamName: string): string => {
   return '';
 };
 
-export default {
+const teamUtils = {
   teams,
   getTeamById,
   getTeamNameById,
   getTeamType,
-}; 
+};
+
+export default teamUtils; 

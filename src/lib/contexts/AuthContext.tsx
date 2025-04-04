@@ -27,17 +27,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     console.log("Setting up auth state listener");
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      console.log("Auth state changed:", user ? "User logged in" : "No user");
-      setUser(user);
+    try {
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        console.log("Auth state changed:", user ? `User logged in: ${user.uid}` : "No user");
+        setUser(user);
+        setLoading(false);
+      }, (error) => {
+        console.error("Auth state change error:", error);
+        setError(error.message);
+        setLoading(false);
+      });
+      
+      return () => {
+        console.log("Unsubscribing from auth state listener");
+        unsubscribe();
+      };
+    } catch (error) {
+      console.error("Error setting up auth state listener:", error);
+      setError("Failed to set up authentication");
       setLoading(false);
-    }, (error) => {
-      console.error("Auth state change error:", error);
-      setError(error.message);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    }
   }, []);
 
   const signInWithGoogle = async () => {

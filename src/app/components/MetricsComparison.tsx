@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Metrics } from '@/app/metrics/page';
 import Image from 'next/image';
 import { 
@@ -59,80 +59,146 @@ export default function MetricsComparison({
     strength: 0
   });
   
-  // Load available teams for user's gender
-  useEffect(() => {
-    const loadTeams = async () => {
-      try {
-        setIsLoading(true);
-        const teamsCollection = collection(db, "teams");
-        
-        // Get all teams first
-        const teamsSnapshot = await getDocs(teamsCollection);
-        let allTeams: Team[] = [];
-        
-        teamsSnapshot.forEach((doc) => {
-          const teamData = doc.data();
-          allTeams.push({
-            id: doc.id,
-            name: teamData.name,
-            gender: teamData.gender
-          } as Team);
-        });
-
-        // If no teams found in Firebase, use the ones from teamUtils
-        if (allTeams.length === 0) {
-          console.log("No teams found in Firebase, using predefined teams");
-          
-          // Create teams from the predefined list with appropriate gender
-          allTeams = allTeamsData.map(team => {
-            const isMaleTeam = team.name.includes('בנים') || 
-              (!team.name.includes('בנות') && !team.name.includes('נערות'));
-            
-            return {
-              id: team.id,
-              name: team.name,
-              gender: isMaleTeam ? 'male' : 'female'
-            } as Team;
-          });
-          
-          // Optionally save these teams to Firebase for future use
-          for (const team of allTeams) {
-            try {
-              await addDoc(teamsCollection, team);
-            } catch (error) {
-              console.error("Error saving team to Firebase:", error);
-            }
-          }
-        }
-
-        // Filter teams based on user's gender and team type
-        const filteredTeams = allTeams.filter(team => {
-          // Check gender match (primary filter)
-          const genderMatch = team.gender === userGender;
-          
-          // Allow any team type for now to make sure some teams appear
-          return genderMatch;
-        });
-
-        console.log("Filtered teams:", filteredTeams);
-        setTeams(filteredTeams);
-        
-        // Calculate user's rank within their gender
-        await calculateUserRankInGender();
-        
-      } catch (err) {
-        console.error("Error loading teams:", err);
-        setError('אירעה שגיאה בטעינת הקבוצות');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Define reusable functions BEFORE they're used in dependencies
+  
+  const calculateRating = useCallback((value: string, type: 'time' | 'reps', metricType: string, gender: string = 'male') => {
+    // Rating calculation logic
+    if (!value || value === '0' || value === '0:00') return 0;
     
-    loadTeams();
-  }, [userGender]);
+    try {
+      if (type === 'time') {
+        // For time-based metrics like running
+        const [mins, secs] = value.split(':').map(Number);
+        
+        if (metricType === 'run3000m') {
+          return threeKRunScore(mins, secs, gender);
+        }
+        // Other time-based calculations can go here
+      } else if (type === 'reps') {
+        // For repetition-based metrics
+        const reps = parseInt(value, 10);
+        
+        if (metricType === 'pullUps') {
+          // Pull-ups logic
+          return reps < 5 ? reps * 10 : 50 + (reps - 5) * 5;
+        } else if (metricType === 'pushUps') {
+          // Push-ups logic
+          return reps < 30 ? reps * 2 : 60 + (reps - 30);
+        }
+        // Other rep-based calculations
+      }
+    } catch (error) {
+      console.error(`Error calculating rating for ${metricType}:`, error);
+    }
+    
+    return 0; // Default fallback
+  }, []);
+  
+  const calculateUserRatings = useCallback((metrics: Metrics, gender: string = 'male') => {
+    // Calculate individual scores
+    const aerobicScore = metrics.run3000m ? calculateRating(metrics.run3000m, 'time', 'run3000m', gender) : 0;
+    const anaerobicScore = metrics.run400m ? calculateRating(metrics.run400m, 'time', 'run400m', gender) : 0;
+    
+    const pullUpsScore = metrics.pullUps ? calculateRating(metrics.pullUps.toString(), 'reps', 'pullUps', gender) : 0;
+    const pushUpsScore = metrics.pushUps ? calculateRating(metrics.pushUps.toString(), 'reps', 'pushUps', gender) : 0;
+    
+    // Strength is average of pull-ups and push-ups
+    const strengthScore = pullUpsScore > 0 || pushUpsScore > 0 
+      ? Math.round((pullUpsScore + pushUpsScore) / 2) 
+      : 0;
+    
+    // Overall score is average of the three categories
+    const validScores = [
+      aerobicScore > 0 ? aerobicScore : null,
+      anaerobicScore > 0 ? anaerobicScore : null,
+      strengthScore > 0 ? strengthScore : null
+    ].filter((score): score is number => score !== null);
+    
+    const overallScore = validScores.length > 0 
+      ? Math.round(validScores.reduce((sum, score) => sum + score, 0) / validScores.length) 
+      : 0;
+    
+    return {
+      overall: overallScore,
+      aerobic: aerobicScore,
+      anaerobic: anaerobicScore,
+      strength: strengthScore
+    };
+  }, [calculateRating]);
+  
+  const generateMockTeamMembers = useCallback((teamId: string, count: number, gender: string): ComparisonMetrics[] => {
+    const mockMembers: ComparisonMetrics[] = [];
+    
+    // Mock names
+    const maleFirstNames = ['יובל', 'איתי', 'נועם', 'אורי', 'דניאל', 'רועי', 'איתמר', 'עידו', 'אלון', 'יואב'];
+    const femaleFirstNames = ['נועה', 'מאיה', 'רוני', 'תמר', 'שירה', 'יעל', 'אביגיל', 'הילה', 'ליאור', 'עדי'];
+    const lastNames = ['כהן', 'לוי', 'מזרחי', 'אברהם', 'דוד', 'פרץ', 'ביטון', 'אוחיון', 'גולן', 'אזולאי'];
+    
+    const names = gender === 'female' ? femaleFirstNames : maleFirstNames;
+    
+    for (let i = 0; i < count; i++) {
+      const firstName = names[Math.floor(Math.random() * names.length)];
+      const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+      const fullName = `${firstName} ${lastName}`;
+      
+      // Generate user ID
+      const userId = `mock-${teamId}-${i}`;
+      
+      // Generate mock metrics based on gender
+      // 3K run: men 10-15 mins, women 12-17 mins
+      let run3000mMin, run3000mMax, pullUpsMin, pullUpsMax, pushUpsMin, pushUpsMax;
+      
+      if (gender === 'female') {
+        run3000mMin = 12;
+        run3000mMax = 17;
+        pullUpsMin = 1;
+        pullUpsMax = 15;
+        pushUpsMin = 10;
+        pushUpsMax = 50;
+      } else {
+        run3000mMin = 10;
+        run3000mMax = 15;
+        pullUpsMin = 3;
+        pullUpsMax = 25;
+        pushUpsMin = 20;
+        pushUpsMax = 70;
+      }
+      
+      // Random 3K run time (minutes:seconds)
+      const run3000mMinutes = Math.floor(Math.random() * (run3000mMax - run3000mMin) + run3000mMin);
+      const run3000mSeconds = Math.floor(Math.random() * 60);
+      const run3000m = `${run3000mMinutes}:${run3000mSeconds.toString().padStart(2, '0')}`;
+      
+      // Random 400m time
+      const run400mSeconds = Math.floor(Math.random() * 30) + 50; // 50-80 seconds
+      const run400m = `0:${run400mSeconds.toString().padStart(2, '0')}`;
+      
+      // Random reps
+      const pullUps = Math.floor(Math.random() * (pullUpsMax - pullUpsMin) + pullUpsMin);
+      const pushUps = Math.floor(Math.random() * (pushUpsMax - pushUpsMin) + pushUpsMin);
+      const sitUps2min = Math.floor(Math.random() * 30) + 30; // 30-60 sit-ups
+      
+      mockMembers.push({
+        id: userId,
+        userId: userId,
+        userName: fullName,
+        userGroup: 'נערים',
+        photoURL: null,
+        gender: gender,
+        run3000m,
+        run400m,
+        pullUps: pullUps.toString(),
+        pushUps: pushUps.toString(),
+        sitUps2min: sitUps2min.toString(),
+        createdAt: new Date().toISOString()
+      } as unknown as ComparisonMetrics);
+    }
+    
+    return mockMembers;
+  }, []);
   
   // Calculate user's rank within their gender category
-  const calculateUserRankInGender = async () => {
+  const calculateUserRankInGender = useCallback(async () => {
     try {
       const usersCollection = collection(db, "users");
       const qUsers = query(usersCollection, where("gender", "==", userGender));
@@ -228,7 +294,79 @@ export default function MetricsComparison({
         total: 16
       });
     }
-  };
+  }, [userMetrics, userGender, userName, userGroup, userPhoto, generateMockTeamMembers, calculateUserRatings]);
+  
+  // Load available teams for user's gender
+  useEffect(() => {
+    const loadTeams = async () => {
+      try {
+        setIsLoading(true);
+        const teamsCollection = collection(db, "teams");
+        
+        // Get all teams first
+        const teamsSnapshot = await getDocs(teamsCollection);
+        let allTeams: Team[] = [];
+        
+        teamsSnapshot.forEach((doc) => {
+          const teamData = doc.data();
+          allTeams.push({
+            id: doc.id,
+            name: teamData.name,
+            gender: teamData.gender
+          } as Team);
+        });
+
+        // If no teams found in Firebase, use the ones from teamUtils
+        if (allTeams.length === 0) {
+          console.log("No teams found in Firebase, using predefined teams");
+          
+          // Create teams from the predefined list with appropriate gender
+          allTeams = allTeamsData.map(team => {
+            const isMaleTeam = team.name.includes('בנים') || 
+              (!team.name.includes('בנות') && !team.name.includes('נערות'));
+            
+            return {
+              id: team.id,
+              name: team.name,
+              gender: isMaleTeam ? 'male' : 'female'
+            } as Team;
+          });
+          
+          // Optionally save these teams to Firebase for future use
+          for (const team of allTeams) {
+            try {
+              await addDoc(teamsCollection, team);
+            } catch (error) {
+              console.error("Error saving team to Firebase:", error);
+            }
+          }
+        }
+
+        // Filter teams based on user's gender and team type
+        const filteredTeams = allTeams.filter(team => {
+          // Check gender match (primary filter)
+          const genderMatch = team.gender === userGender;
+          
+          // Allow any team type for now to make sure some teams appear
+          return genderMatch;
+        });
+
+        console.log("Filtered teams:", filteredTeams);
+        setTeams(filteredTeams);
+        
+        // Calculate user's rank within their gender
+        await calculateUserRankInGender();
+        
+      } catch (err) {
+        console.error("Error loading teams:", err);
+        setError('אירעה שגיאה בטעינת הקבוצות');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadTeams();
+  }, [userGender, calculateUserRankInGender]);
   
   // When a team is selected, load team members and calculate stats
   useEffect(() => {
@@ -327,135 +465,7 @@ export default function MetricsComparison({
     };
     
     loadTeamData();
-  }, [selectedTeamId, userGender]);
-
-  // Generate mock team members for demo purposes
-  const generateMockTeamMembers = (teamId: string, count: number, gender: string): ComparisonMetrics[] => {
-    const maleFirstNames = ['אביב', 'אלון', 'יובל', 'איתן', 'אורי', 'נועם', 'ליאור', 'עידו', 'רועי', 'גיל', 'עומר', 'אסף', 'דור', 'אריאל', 'אלי'];
-    const femaleFirstNames = ['שירה', 'נועה', 'מיכל', 'יעל', 'אביגיל', 'רוני', 'דנה', 'ליאור', 'עדי', 'הילה', 'תמר', 'אור', 'מאיה', 'טל', 'שיר'];
-    const lastNames = ['כהן', 'לוי', 'אברהמי', 'מזרחי', 'פרץ', 'ביטון', 'דהן', 'אזולאי', 'פרידמן', 'שפירא', 'רוזנברג', 'גולדברג', 'שטרן'];
-    
-    const names = gender === 'male' ? maleFirstNames : femaleFirstNames;
-    const mockMembers: ComparisonMetrics[] = [];
-    
-    for (let i = 0; i < count; i++) {
-      const firstName = names[Math.floor(Math.random() * names.length)];
-      const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-      const fullName = `${firstName} ${lastName}`;
-      
-      // Generate performance values based on skill level
-      const skillLevel = Math.random(); // 0-1 skill factor
-      
-      // Better runners have lower times
-      const run3000mMin = Math.floor(12 + (18 - 12) * (1 - skillLevel)); // Range from 12-18 minutes
-      const run3000mSec = Math.floor(Math.random() * 60);
-      const run3000m = `${run3000mMin}:${run3000mSec.toString().padStart(2, '0')}`;
-      
-      const run400mMin = Math.floor(skillLevel < 0.3 ? 1 : 0); // Very good runners under 1 min
-      const run400mSec = Math.floor(45 + (75 - 45) * (1 - skillLevel));
-      const run400m = `${run400mMin}:${run400mSec.toString().padStart(2, '0')}`;
-      
-      // Better athletes have higher reps
-      const pullUps = Math.floor(3 + 20 * skillLevel);
-      const pushUps = Math.floor(10 + 45 * skillLevel);
-      const sitUps2min = Math.floor(20 + 60 * skillLevel);
-      
-      mockMembers.push({
-        id: `mock-${i}-${teamId}`,
-        userId: `mock-user-${i}-${teamId}`,
-        userName: fullName,
-        userGroup: teamId,
-        photoURL: null,
-        gender: gender,
-        run3000m: run3000m,
-        run400m: run400m,
-        pullUps: pullUps.toString(),
-        pushUps: pushUps.toString(),
-        sitUps2min: sitUps2min.toString(),
-        createdAt: new Date().toISOString()
-      } as ComparisonMetrics);
-    }
-    
-    return mockMembers;
-  };
-
-  // Calculate ratings for a user
-  const calculateUserRatings = (metrics: Metrics, gender: string = 'male') => {
-    // Calculate individual ratings
-    const run3000Rating = calculateRating(metrics.run3000m, 'time', '3000m', gender);
-    const run400Rating = calculateRating(metrics.run400m, 'time', '400m');
-    const pullUpsRating = calculateRating(metrics.pullUps, 'reps', 'pullUps');
-    const pushUpsRating = calculateRating(metrics.pushUps, 'reps', 'pushUps');
-    const sitUpsRating = calculateRating(metrics.sitUps2min, 'reps', 'sitUps');
-
-    // Calculate main category ratings
-    const aerobic = run3000Rating;
-    const anaerobic = run400Rating;
-    const strength = Math.round((pullUpsRating + pushUpsRating + sitUpsRating) / 3);
-    
-    // Overall rating - match the calculation in MetricsFifaCard
-    const overall = Math.round(
-      (run3000Rating + run400Rating + pullUpsRating + pushUpsRating + sitUpsRating) / 5
-    );
-
-    return { overall, aerobic, anaerobic, strength };
-  };
-
-  // Convert metrics to ratings (0-99) - match the calculation in MetricsFifaCard
-  const calculateRating = (value: string, type: 'time' | 'reps', metricType: string, gender: string = 'male') => {
-    if (type === 'time') {
-      const [minutes, seconds] = value.split(':').map(Number);
-      const totalSeconds = minutes * 60 + seconds;
-      
-      if (isNaN(totalSeconds)) return 0;
-      
-      // For 3000m run (lower is better)
-      if (metricType === '3000m' || value === userMetrics.run3000m) {
-        if (gender === 'female') {
-          return threeKRunScore(minutes, seconds, 'female');
-        }
-        return threeKRunScore(minutes, seconds);
-      }
-      
-      // For 400m run (lower is better)
-      if (metricType === '400m' || value === userMetrics.run400m) {
-        if (totalSeconds < 60) return 99; // Under 1 minute is exceptional
-        if (totalSeconds > 180) return 40; // Over 3 minutes is below average
-        
-        // Linear scale between 1 and 3 minutes
-        return Math.round(99 - ((totalSeconds - 60) / 120) * 59);
-      }
-      
-      return 50; // Default
-    } else {
-      // For reps (higher is better)
-      const reps = parseInt(value);
-      if (isNaN(reps)) return 0;
-      
-      // Pull-ups
-      if (metricType === 'pullUps' || value === userMetrics.pullUps) {
-        if (reps > 20) return 99;
-        if (reps < 1) return 40;
-        return Math.round(40 + (reps / 20) * 59);
-      }
-      
-      // Push-ups
-      if (metricType === 'pushUps' || value === userMetrics.pushUps) {
-        if (reps > 50) return 99;
-        if (reps < 5) return 40;
-        return Math.round(40 + (reps / 50) * 59);
-      }
-      
-      // Sit-ups
-      if (metricType === 'sitUps' || value === userMetrics.sitUps2min) {
-        if (reps > 70) return 99;
-        if (reps < 10) return 40;
-        return Math.round(40 + (reps / 70) * 59);
-      }
-      
-      return 50; // Default
-    }
-  };
+  }, [selectedTeamId, userGender, calculateUserRatings]);
 
   // Get rating color based on value
   const getRatingColor = (rating: number) => {

@@ -1,14 +1,25 @@
 'use client';
 
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import ImageGallery from './ImageGallery';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function Hero() {
   const router = useRouter();
+  const { signInWithGoogle } = useAuth();
+
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      // Router navigation will be handled by the auth state change in the root layout
+    } catch (error) {
+      console.error('Error signing in:', error);
+    }
+  };
 
   return (
-    <section className="relative min-h-[90vh] flex items-center section-padding overflow-hidden bg-gradient-to-b from-[#ff8714] via-[#fff5eb] to-white">
+    <section className="relative min-h-[90vh] flex items-center section-padding overflow-hidden bg-white">
       <div className="container-custom relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <motion.div 
@@ -23,7 +34,7 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              הגשם את <span className="text-gradient">הפוטנציאל</span> שלך
+              הגשם את <span className="text-[#ff8714]">הפוטנציאל</span> שלך
               <br />
               עם תוכנית אימון אישית
             </motion.h1>
@@ -37,36 +48,40 @@ export default function Hero() {
               לעקוב אחר ההתקדמות ולהשיג את המטרות שלהם.
             </motion.p>
             <motion.div 
-              className="flex flex-col sm:flex-row gap-4"
+              className="flex justify-center sm:justify-start"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
             >
               <motion.button 
-                className="btn-primary"
+                className="px-8 py-4 rounded-lg font-semibold bg-[#ff8714] text-white hover:bg-[#ff7600] transition-colors duration-200 shadow-lg hover:shadow-xl text-lg"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => router.push('/create-program')}
+                onClick={handleSignIn}
               >
-                צור תוכנית אימון
-              </motion.button>
-              <motion.button 
-                className="px-6 py-3 rounded-lg font-semibold border-2 border-[#ff8714] text-[#ff8714] hover:bg-[#fff5eb] transition-colors duration-200"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                גלה עוד
+                גלו את העתיד
               </motion.button>
             </motion.div>
+            
+            {/* Mobile Gallery - visible only on mobile */}
+            <motion.div 
+              className="mt-8 block lg:hidden"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+            >
+              <ImageGallery />
+            </motion.div>
           </motion.div>
+          {/* Desktop Gallery - visible only on desktop */}
           <motion.div 
-            className="relative h-[500px] hidden lg:block"
+            className="relative hidden lg:block"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1 }}
           >
             <motion.div 
-              className="absolute inset-0 bg-gradient-to-r from-[#ff8714] to-[#ffa149] rounded-full opacity-30 blur-3xl"
+              className="absolute inset-0 bg-gradient-to-r from-[#ff8714]/5 to-[#ffa149]/5 rounded-full opacity-30 blur-3xl"
               animate={{
                 scale: [1, 1.2, 1],
                 opacity: [0.2, 0.3, 0.2],
@@ -88,24 +103,11 @@ export default function Hero() {
               }}
               className="relative h-full"
             >
-              <Image
-                src="/images/profile.jpg"
-                alt="Profile"
-                fill
-                className="object-contain rounded-3xl"
-                priority
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
+              <ImageGallery />
             </motion.div>
           </motion.div>
         </div>
       </div>
-      <motion.div 
-        className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white via-[#fff5eb] to-transparent"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 0.8 }}
-      />
     </section>
   );
 } 
