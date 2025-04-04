@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { FaRunning, FaBolt, FaDumbbell } from "react-icons/fa";
 import { getProfile } from "@/lib/firebase/profileUtils";
 import Image from "next/image";
-import { threeKRunScore } from "@/lib/fitnessUtils";
+import { threeKRunScore, strengthScoreFromString, fourHundredMeterScoreFromString } from "@/lib/fitnessUtils";
 
 interface MetricsFifaCardProps {
   metrics: Metrics;
@@ -97,22 +97,19 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
     }
   };
 
-  // Calculate overall rating
-  const overallRating = Math.round(
-    (calculateRating(metrics.run3000m, 'time', '3000m') +
-    calculateRating(metrics.run400m, 'time', '400m') +
-    calculateRating(metrics.pullUps, 'reps', 'pullUps') +
-    calculateRating(metrics.pushUps, 'reps', 'pushUps') +
-    calculateRating(metrics.sitUps2min, 'reps', 'sitUps')) / 5
-  );
-
   // Calculate category ratings
   const aerobicRating = calculateRating(metrics.run3000m, 'time', '3000m');
-  const anaerobicRating = calculateRating(metrics.run400m, 'time', '400m');
-  const strengthRating = Math.round(
-    (calculateRating(metrics.pullUps, 'reps', 'pullUps') +
-     calculateRating(metrics.pushUps, 'reps', 'pushUps') +
-     calculateRating(metrics.sitUps2min, 'reps', 'sitUps')) / 3
+  const anaerobicRating = fourHundredMeterScoreFromString(metrics.run400m);
+  
+  // Use the new strength score calculation (50% pull-ups, 50% push-ups)
+  const strengthRating = strengthScoreFromString(metrics.pullUps, metrics.pushUps);
+  
+  // Sit-ups rating as a separate category
+  const sitUpsRating = calculateRating(metrics.sitUps2min, 'reps', 'sitUps');
+
+  // Overall rating calculation 
+  const overallRating = Math.round(
+    (aerobicRating + anaerobicRating + strengthRating + sitUpsRating) / 4
   );
 
   // Get rating color based on value

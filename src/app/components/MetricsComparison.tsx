@@ -459,12 +459,12 @@ export default function MetricsComparison({
 
   // Get rating color based on value
   const getRatingColor = (rating: number) => {
-    if (rating >= 90) return "text-green-500";
-    if (rating >= 80) return "text-green-400";
-    if (rating >= 70) return "text-lime-500";
-    if (rating >= 60) return "text-yellow-500";
-    if (rating >= 50) return "text-orange-500";
-    return "text-red-500";
+    if (rating >= 90) return "text-emerald-600";
+    if (rating >= 80) return "text-emerald-500";
+    if (rating >= 70) return "text-blue-600";
+    if (rating >= 60) return "text-indigo-500";
+    if (rating >= 50) return "text-slate-700";
+    return "text-slate-500";
   };
 
   // Get comparison info between two values
@@ -473,35 +473,35 @@ export default function MetricsComparison({
     
     if (diff > 10) {
       return {
-        icon: <FaChevronUp className="text-green-500" />,
-        color: 'text-green-500',
+        icon: <FaChevronUp className="text-emerald-600" />,
+        color: 'text-emerald-600',
         text: `אתה מוביל ב-${diff} נקודות`
       };
     } else if (diff > 0) {
       return {
-        icon: <FaChevronUp className="text-green-400" />,
-        color: 'text-green-400',
+        icon: <FaChevronUp className="text-emerald-500" />,
+        color: 'text-emerald-500',
         text: `אתה מוביל במעט (${diff} נקודות)`
       };
     } else if (diff === 0) {
       return {
-        icon: <FaEquals className="text-gray-400" />,
-        color: 'text-gray-400',
+        icon: <FaEquals className="text-slate-500" />,
+        color: 'text-slate-500',
         text: 'תיקו - אותו דירוג'
       };
     } else if (diff > -10) {
       return {
-        icon: <FaChevronDown className="text-orange-400" />,
-        color: 'text-orange-400',
+        icon: <FaChevronDown className="text-indigo-500" />,
+        color: 'text-indigo-500',
         text: `אתה מפגר במעט (${Math.abs(diff)} נקודות)`
       };
     } else {
       return {
-        icon: <FaChevronDown className="text-red-500" />,
-        color: 'text-red-500',
+        icon: <FaChevronDown className="text-slate-700" />,
+        color: 'text-slate-700',
         text: `אתה מפגר ב-${Math.abs(diff)} נקודות`
       };
-    }
+    };
   };
 
   const userRatings = calculateUserRatings(userMetrics, userGender);
@@ -529,40 +529,40 @@ export default function MetricsComparison({
   return (
     <div className="space-y-6">
       {/* User Ranking */}
-      <div className="bg-white rounded-xl p-6 shadow-md">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold flex items-center gap-2">
-            <FaTrophy className="text-yellow-500" />
+          <h3 className="text-xl font-medium flex items-center gap-2 text-slate-800">
+            <FaTrophy className="text-amber-400" />
             דירוג שלך
           </h3>
-          <div className="bg-[#ff8714] text-white font-bold px-4 py-2 rounded-full">
+          <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white font-medium px-4 py-2 rounded-full">
             מקום {userRank.rank} מתוך {userRank.total}
           </div>
         </div>
-        <p className="text-gray-600 mt-2">הדירוג שלך מבין כל {userGender === 'male' ? 'הבנים' : 'הבנות'}</p>
+        <p className="text-slate-500 mt-2">הדירוג שלך מבין כל {userGender === 'male' ? 'הבנים' : 'הבנות'}</p>
       </div>
 
       {/* Team Comparison Section */}
-      <div className="bg-white rounded-xl p-6 shadow-md">
-        <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+        <h3 className="text-xl font-medium mb-6 flex items-center gap-2 text-slate-800">
           <FaUsers className="text-blue-500" />
           השוואה לקבוצות {userGender === 'male' ? 'בנים' : 'בנות'}
         </h3>
         
         <div className="flex flex-col md:flex-row gap-6">
           {/* Team Selection List - Sidebar */}
-          <div className="md:w-1/4 md:border-l md:border-gray-200 md:pl-4">
-            <h4 className="font-medium text-md mb-3">בחר קבוצה:</h4>
+          <div className="md:w-1/4 md:border-l md:border-slate-200 md:pl-4">
+            <h4 className="font-medium text-md mb-3 text-slate-700">בחר קבוצה:</h4>
             
             {isLoading && teams.length === 0 && (
               <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#ff8714]"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-700"></div>
               </div>
             )}
             
             {!isLoading && teams.length === 0 && (
-              <div className="text-center py-3 border border-dashed border-gray-300 rounded-lg bg-gray-50">
-                <p className="text-sm text-gray-500">לא נמצאו קבוצות {userGender === 'male' ? 'בנים' : 'בנות'}</p>
+              <div className="text-center py-3 border border-dashed border-slate-300 rounded-lg bg-slate-50">
+                <p className="text-sm text-slate-500">לא נמצאו קבוצות {userGender === 'male' ? 'בנים' : 'בנות'}</p>
               </div>
             )}
             
@@ -575,15 +575,15 @@ export default function MetricsComparison({
                     className={`
                       flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-all
                       ${team.id === selectedTeamId 
-                        ? 'bg-[#ff8714] text-white font-medium shadow-sm' 
-                        : 'hover:bg-gray-50 text-gray-700'}
+                        ? 'bg-slate-700 text-white font-medium shadow-sm' 
+                        : 'hover:bg-slate-50 text-slate-700 border border-transparent hover:border-slate-200'}
                     `}
                   >
                     <div className={`
                       w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0
-                      ${team.id === selectedTeamId ? 'bg-white/20' : 'bg-gray-100'}
+                      ${team.id === selectedTeamId ? 'bg-white/20' : 'bg-slate-100'}
                     `}>
-                      <FaUsers className={team.id === selectedTeamId ? 'text-white' : 'text-gray-500'} size={12} />
+                      <FaUsers className={team.id === selectedTeamId ? 'text-white' : 'text-slate-500'} size={12} />
                     </div>
                     <span className="text-sm truncate">{team.name}</span>
                     {team.id === selectedTeamId && (
@@ -601,14 +601,14 @@ export default function MetricsComparison({
           <div className="md:w-3/4">
             {/* No team selected message */}
             {!selectedTeamId && !isLoading && teams.length > 0 && (
-              <div className="h-full flex flex-col items-center justify-center text-center py-16 px-4 border border-dashed border-gray-300 rounded-lg">
-                <div className="bg-blue-50 p-3 rounded-full mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="h-full flex flex-col items-center justify-center text-center py-16 px-4 border border-dashed border-slate-300 rounded-lg">
+                <div className="bg-slate-100 p-3 rounded-full mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                   </svg>
                 </div>
-                <h4 className="font-medium text-lg mb-2">בחר קבוצה מהרשימה</h4>
-                <p className="text-gray-500 max-w-md">
+                <h4 className="font-medium text-lg mb-2 text-slate-700">בחר קבוצה מהרשימה</h4>
+                <p className="text-slate-500 max-w-md">
                   בחר קבוצה מהרשימה בצד ימין כדי להשוות את הביצועים שלך לממוצע הקבוצה 
                   ולביצועי המוביל/ה בקבוצה
                 </p>
@@ -617,7 +617,7 @@ export default function MetricsComparison({
             
             {/* Error message */}
             {error && (
-              <div className="text-center py-6 border border-gray-200 rounded-lg bg-gray-50">
+              <div className="text-center py-6 border border-slate-200 rounded-lg bg-slate-50">
                 <div className="text-red-500 mb-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -630,44 +630,43 @@ export default function MetricsComparison({
             {/* Loading state */}
             {isLoading && selectedTeamId && (
               <div className="text-center py-16">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#ff8714] mx-auto mb-3"></div>
-                <p className="text-gray-600">טוען נתוני קבוצה...</p>
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-slate-600 mx-auto mb-3"></div>
+                <p className="text-slate-600">טוען נתוני קבוצה...</p>
               </div>
             )}
             
-            {/* Team Comparison Results */}
+            {/* Team Overview Section */}
             {selectedTeamId && !isLoading && !error && (
               <div className="space-y-8 animate-fadeIn">
                 {/* Team Header & Overview */}
-                <div className="bg-gradient-to-r from-blue-50 via-gray-50 to-white p-5 rounded-xl relative overflow-hidden border border-blue-100">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-10 -mt-10"></div>
+                <div className="bg-slate-50 p-5 rounded-xl relative overflow-hidden border border-slate-200">
                   <div className="relative z-10">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                       <div>
-                        <h4 className="font-bold text-xl text-[#ff8714]">
+                        <h4 className="font-medium text-xl text-slate-800">
                           {teams.find(t => t.id === selectedTeamId)?.name}
                         </h4>
-                        <p className="text-gray-600 text-sm">
+                        <p className="text-slate-500 text-sm">
                           השוואה בין המדדים שלך לביצועי הקבוצה
                         </p>
                       </div>
                       
-                      <div className="p-3 bg-white rounded-xl shadow-sm border border-gray-100 text-center min-w-[150px]">
+                      <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-200 text-center min-w-[150px]">
                         <div className="flex items-center justify-center mb-1">
                           <span className={`text-2xl font-bold ${getRatingColor(userRatings.overall)}`}>
                             {userRatings.overall}
                           </span>
-                          <span className="text-gray-400 mx-2 text-lg">vs</span>
+                          <span className="text-slate-400 mx-2 text-lg">vs</span>
                           <span className={`text-2xl font-bold ${getRatingColor(teamAverage.overall)}`}>
                             {teamAverage.overall}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500">הציון הכללי שלך מול ממוצע הקבוצה</p>
+                        <p className="text-xs text-slate-500">הציון הכללי שלך מול ממוצע הקבוצה</p>
                       </div>
                     </div>
                     
                     {/* Comparison Summary */}
-                    <div className="mt-6 p-3 bg-blue-50/80 rounded-lg border border-blue-100">
+                    <div className="mt-6 p-3 bg-slate-100 rounded-lg border border-slate-200">
                       <div className="flex items-center gap-2">
                         {getComparisonInfo(userRatings.overall, teamAverage.overall).icon}
                         <span className={`${getComparisonInfo(userRatings.overall, teamAverage.overall).color} font-medium`}>
@@ -680,10 +679,10 @@ export default function MetricsComparison({
                 
                 {/* Best Team Member Comparison */}
                 {bestTeamMember && (
-                  <div className="border border-gray-200 rounded-xl bg-gradient-to-b from-yellow-50 to-white overflow-hidden shadow-sm">
-                    <div className="bg-yellow-500 text-white p-4">
-                      <h4 className="font-bold text-lg flex items-center gap-2">
-                        <FaTrophy />
+                  <div className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white p-4">
+                      <h4 className="font-medium text-lg flex items-center gap-2">
+                        <FaTrophy className="text-amber-400" />
                         השוואה למוביל/ה בקבוצה
                       </h4>
                     </div>
@@ -691,9 +690,9 @@ export default function MetricsComparison({
                     <div className="p-5">
                       <div className="flex flex-col md:flex-row gap-6">
                         {/* Top Performer Card */}
-                        <div className="md:w-1/3 bg-white rounded-xl border border-yellow-200 p-4 shadow-sm">
+                        <div className="md:w-1/3 bg-slate-50 rounded-xl border border-slate-200 p-4">
                           <div className="flex flex-col items-center text-center">
-                            <div className="relative w-20 h-20 overflow-hidden rounded-full border-4 border-yellow-200 mb-3">
+                            <div className="relative w-20 h-20 overflow-hidden rounded-full border-4 border-slate-100 mb-3">
                               {bestTeamMember.photoURL ? (
                                 <Image 
                                   src={bestTeamMember.photoURL} 
@@ -702,20 +701,20 @@ export default function MetricsComparison({
                                   className="object-cover"
                                 />
                               ) : (
-                                <div className="w-full h-full bg-yellow-100 flex items-center justify-center text-yellow-600 font-bold text-xl">
+                                <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xl">
                                   {bestTeamMember.userName.charAt(0).toUpperCase()}
                                 </div>
                               )}
-                              <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-white rounded-full w-8 h-8 flex items-center justify-center">
+                              <div className="absolute -bottom-1 -right-1 bg-amber-400 text-slate-800 rounded-full w-8 h-8 flex items-center justify-center">
                                 <FaTrophy size={14} />
                               </div>
                             </div>
                             
-                            <h5 className="font-bold text-lg mb-1">{bestTeamMember.userName}</h5>
-                            <p className="text-gray-600 text-sm mb-3">מוביל/ה בקבוצה</p>
+                            <h5 className="font-semibold text-lg mb-1">{bestTeamMember.userName}</h5>
+                            <p className="text-slate-500 text-sm mb-3">מוביל/ה בקבוצה</p>
                             
-                            <div className="bg-yellow-100 rounded-full px-6 py-2 inline-flex items-center gap-2">
-                              <span className="text-gray-700">ציון כללי:</span>
+                            <div className="bg-slate-100 rounded-full px-6 py-2 inline-flex items-center gap-2">
+                              <span className="text-slate-600">ציון כללי:</span>
                               <span className={`font-bold text-xl ${getRatingColor(calculateUserRatings(bestTeamMember).overall)}`}>
                                 {calculateUserRatings(bestTeamMember).overall}
                               </span>
@@ -725,26 +724,26 @@ export default function MetricsComparison({
                         
                         {/* Comparison Metrics */}
                         <div className="md:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <div className="bg-white border border-slate-200 rounded-lg p-4">
                             <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-gray-700">סיבולת אירובית</span>
+                              <span className="font-medium text-slate-700">סיבולת אירובית</span>
                               <div className="flex items-center gap-2">
                                 <span className={`font-bold ${getRatingColor(userRatings.aerobic)}`}>{userRatings.aerobic}</span>
-                                <span className="text-gray-400 mx-1">vs</span>
+                                <span className="text-slate-400 mx-1">vs</span>
                                 <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).aerobic)}`}>
                                   {calculateUserRatings(bestTeamMember).aerobic}
                                 </span>
                               </div>
                             </div>
                             
-                            <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
+                            <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-2">
                               <div 
-                                className="absolute h-full right-0 bg-blue-500"
+                                className="absolute h-full right-0 bg-blue-500/80"
                                 style={{ width: `${userRatings.aerobic}%` }}
                               ></div>
                               <div 
-                                className="absolute h-full right-0 bg-yellow-500/30"
-                                style={{ width: `${calculateUserRatings(bestTeamMember).aerobic}%`, borderLeft: '2px dashed #EAB308' }}
+                                className="absolute h-full right-0 border-l border-amber-400"
+                                style={{ width: `${calculateUserRatings(bestTeamMember).aerobic}%` }}
                               ></div>
                             </div>
                             
@@ -756,26 +755,26 @@ export default function MetricsComparison({
                             </div>
                           </div>
                           
-                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <div className="bg-white border border-slate-200 rounded-lg p-4">
                             <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-gray-700">סיבולת אנאירובית</span>
+                              <span className="font-medium text-slate-700">סיבולת אנאירובית</span>
                               <div className="flex items-center gap-2">
                                 <span className={`font-bold ${getRatingColor(userRatings.anaerobic)}`}>{userRatings.anaerobic}</span>
-                                <span className="text-gray-400 mx-1">vs</span>
+                                <span className="text-slate-400 mx-1">vs</span>
                                 <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).anaerobic)}`}>
                                   {calculateUserRatings(bestTeamMember).anaerobic}
                                 </span>
                               </div>
                             </div>
                             
-                            <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
+                            <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-2">
                               <div 
-                                className="absolute h-full right-0 bg-purple-500"
+                                className="absolute h-full right-0 bg-indigo-500/80"
                                 style={{ width: `${userRatings.anaerobic}%` }}
                               ></div>
                               <div 
-                                className="absolute h-full right-0 bg-yellow-500/30"
-                                style={{ width: `${calculateUserRatings(bestTeamMember).anaerobic}%`, borderLeft: '2px dashed #EAB308' }}
+                                className="absolute h-full right-0 border-l border-amber-400"
+                                style={{ width: `${calculateUserRatings(bestTeamMember).anaerobic}%` }}
                               ></div>
                             </div>
                             
@@ -787,26 +786,26 @@ export default function MetricsComparison({
                             </div>
                           </div>
                           
-                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <div className="bg-white border border-slate-200 rounded-lg p-4">
                             <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-gray-700">כוח</span>
+                              <span className="font-medium text-slate-700">כוח</span>
                               <div className="flex items-center gap-2">
                                 <span className={`font-bold ${getRatingColor(userRatings.strength)}`}>{userRatings.strength}</span>
-                                <span className="text-gray-400 mx-1">vs</span>
+                                <span className="text-slate-400 mx-1">vs</span>
                                 <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).strength)}`}>
                                   {calculateUserRatings(bestTeamMember).strength}
                                 </span>
                               </div>
                             </div>
                             
-                            <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
+                            <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-2">
                               <div 
-                                className="absolute h-full right-0 bg-green-500"
+                                className="absolute h-full right-0 bg-emerald-500/80"
                                 style={{ width: `${userRatings.strength}%` }}
                               ></div>
                               <div 
-                                className="absolute h-full right-0 bg-yellow-500/30"
-                                style={{ width: `${calculateUserRatings(bestTeamMember).strength}%`, borderLeft: '2px dashed #EAB308' }}
+                                className="absolute h-full right-0 border-l border-amber-400"
+                                style={{ width: `${calculateUserRatings(bestTeamMember).strength}%` }}
                               ></div>
                             </div>
                             
@@ -818,26 +817,26 @@ export default function MetricsComparison({
                             </div>
                           </div>
                           
-                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <div className="bg-white border border-slate-200 rounded-lg p-4">
                             <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-gray-700">ציון כללי</span>
+                              <span className="font-medium text-slate-700">ציון כללי</span>
                               <div className="flex items-center gap-2">
                                 <span className={`font-bold ${getRatingColor(userRatings.overall)}`}>{userRatings.overall}</span>
-                                <span className="text-gray-400 mx-1">vs</span>
+                                <span className="text-slate-400 mx-1">vs</span>
                                 <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).overall)}`}>
                                   {calculateUserRatings(bestTeamMember).overall}
                                 </span>
                               </div>
                             </div>
                             
-                            <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
+                            <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-2">
                               <div 
-                                className="absolute h-full right-0 bg-[#ff8714]"
+                                className="absolute h-full right-0 bg-slate-700/80"
                                 style={{ width: `${userRatings.overall}%` }}
                               ></div>
                               <div 
-                                className="absolute h-full right-0 bg-yellow-500/30"
-                                style={{ width: `${calculateUserRatings(bestTeamMember).overall}%`, borderLeft: '2px dashed #EAB308' }}
+                                className="absolute h-full right-0 border-l border-amber-400"
+                                style={{ width: `${calculateUserRatings(bestTeamMember).overall}%` }}
                               ></div>
                             </div>
                             
@@ -855,25 +854,25 @@ export default function MetricsComparison({
                 )}
                 
                 {/* Metrics Comparison Tabs */}
-                <div className="p-5 border border-gray-200 rounded-xl shadow-sm">
-                  <h4 className="font-bold text-lg mb-6">השוואה לממוצע הקבוצה לפי קטגוריות</h4>
+                <div className="p-5 border border-slate-200 rounded-xl shadow-sm bg-white">
+                  <h4 className="font-medium text-lg mb-6 text-slate-800">השוואה לממוצע הקבוצה לפי קטגוריות</h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Aerobic Card */}
-                    <div className="bg-gradient-to-b from-blue-50 to-white rounded-xl overflow-hidden border border-blue-100 shadow-sm">
-                      <div className="p-4 bg-blue-500 text-white flex items-center justify-between">
+                    <div className="bg-slate-50 rounded-xl overflow-hidden border border-slate-200">
+                      <div className="p-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <FaRunning size={18} />
-                          <h5 className="font-bold">סיבולת אירובית</h5>
+                          <FaRunning size={16} />
+                          <h5 className="font-medium">סיבולת אירובית</h5>
                         </div>
-                        <div className="bg-white/20 px-2 py-1 rounded text-sm">
+                        <div className="bg-white/10 px-2 py-1 rounded text-xs">
                           ריצת 3000 מ׳
                         </div>
                       </div>
                       
                       <div className="p-4">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-gray-700">אתה</span>
+                          <span className="text-slate-600">אתה</span>
                           <div className="flex items-center gap-1">
                             <span className={`text-xl font-bold ${getRatingColor(userRatings.aerobic)}`}>
                               {userRatings.aerobic}
@@ -882,7 +881,7 @@ export default function MetricsComparison({
                         </div>
                         
                         <div className="flex justify-between items-center mb-4">
-                          <span className="text-gray-700">ממוצע הקבוצה</span>
+                          <span className="text-slate-600">ממוצע הקבוצה</span>
                           <div className="flex items-center gap-1">
                             <span className={`text-xl font-bold ${getRatingColor(teamAverage.aerobic)}`}>
                               {teamAverage.aerobic}
@@ -890,38 +889,38 @@ export default function MetricsComparison({
                           </div>
                         </div>
                         
-                        <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden mb-3">
+                        <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
                           <div 
-                            className="absolute h-full right-0 bg-blue-500"
+                            className="absolute h-full right-0 bg-blue-500/80"
                             style={{ width: `${userRatings.aerobic}%` }}
                           ></div>
                           <div 
-                            className="absolute h-full right-0 bg-gray-500/30 border-l-2 border-dashed border-gray-400"
+                            className="absolute h-full right-0 border-l border-slate-400"
                             style={{ width: `${teamAverage.aerobic}%` }}
                           ></div>
                         </div>
                         
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-slate-600">
                           {getComparisonInfo(userRatings.aerobic, teamAverage.aerobic).text}
                         </div>
                       </div>
                     </div>
                     
                     {/* Anaerobic Card */}
-                    <div className="bg-gradient-to-b from-purple-50 to-white rounded-xl overflow-hidden border border-purple-100 shadow-sm">
-                      <div className="p-4 bg-purple-500 text-white flex items-center justify-between">
+                    <div className="bg-slate-50 rounded-xl overflow-hidden border border-slate-200">
+                      <div className="p-4 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <FaBolt size={18} />
-                          <h5 className="font-bold">סיבולת אנאירובית</h5>
+                          <FaBolt size={16} />
+                          <h5 className="font-medium">סיבולת אנאירובית</h5>
                         </div>
-                        <div className="bg-white/20 px-2 py-1 rounded text-sm">
+                        <div className="bg-white/10 px-2 py-1 rounded text-xs">
                           ריצת 400 מ׳
                         </div>
                       </div>
                       
                       <div className="p-4">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-gray-700">אתה</span>
+                          <span className="text-slate-600">אתה</span>
                           <div className="flex items-center gap-1">
                             <span className={`text-xl font-bold ${getRatingColor(userRatings.anaerobic)}`}>
                               {userRatings.anaerobic}
@@ -930,7 +929,7 @@ export default function MetricsComparison({
                         </div>
                         
                         <div className="flex justify-between items-center mb-4">
-                          <span className="text-gray-700">ממוצע הקבוצה</span>
+                          <span className="text-slate-600">ממוצע הקבוצה</span>
                           <div className="flex items-center gap-1">
                             <span className={`text-xl font-bold ${getRatingColor(teamAverage.anaerobic)}`}>
                               {teamAverage.anaerobic}
@@ -938,38 +937,38 @@ export default function MetricsComparison({
                           </div>
                         </div>
                         
-                        <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden mb-3">
+                        <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
                           <div 
-                            className="absolute h-full right-0 bg-purple-500"
+                            className="absolute h-full right-0 bg-indigo-500/80"
                             style={{ width: `${userRatings.anaerobic}%` }}
                           ></div>
                           <div 
-                            className="absolute h-full right-0 bg-gray-500/30 border-l-2 border-dashed border-gray-400"
+                            className="absolute h-full right-0 border-l border-slate-400"
                             style={{ width: `${teamAverage.anaerobic}%` }}
                           ></div>
                         </div>
                         
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-slate-600">
                           {getComparisonInfo(userRatings.anaerobic, teamAverage.anaerobic).text}
                         </div>
                       </div>
                     </div>
                     
                     {/* Strength Card */}
-                    <div className="bg-gradient-to-b from-green-50 to-white rounded-xl overflow-hidden border border-green-100 shadow-sm">
-                      <div className="p-4 bg-green-500 text-white flex items-center justify-between">
+                    <div className="bg-slate-50 rounded-xl overflow-hidden border border-slate-200">
+                      <div className="p-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <FaDumbbell size={18} />
-                          <h5 className="font-bold">כוח</h5>
+                          <FaDumbbell size={16} />
+                          <h5 className="font-medium">כוח</h5>
                         </div>
-                        <div className="bg-white/20 px-2 py-1 rounded text-sm">
+                        <div className="bg-white/10 px-2 py-1 rounded text-xs">
                           מתח, שכיבות סמיכה, בטן
                         </div>
                       </div>
                       
                       <div className="p-4">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-gray-700">אתה</span>
+                          <span className="text-slate-600">אתה</span>
                           <div className="flex items-center gap-1">
                             <span className={`text-xl font-bold ${getRatingColor(userRatings.strength)}`}>
                               {userRatings.strength}
@@ -978,7 +977,7 @@ export default function MetricsComparison({
                         </div>
                         
                         <div className="flex justify-between items-center mb-4">
-                          <span className="text-gray-700">ממוצע הקבוצה</span>
+                          <span className="text-slate-600">ממוצע הקבוצה</span>
                           <div className="flex items-center gap-1">
                             <span className={`text-xl font-bold ${getRatingColor(teamAverage.strength)}`}>
                               {teamAverage.strength}
@@ -986,18 +985,18 @@ export default function MetricsComparison({
                           </div>
                         </div>
                         
-                        <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden mb-3">
+                        <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
                           <div 
-                            className="absolute h-full right-0 bg-green-500"
+                            className="absolute h-full right-0 bg-emerald-500/80"
                             style={{ width: `${userRatings.strength}%` }}
                           ></div>
                           <div 
-                            className="absolute h-full right-0 bg-gray-500/30 border-l-2 border-dashed border-gray-400"
+                            className="absolute h-full right-0 border-l border-slate-400"
                             style={{ width: `${teamAverage.strength}%` }}
                           ></div>
                         </div>
                         
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-slate-600">
                           {getComparisonInfo(userRatings.strength, teamAverage.strength).text}
                         </div>
                       </div>
