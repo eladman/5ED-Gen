@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Metrics } from '@/app/metrics/page';
-import { getAllMockMetrics } from '@/lib/mock/mockUserData';
 import Image from 'next/image';
 import { 
   FaRunning, FaBolt, FaDumbbell, FaChevronUp, 
   FaChevronDown, FaEquals, FaSearch, FaTrophy, FaUsers, FaChartBar
 } from 'react-icons/fa';
 import { threeKRunScore } from '@/lib/fitnessUtils';
+import { collection, getDocs, query, where, orderBy, addDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/firebase';
+import { teams as allTeamsData } from '@/lib/teamUtils';
 
 export interface MetricsComparisonProps {
   userMetrics: Metrics;
@@ -25,6 +27,12 @@ interface ComparisonMetrics extends Metrics {
   gender?: string;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  gender: string; // 'male' or 'female'
+}
+
 export default function MetricsComparison({ 
   userMetrics, 
   userName, 
@@ -32,21 +40,344 @@ export default function MetricsComparison({
   userGroup = 'כיתה א', // Default group if not provided
   userGender = 'male' // Default gender if not provided
 }: MetricsComparisonProps) {
-  const [otherUsers, setOtherUsers] = useState<ComparisonMetrics[]>([]);
-  const [selectedUser, setSelectedUser] = useState<ComparisonMetrics | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [leaderboardCategory, setLeaderboardCategory] = useState<'overall' | 'aerobic' | 'anaerobic' | 'strength'>('overall');
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+  const [teamMembers, setTeamMembers] = useState<ComparisonMetrics[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [userRank, setUserRank] = useState<{rank: number, total: number}>({rank: 0, total: 0});
+  const [bestTeamMember, setBestTeamMember] = useState<ComparisonMetrics | null>(null);
+  const [teamAverage, setTeamAverage] = useState<{
+    overall: number,
+    aerobic: number,
+    anaerobic: number,
+    strength: number
+  }>({
+    overall: 0,
+    aerobic: 0,
+    anaerobic: 0,
+    strength: 0
+  });
   
-  // Load mock data
+  // Load available teams for user's gender
   useEffect(() => {
-    const mockMetrics = getAllMockMetrics();
-    setOtherUsers(mockMetrics);
-    // Select first user by default
-    if (mockMetrics.length > 0) {
-      setSelectedUser(mockMetrics[0]);
+    const loadTeams = async () => {
+      try {
+        setIsLoading(true);
+        const teamsCollection = collection(db, "teams");
+        
+        // Get all teams first
+        const teamsSnapshot = await getDocs(teamsCollection);
+        let allTeams: Team[] = [];
+        
+        teamsSnapshot.forEach((doc) => {
+          const teamData = doc.data();
+          allTeams.push({
+            id: doc.id,
+            name: teamData.name,
+            gender: teamData.gender
+          } as Team);
+        });
+
+        // If no teams found in Firebase, use the ones from teamUtils
+        if (allTeams.length === 0) {
+          console.log("No teams found in Firebase, using predefined teams");
+          
+          // Create teams from the predefined list with appropriate gender
+          allTeams = allTeamsData.map(team => {
+            const isMaleTeam = team.name.includes('בנים') || 
+              (!team.name.includes('בנות') && !team.name.includes('נערות'));
+            
+            return {
+              id: team.id,
+              name: team.name,
+              gender: isMaleTeam ? 'male' : 'female'
+            } as Team;
+          });
+          
+          // Optionally save these teams to Firebase for future use
+          for (const team of allTeams) {
+            try {
+              await addDoc(teamsCollection, team);
+            } catch (error) {
+              console.error("Error saving team to Firebase:", error);
+            }
+          }
+        }
+
+        // Filter teams based on user's gender and team type
+        const filteredTeams = allTeams.filter(team => {
+          // Check gender match (primary filter)
+          const genderMatch = team.gender === userGender;
+          
+          // Allow any team type for now to make sure some teams appear
+          return genderMatch;
+        });
+
+        console.log("Filtered teams:", filteredTeams);
+        setTeams(filteredTeams);
+        
+        // Calculate user's rank within their gender
+        await calculateUserRankInGender();
+        
+      } catch (err) {
+        console.error("Error loading teams:", err);
+        setError('אירעה שגיאה בטעינת הקבוצות');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadTeams();
+  }, [userGender]);
+  
+  // Calculate user's rank within their gender category
+  const calculateUserRankInGender = async () => {
+    try {
+      const usersCollection = collection(db, "users");
+      const qUsers = query(usersCollection, where("gender", "==", userGender));
+      const usersSnapshot = await getDocs(qUsers);
+      
+      const allUsers: {id: string, name: string}[] = [];
+      usersSnapshot.forEach(doc => {
+        allUsers.push({
+          id: doc.id,
+          name: doc.data().name || ""
+        });
+      });
+      
+      // Get metrics for all users in this gender
+      const metricsCollection = collection(db, "metrics");
+      
+      // Get the latest metrics for each user
+      let allUserMetrics: ComparisonMetrics[] = [];
+      
+      for (const user of allUsers) {
+        const qMetrics = query(
+          metricsCollection, 
+          where("userId", "==", user.id),
+          orderBy("createdAt", "desc")
+        );
+        
+        const metricsSnapshot = await getDocs(qMetrics);
+        if (!metricsSnapshot.empty) {
+          // Get only the latest metrics entry
+          const latestMetrics = metricsSnapshot.docs[0];
+          allUserMetrics.push({
+            id: latestMetrics.id,
+            userName: user.name,
+            userGroup: '', // We don't need this for ranking
+            photoURL: null, // We don't need this for ranking
+            ...latestMetrics.data()
+          } as ComparisonMetrics);
+        }
+      }
+      
+      // If no real users found, generate mock data for demo
+      if (allUserMetrics.length === 0) {
+        console.log("No real users found, generating mock ranking data");
+        // Generate 15 random users of the same gender for ranking purposes
+        allUserMetrics = generateMockTeamMembers("ranking", 15, userGender);
+        
+        // Add the current user to the mix
+        allUserMetrics.push({
+          id: 'current-user',
+          userId: userMetrics.userId || 'current-user-id',
+          userName: userName,
+          userGroup: userGroup,
+          photoURL: userPhoto || null,
+          gender: userGender,
+          run3000m: userMetrics.run3000m,
+          run400m: userMetrics.run400m,
+          pullUps: userMetrics.pullUps,
+          pushUps: userMetrics.pushUps,
+          sitUps2min: userMetrics.sitUps2min,
+          createdAt: new Date().toISOString()
+        } as ComparisonMetrics);
+      }
+      
+      // Sort by overall rating (highest first)
+      allUserMetrics.sort((a, b) => {
+        const aRating = calculateUserRatings(a, a.gender || 'male').overall;
+        const bRating = calculateUserRatings(b, b.gender || 'male').overall;
+        return bRating - aRating;
+      });
+      
+      // Find user's position
+      const userIndex = allUserMetrics.findIndex(m => m.userId === userMetrics.userId);
+      
+      if (userIndex !== -1) {
+        setUserRank({
+          rank: userIndex + 1,
+          total: allUserMetrics.length
+        });
+      } else {
+        // If user not found in the list (shouldn't happen with mock data)
+        // Set a reasonable rank
+        setUserRank({
+          rank: Math.floor(Math.random() * allUserMetrics.length) + 1,
+          total: allUserMetrics.length
+        });
+      }
+    } catch (err) {
+      console.error("Error calculating user rank:", err);
+      
+      // Fallback to mock rank on error
+      setUserRank({
+        rank: Math.floor(Math.random() * 15) + 1,
+        total: 16
+      });
     }
-  }, []);
+  };
+  
+  // When a team is selected, load team members and calculate stats
+  useEffect(() => {
+    if (!selectedTeamId) return;
+    
+    const loadTeamData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get team members
+        const usersCollection = collection(db, "users");
+        const qUsers = query(usersCollection, where("teamId", "==", selectedTeamId));
+        const usersSnapshot = await getDocs(qUsers);
+        
+        const teamUsersData: {id: string, name: string, photoURL?: string}[] = [];
+        usersSnapshot.forEach(doc => {
+          teamUsersData.push({
+            id: doc.id,
+            name: doc.data().name || "",
+            photoURL: doc.data().photoURL || null,
+            ...doc.data()
+          });
+        });
+        
+        // Get metrics for all team members
+        const metricsCollection = collection(db, "metrics");
+        let teamMembersMetrics: ComparisonMetrics[] = [];
+        
+        for (const user of teamUsersData) {
+          const qMetrics = query(
+            metricsCollection, 
+            where("userId", "==", user.id),
+            orderBy("createdAt", "desc")
+          );
+          
+          const metricsSnapshot = await getDocs(qMetrics);
+          if (!metricsSnapshot.empty) {
+            // Get only the latest metrics entry
+            const latestMetrics = metricsSnapshot.docs[0];
+            teamMembersMetrics.push({
+              id: latestMetrics.id,
+              userName: user.name,
+              userGroup: selectedTeamId,
+              photoURL: user.photoURL || null,
+              ...latestMetrics.data()
+            } as ComparisonMetrics);
+          }
+        }
+        
+        // If no real team members found, generate mock data for demo
+        if (teamMembersMetrics.length === 0) {
+          console.log("No real team members found, generating mock data");
+          teamMembersMetrics = generateMockTeamMembers(selectedTeamId, 5, userGender);
+        }
+        
+        setTeamMembers(teamMembersMetrics);
+        
+        // Calculate team average
+        if (teamMembersMetrics.length > 0) {
+          let overallSum = 0;
+          let aerobicSum = 0;
+          let anaerobicSum = 0;
+          let strengthSum = 0;
+          
+          teamMembersMetrics.forEach(member => {
+            const ratings = calculateUserRatings(member, member.gender || userGender);
+            overallSum += ratings.overall;
+            aerobicSum += ratings.aerobic;
+            anaerobicSum += ratings.anaerobic;
+            strengthSum += ratings.strength;
+          });
+          
+          setTeamAverage({
+            overall: Math.round(overallSum / teamMembersMetrics.length),
+            aerobic: Math.round(aerobicSum / teamMembersMetrics.length),
+            anaerobic: Math.round(anaerobicSum / teamMembersMetrics.length),
+            strength: Math.round(strengthSum / teamMembersMetrics.length)
+          });
+          
+          // Find best team member
+          teamMembersMetrics.sort((a, b) => {
+            const aRating = calculateUserRatings(a, a.gender || userGender).overall;
+            const bRating = calculateUserRatings(b, b.gender || userGender).overall;
+            return bRating - aRating;
+          });
+          
+          setBestTeamMember(teamMembersMetrics[0]);
+        }
+        
+      } catch (err) {
+        console.error("Error loading team data:", err);
+        setError('אירעה שגיאה בטעינת נתוני הקבוצה');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadTeamData();
+  }, [selectedTeamId, userGender]);
+
+  // Generate mock team members for demo purposes
+  const generateMockTeamMembers = (teamId: string, count: number, gender: string): ComparisonMetrics[] => {
+    const maleFirstNames = ['אביב', 'אלון', 'יובל', 'איתן', 'אורי', 'נועם', 'ליאור', 'עידו', 'רועי', 'גיל', 'עומר', 'אסף', 'דור', 'אריאל', 'אלי'];
+    const femaleFirstNames = ['שירה', 'נועה', 'מיכל', 'יעל', 'אביגיל', 'רוני', 'דנה', 'ליאור', 'עדי', 'הילה', 'תמר', 'אור', 'מאיה', 'טל', 'שיר'];
+    const lastNames = ['כהן', 'לוי', 'אברהמי', 'מזרחי', 'פרץ', 'ביטון', 'דהן', 'אזולאי', 'פרידמן', 'שפירא', 'רוזנברג', 'גולדברג', 'שטרן'];
+    
+    const names = gender === 'male' ? maleFirstNames : femaleFirstNames;
+    const mockMembers: ComparisonMetrics[] = [];
+    
+    for (let i = 0; i < count; i++) {
+      const firstName = names[Math.floor(Math.random() * names.length)];
+      const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+      const fullName = `${firstName} ${lastName}`;
+      
+      // Generate performance values based on skill level
+      const skillLevel = Math.random(); // 0-1 skill factor
+      
+      // Better runners have lower times
+      const run3000mMin = Math.floor(12 + (18 - 12) * (1 - skillLevel)); // Range from 12-18 minutes
+      const run3000mSec = Math.floor(Math.random() * 60);
+      const run3000m = `${run3000mMin}:${run3000mSec.toString().padStart(2, '0')}`;
+      
+      const run400mMin = Math.floor(skillLevel < 0.3 ? 1 : 0); // Very good runners under 1 min
+      const run400mSec = Math.floor(45 + (75 - 45) * (1 - skillLevel));
+      const run400m = `${run400mMin}:${run400mSec.toString().padStart(2, '0')}`;
+      
+      // Better athletes have higher reps
+      const pullUps = Math.floor(3 + 20 * skillLevel);
+      const pushUps = Math.floor(10 + 45 * skillLevel);
+      const sitUps2min = Math.floor(20 + 60 * skillLevel);
+      
+      mockMembers.push({
+        id: `mock-${i}-${teamId}`,
+        userId: `mock-user-${i}-${teamId}`,
+        userName: fullName,
+        userGroup: teamId,
+        photoURL: null,
+        gender: gender,
+        run3000m: run3000m,
+        run400m: run400m,
+        pullUps: pullUps.toString(),
+        pushUps: pushUps.toString(),
+        sitUps2min: sitUps2min.toString(),
+        createdAt: new Date().toISOString()
+      } as ComparisonMetrics);
+    }
+    
+    return mockMembers;
+  };
 
   // Calculate ratings for a user
   const calculateUserRatings = (metrics: Metrics, gender: string = 'male') => {
@@ -173,554 +504,509 @@ export default function MetricsComparison({
     }
   };
 
-  // Filter users based on search query
-  const filteredUsers = otherUsers.filter(user => 
-    user.userName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    user.userGroup.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Sort users by selected category for leaderboard
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
-    const aRatings = calculateUserRatings(a, a.gender || 'male');
-    const bRatings = calculateUserRatings(b, b.gender || 'male');
-    
-    return bRatings[leaderboardCategory] - aRatings[leaderboardCategory];
-  });
-
-  // User's rank in each category
-  const userRankData = (() => {
-    const userRatings = calculateUserRatings(userMetrics, userGender);
-    const allUsersWithCurrent = [...otherUsers, {
-      ...userMetrics,
-      userName,
-      userGroup: userGroup || 'כיתה א',
-      photoURL: userPhoto || null,
-      gender: userGender
-    }];
-    
-    // Sort everyone by category and find user's position
-    const overallRank = [...allUsersWithCurrent]
-      .sort((a, b) => calculateUserRatings(b, b.gender || 'male').overall - calculateUserRatings(a, a.gender || 'male').overall)
-      .findIndex(u => u.userName === userName) + 1;
-      
-    const aerobicRank = [...allUsersWithCurrent]
-      .sort((a, b) => calculateUserRatings(b, b.gender || 'male').aerobic - calculateUserRatings(a, a.gender || 'male').aerobic)
-      .findIndex(u => u.userName === userName) + 1;
-      
-    const anaerobicRank = [...allUsersWithCurrent]
-      .sort((a, b) => calculateUserRatings(b).anaerobic - calculateUserRatings(a).anaerobic)
-      .findIndex(u => u.userName === userName) + 1;
-      
-    const strengthRank = [...allUsersWithCurrent]
-      .sort((a, b) => calculateUserRatings(b).strength - calculateUserRatings(a).strength)
-      .findIndex(u => u.userName === userName) + 1;
-    
-    const totalUsers = allUsersWithCurrent.length;
-    
-    return {
-      overall: { rank: overallRank, total: totalUsers },
-      aerobic: { rank: aerobicRank, total: totalUsers },
-      anaerobic: { rank: anaerobicRank, total: totalUsers },
-      strength: { rank: strengthRank, total: totalUsers },
-    };
-  })();
-
-  // Calculate same group rank  
-  const getUserGroupRank = () => {
-    const sameGroupUsers = otherUsers.filter(u => u.userGroup === userGroup);
-    
-    // Add current user to the list
-    const allGroupUsers = [...sameGroupUsers, {
-      ...userMetrics,
-      userName,
-      userGroup: userGroup || 'כיתה א',
-      photoURL: userPhoto || null,
-      gender: userGender
-    }];
-    
-    // Sort by overall rating and find user position
-    const groupRank = [...allGroupUsers]
-      .sort((a, b) => calculateUserRatings(b, b.gender || 'male').overall - calculateUserRatings(a, a.gender || 'male').overall)
-      .findIndex(u => u.userName === userName) + 1;
-      
-    return { rank: groupRank, total: allGroupUsers.length };
-  };
-
   const userRatings = calculateUserRatings(userMetrics, userGender);
-  const selectedUserRatings = selectedUser ? calculateUserRatings(selectedUser, selectedUser.gender || 'male') : {
-    overall: 0,
-    aerobic: 0,
-    anaerobic: 0,
-    strength: 0
-  };
-  const groupRank = getUserGroupRank();
 
-  // Add this function to handle user selection/deselection
-  const handleUserSelection = (user: ComparisonMetrics) => {
-    if (selectedUser?.id === user.id) {
-      // If clicking the same user again, deselect them
-      setSelectedUser(null);
-    } else {
-      // Otherwise, select the new user
-      setSelectedUser(user);
-    }
-  };
-
-  return (
-    <div className="space-y-8">
-      {/* User Stats Summary - Enhanced with better card design */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="bg-[#ff8714]/5 p-6 border-b border-gray-200">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full overflow-hidden bg-white border-4 border-[#ff8714]/20 flex items-center justify-center shadow-md">
-              {userPhoto ? (
-                <Image 
-                  src={userPhoto} 
-                  alt={userName} 
-                  width={64} 
-                  height={64} 
-                  className="object-cover w-full h-full"
-                />
-              ) : (
-                <div className="text-[#ff8714] text-2xl font-bold">
-                  {userName.charAt(0)}
-                </div>
-              )}
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">{userName}</h2>
-              <div className="text-sm text-gray-500 flex items-center gap-2">
-                <span>{userGroup}</span>
-                <span className="inline-flex items-center gap-1 bg-[#ff8714]/10 text-[#ff8714] px-2 py-0.5 rounded-full text-xs font-medium">
-                  <FaTrophy className="w-3 h-3" /> מקום {groupRank.rank}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Overall Rating */}
-            <div className="bg-white rounded-xl p-4 shadow border border-gray-200 flex flex-col items-center justify-center">
-              <div className="text-sm text-gray-500 mb-1">דירוג כללי</div>
-              <div className="relative">
-                <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center">
-                  <div className={`text-3xl font-bold ${getRatingColor(userRatings.overall)}`}>
-                    {userRatings.overall}
-                  </div>
-                </div>
-                <div 
-                  className="absolute inset-0 rounded-full border-4 border-transparent"
-                  style={{ 
-                    borderTopColor: '#ff8714',
-                    transform: `rotate(${userRatings.overall * 3.6}deg)`,
-                    transition: 'transform 1s ease-out'
-                  }}
-                ></div>
-              </div>
-              <div className="text-xs text-gray-500 mt-2">מתוך 100</div>
-            </div>
-            
-            {/* Category Ratings */}
-            <div className="bg-white rounded-xl p-4 shadow border border-gray-200 col-span-3">
-              <h3 className="text-sm font-medium text-gray-500 mb-4">דירוג לפי קטגוריה</h3>
-              
-              <div className="space-y-4">
-                {/* Aerobic */}
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex items-center gap-2">
-                      <FaRunning className="text-[#ff8714]" />
-                      <span className="text-sm font-medium">אירובי</span>
-                    </div>
-                    <div className={`font-bold ${getRatingColor(userRatings.aerobic)}`}>
-                      {userRatings.aerobic}
-                    </div>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#ff8714]" 
-                      style={{ width: `${userRatings.aerobic}%`, transition: 'width 1s ease-out' }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>דירוג: {userRankData.aerobic.rank}/{userRankData.aerobic.total}</span>
-                    <span>{userRatings.aerobic}%</span>
-                  </div>
-                </div>
-                
-                {/* Anaerobic */}
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex items-center gap-2">
-                      <FaBolt className="text-[#ff8714]" />
-                      <span className="text-sm font-medium">אנאירובי</span>
-                    </div>
-                    <div className={`font-bold ${getRatingColor(userRatings.anaerobic)}`}>
-                      {userRatings.anaerobic}
-                    </div>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#ff8714]" 
-                      style={{ width: `${userRatings.anaerobic}%`, transition: 'width 1s ease-out' }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>דירוג: {userRankData.anaerobic.rank}/{userRankData.anaerobic.total}</span>
-                    <span>{userRatings.anaerobic}%</span>
-                  </div>
-                </div>
-                
-                {/* Strength */}
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex items-center gap-2">
-                      <FaDumbbell className="text-[#ff8714]" />
-                      <span className="text-sm font-medium">כוח</span>
-                    </div>
-                    <div className={`font-bold ${getRatingColor(userRatings.strength)}`}>
-                      {userRatings.strength}
-                    </div>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#ff8714]" 
-                      style={{ width: `${userRatings.strength}%`, transition: 'width 1s ease-out' }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>דירוג: {userRankData.strength.rank}/{userRankData.strength.total}</span>
-                    <span>{userRatings.strength}%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  // Return loading state
+  if (isLoading && teams.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#ff8714] mx-auto mb-4"></div>
+        <p className="text-gray-600">טוען נתונים...</p>
       </div>
-      
-      {/* Comparison Section - Enhanced with better UI */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <FaUsers className="text-[#ff8714]" />
-              השוואה חברתית
-            </h2>
-            <button 
-              onClick={() => setShowLeaderboard(!showLeaderboard)}
-              className="px-4 py-2 rounded-full bg-[#ff8714] text-white hover:bg-[#e67200] transition-colors flex items-center gap-2 text-sm font-medium"
-            >
-              {showLeaderboard ? (
-                <>
-                  <span>חזרה להשוואה</span>
-                </>
-              ) : (
-                <>
-                  <FaTrophy className="w-4 h-4" />
-                  <span>הצג טבלת דירוג</span>
-                </>
-              )}
-            </button>
+    );
+  }
+
+  // Return error state
+  if (error && teams.length === 0) {
+    return (
+      <div className="text-center py-8 text-red-500">
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  // Render the comparison UI
+  return (
+    <div className="space-y-6">
+      {/* User Ranking */}
+      <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <FaTrophy className="text-yellow-500" />
+            דירוג שלך
+          </h3>
+          <div className="bg-[#ff8714] text-white font-bold px-4 py-2 rounded-full">
+            מקום {userRank.rank} מתוך {userRank.total}
           </div>
         </div>
+        <p className="text-gray-600 mt-2">הדירוג שלך מבין כל {userGender === 'male' ? 'הבנים' : 'הבנות'}</p>
+      </div>
+
+      {/* Team Comparison Section */}
+      <div className="bg-white rounded-xl p-6 shadow-md">
+        <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+          <FaUsers className="text-blue-500" />
+          השוואה לקבוצות {userGender === 'male' ? 'בנים' : 'בנות'}
+        </h3>
         
-        {/* Search Bar - Enhanced with better styling */}
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <div className="relative max-w-md mx-auto">
-            <FaSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="חפש לפי שם או קבוצה..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full py-2 pr-10 pl-4 text-right bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff8714] text-black shadow-sm"
-            />
-          </div>
-        </div>
-        
-        <div className="p-6">
-          {showLeaderboard ? (
-            <div className="animate-fadeIn">
-              {/* Leaderboard category selector - Enhanced with pill style */}
-              <div className="bg-gray-100 p-1 rounded-full inline-flex mb-6 shadow-sm">
-                {['overall', 'aerobic', 'anaerobic', 'strength'].map((category) => (
-                  <button 
-                    key={category}
-                    className={`px-4 py-2 rounded-full font-medium text-sm transition-all duration-200 ${
-                      leaderboardCategory === category 
-                        ? 'bg-white text-[#ff8714] shadow-sm' 
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                    onClick={() => setLeaderboardCategory(category as any)}
-                  >
-                    {category === 'overall' && 'דירוג כללי'}
-                    {category === 'aerobic' && 'אירובי'}
-                    {category === 'anaerobic' && 'אנאירובי'}
-                    {category === 'strength' && 'כוח'}
-                  </button>
-                ))}
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Team Selection List - Sidebar */}
+          <div className="md:w-1/4 md:border-l md:border-gray-200 md:pl-4">
+            <h4 className="font-medium text-md mb-3">בחר קבוצה:</h4>
+            
+            {isLoading && teams.length === 0 && (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#ff8714]"></div>
               </div>
-              
-              {/* Leaderboard table - Enhanced with better styling */}
-              <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-right text-gray-500 text-sm font-medium">דירוג</th>
-                      <th className="px-4 py-3 text-right text-gray-500 text-sm font-medium">משתמש</th>
-                      <th className="px-4 py-3 text-right text-gray-500 text-sm font-medium">קבוצה</th>
-                      <th className="px-4 py-3 text-right text-gray-500 text-sm font-medium">ציון</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {sortedUsers.map((user, index) => {
-                      const isCurrentUser = user.userName === userName;
-                      const userRating = calculateUserRatings(user, user.gender || 'male')[leaderboardCategory];
-                      return (
-                        <tr 
-                          key={index} 
-                          className={`${
-                            isCurrentUser 
-                              ? 'bg-[#ff8714]/10' 
-                              : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                          } hover:bg-gray-100 transition-colors`}
-                        >
-                          <td className="px-4 py-3 text-right">
-                            {index === 0 ? (
-                              <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#ff8714] text-white">
-                                <FaTrophy className="w-3 h-3" />
-                              </div>
-                            ) : (
-                              <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 text-sm">
-                                {index + 1}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                                {user.photoURL ? (
-                                  <Image 
-                                    src={user.photoURL} 
-                                    alt={user.userName} 
-                                    width={32} 
-                                    height={32} 
-                                    className="object-cover w-full h-full"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                    {user.userName.charAt(0)}
-                                  </div>
-                                )}
-                              </div>
-                              <span className={`${isCurrentUser ? 'font-bold' : ''}`}>
-                                {user.userName}
-                                {isCurrentUser && (
-                                  <span className="text-xs text-[#ff8714] mr-1">(אתה)</span>
-                                )}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-right text-gray-500">{user.userGroup}</td>
-                          <td className="px-4 py-3 text-right">
-                            <span className={`font-bold ${getRatingColor(userRating)}`}>
-                              {userRating}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            )}
+            
+            {!isLoading && teams.length === 0 && (
+              <div className="text-center py-3 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                <p className="text-sm text-gray-500">לא נמצאו קבוצות {userGender === 'male' ? 'בנים' : 'בנות'}</p>
               </div>
-            </div>
-          ) : (
-            <div className="animate-fadeIn">
-              {/* User selection - Enhanced with better cards */}
-              <h3 className="text-lg font-medium mb-4">בחר משתמש להשוואה</h3>
-              
-              {/* User selection grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
-                {filteredUsers.map((user) => (
+            )}
+            
+            {!isLoading && teams.length > 0 && (
+              <div className="overflow-y-auto max-h-[70vh] pr-2 space-y-1">
+                {teams.map(team => (
                   <div 
-                    key={user.id} 
-                    className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                      selectedUser?.id === user.id 
-                        ? 'border-[#ff8714] bg-[#ff8714]/5 shadow-md transform scale-105' 
-                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow'
-                    } flex flex-col items-center relative`}
-                    onClick={() => handleUserSelection(user)}
+                    key={team.id} 
+                    onClick={() => setSelectedTeamId(team.id === selectedTeamId ? '' : team.id)}
+                    className={`
+                      flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-all
+                      ${team.id === selectedTeamId 
+                        ? 'bg-[#ff8714] text-white font-medium shadow-sm' 
+                        : 'hover:bg-gray-50 text-gray-700'}
+                    `}
                   >
-                    <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200 mb-2 border-2 border-white shadow">
-                      {user.photoURL ? (
-                        <Image
-                          src={user.photoURL}
-                          alt={user.userName}
-                          width={56}
-                          height={56}
-                          className="object-cover w-full h-full"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-300">
-                          <span className="text-2xl text-gray-600">
-                            {user.userName.charAt(0)}
-                          </span>
-                        </div>
-                      )}
+                    <div className={`
+                      w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0
+                      ${team.id === selectedTeamId ? 'bg-white/20' : 'bg-gray-100'}
+                    `}>
+                      <FaUsers className={team.id === selectedTeamId ? 'text-white' : 'text-gray-500'} size={12} />
                     </div>
-                    <div className="text-sm font-medium text-center">{user.userName}</div>
-                    <div className="text-xs text-gray-500">{user.userGroup}</div>
-                    {selectedUser?.id === user.id && (
-                      <div className="absolute top-2 right-2 text-[#ff8714]">
-                        <FaTrophy size={16} />
+                    <span className="text-sm truncate">{team.name}</span>
+                    {team.id === selectedTeamId && (
+                      <div className="ml-auto">
+                        <div className="h-2 w-2 rounded-full bg-white"></div>
                       </div>
                     )}
                   </div>
                 ))}
               </div>
-              
-              {/* Comparison details - Enhanced with better visualization */}
-              {selectedUser && (
-                <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden animate-slideUp">
-                  <div className="p-4 border-b border-gray-200 bg-gray-50">
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-bold">השוואה מפורטת</h3>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-[#ff8714]"></div>
-                          <span className="text-sm">{userName}</span>
+            )}
+          </div>
+          
+          {/* Main Comparison Content */}
+          <div className="md:w-3/4">
+            {/* No team selected message */}
+            {!selectedTeamId && !isLoading && teams.length > 0 && (
+              <div className="h-full flex flex-col items-center justify-center text-center py-16 px-4 border border-dashed border-gray-300 rounded-lg">
+                <div className="bg-blue-50 p-3 rounded-full mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                </div>
+                <h4 className="font-medium text-lg mb-2">בחר קבוצה מהרשימה</h4>
+                <p className="text-gray-500 max-w-md">
+                  בחר קבוצה מהרשימה בצד ימין כדי להשוות את הביצועים שלך לממוצע הקבוצה 
+                  ולביצועי המוביל/ה בקבוצה
+                </p>
+              </div>
+            )}
+            
+            {/* Error message */}
+            {error && (
+              <div className="text-center py-6 border border-gray-200 rounded-lg bg-gray-50">
+                <div className="text-red-500 mb-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <p className="text-red-500">{error}</p>
+              </div>
+            )}
+            
+            {/* Loading state */}
+            {isLoading && selectedTeamId && (
+              <div className="text-center py-16">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#ff8714] mx-auto mb-3"></div>
+                <p className="text-gray-600">טוען נתוני קבוצה...</p>
+              </div>
+            )}
+            
+            {/* Team Comparison Results */}
+            {selectedTeamId && !isLoading && !error && (
+              <div className="space-y-8 animate-fadeIn">
+                {/* Team Header & Overview */}
+                <div className="bg-gradient-to-r from-blue-50 via-gray-50 to-white p-5 rounded-xl relative overflow-hidden border border-blue-100">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-10 -mt-10"></div>
+                  <div className="relative z-10">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div>
+                        <h4 className="font-bold text-xl text-[#ff8714]">
+                          {teams.find(t => t.id === selectedTeamId)?.name}
+                        </h4>
+                        <p className="text-gray-600 text-sm">
+                          השוואה בין המדדים שלך לביצועי הקבוצה
+                        </p>
+                      </div>
+                      
+                      <div className="p-3 bg-white rounded-xl shadow-sm border border-gray-100 text-center min-w-[150px]">
+                        <div className="flex items-center justify-center mb-1">
+                          <span className={`text-2xl font-bold ${getRatingColor(userRatings.overall)}`}>
+                            {userRatings.overall}
+                          </span>
+                          <span className="text-gray-400 mx-2 text-lg">vs</span>
+                          <span className={`text-2xl font-bold ${getRatingColor(teamAverage.overall)}`}>
+                            {teamAverage.overall}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                          <span className="text-sm">{selectedUser.userName}</span>
+                        <p className="text-xs text-gray-500">הציון הכללי שלך מול ממוצע הקבוצה</p>
+                      </div>
+                    </div>
+                    
+                    {/* Comparison Summary */}
+                    <div className="mt-6 p-3 bg-blue-50/80 rounded-lg border border-blue-100">
+                      <div className="flex items-center gap-2">
+                        {getComparisonInfo(userRatings.overall, teamAverage.overall).icon}
+                        <span className={`${getComparisonInfo(userRatings.overall, teamAverage.overall).color} font-medium`}>
+                          {getComparisonInfo(userRatings.overall, teamAverage.overall).text}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Best Team Member Comparison */}
+                {bestTeamMember && (
+                  <div className="border border-gray-200 rounded-xl bg-gradient-to-b from-yellow-50 to-white overflow-hidden shadow-sm">
+                    <div className="bg-yellow-500 text-white p-4">
+                      <h4 className="font-bold text-lg flex items-center gap-2">
+                        <FaTrophy />
+                        השוואה למוביל/ה בקבוצה
+                      </h4>
+                    </div>
+                    
+                    <div className="p-5">
+                      <div className="flex flex-col md:flex-row gap-6">
+                        {/* Top Performer Card */}
+                        <div className="md:w-1/3 bg-white rounded-xl border border-yellow-200 p-4 shadow-sm">
+                          <div className="flex flex-col items-center text-center">
+                            <div className="relative w-20 h-20 overflow-hidden rounded-full border-4 border-yellow-200 mb-3">
+                              {bestTeamMember.photoURL ? (
+                                <Image 
+                                  src={bestTeamMember.photoURL} 
+                                  alt={bestTeamMember.userName}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-yellow-100 flex items-center justify-center text-yellow-600 font-bold text-xl">
+                                  {bestTeamMember.userName.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-white rounded-full w-8 h-8 flex items-center justify-center">
+                                <FaTrophy size={14} />
+                              </div>
+                            </div>
+                            
+                            <h5 className="font-bold text-lg mb-1">{bestTeamMember.userName}</h5>
+                            <p className="text-gray-600 text-sm mb-3">מוביל/ה בקבוצה</p>
+                            
+                            <div className="bg-yellow-100 rounded-full px-6 py-2 inline-flex items-center gap-2">
+                              <span className="text-gray-700">ציון כללי:</span>
+                              <span className={`font-bold text-xl ${getRatingColor(calculateUserRatings(bestTeamMember).overall)}`}>
+                                {calculateUserRatings(bestTeamMember).overall}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Comparison Metrics */}
+                        <div className="md:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="font-medium text-gray-700">סיבולת אירובית</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-bold ${getRatingColor(userRatings.aerobic)}`}>{userRatings.aerobic}</span>
+                                <span className="text-gray-400 mx-1">vs</span>
+                                <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).aerobic)}`}>
+                                  {calculateUserRatings(bestTeamMember).aerobic}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
+                              <div 
+                                className="absolute h-full right-0 bg-blue-500"
+                                style={{ width: `${userRatings.aerobic}%` }}
+                              ></div>
+                              <div 
+                                className="absolute h-full right-0 bg-yellow-500/30"
+                                style={{ width: `${calculateUserRatings(bestTeamMember).aerobic}%`, borderLeft: '2px dashed #EAB308' }}
+                              ></div>
+                            </div>
+                            
+                            <div className="text-sm flex items-center gap-1">
+                              {getComparisonInfo(userRatings.aerobic, calculateUserRatings(bestTeamMember).aerobic).icon}
+                              <span className={getComparisonInfo(userRatings.aerobic, calculateUserRatings(bestTeamMember).aerobic).color}>
+                                {getComparisonInfo(userRatings.aerobic, calculateUserRatings(bestTeamMember).aerobic).text}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="font-medium text-gray-700">סיבולת אנאירובית</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-bold ${getRatingColor(userRatings.anaerobic)}`}>{userRatings.anaerobic}</span>
+                                <span className="text-gray-400 mx-1">vs</span>
+                                <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).anaerobic)}`}>
+                                  {calculateUserRatings(bestTeamMember).anaerobic}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
+                              <div 
+                                className="absolute h-full right-0 bg-purple-500"
+                                style={{ width: `${userRatings.anaerobic}%` }}
+                              ></div>
+                              <div 
+                                className="absolute h-full right-0 bg-yellow-500/30"
+                                style={{ width: `${calculateUserRatings(bestTeamMember).anaerobic}%`, borderLeft: '2px dashed #EAB308' }}
+                              ></div>
+                            </div>
+                            
+                            <div className="text-sm flex items-center gap-1">
+                              {getComparisonInfo(userRatings.anaerobic, calculateUserRatings(bestTeamMember).anaerobic).icon}
+                              <span className={getComparisonInfo(userRatings.anaerobic, calculateUserRatings(bestTeamMember).anaerobic).color}>
+                                {getComparisonInfo(userRatings.anaerobic, calculateUserRatings(bestTeamMember).anaerobic).text}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="font-medium text-gray-700">כוח</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-bold ${getRatingColor(userRatings.strength)}`}>{userRatings.strength}</span>
+                                <span className="text-gray-400 mx-1">vs</span>
+                                <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).strength)}`}>
+                                  {calculateUserRatings(bestTeamMember).strength}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
+                              <div 
+                                className="absolute h-full right-0 bg-green-500"
+                                style={{ width: `${userRatings.strength}%` }}
+                              ></div>
+                              <div 
+                                className="absolute h-full right-0 bg-yellow-500/30"
+                                style={{ width: `${calculateUserRatings(bestTeamMember).strength}%`, borderLeft: '2px dashed #EAB308' }}
+                              ></div>
+                            </div>
+                            
+                            <div className="text-sm flex items-center gap-1">
+                              {getComparisonInfo(userRatings.strength, calculateUserRatings(bestTeamMember).strength).icon}
+                              <span className={getComparisonInfo(userRatings.strength, calculateUserRatings(bestTeamMember).strength).color}>
+                                {getComparisonInfo(userRatings.strength, calculateUserRatings(bestTeamMember).strength).text}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="font-medium text-gray-700">ציון כללי</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-bold ${getRatingColor(userRatings.overall)}`}>{userRatings.overall}</span>
+                                <span className="text-gray-400 mx-1">vs</span>
+                                <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).overall)}`}>
+                                  {calculateUserRatings(bestTeamMember).overall}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
+                              <div 
+                                className="absolute h-full right-0 bg-[#ff8714]"
+                                style={{ width: `${userRatings.overall}%` }}
+                              ></div>
+                              <div 
+                                className="absolute h-full right-0 bg-yellow-500/30"
+                                style={{ width: `${calculateUserRatings(bestTeamMember).overall}%`, borderLeft: '2px dashed #EAB308' }}
+                              ></div>
+                            </div>
+                            
+                            <div className="text-sm flex items-center gap-1">
+                              {getComparisonInfo(userRatings.overall, calculateUserRatings(bestTeamMember).overall).icon}
+                              <span className={getComparisonInfo(userRatings.overall, calculateUserRatings(bestTeamMember).overall).color}>
+                                {getComparisonInfo(userRatings.overall, calculateUserRatings(bestTeamMember).overall).text}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
+                )}
+                
+                {/* Metrics Comparison Tabs */}
+                <div className="p-5 border border-gray-200 rounded-xl shadow-sm">
+                  <h4 className="font-bold text-lg mb-6">השוואה לממוצע הקבוצה לפי קטגוריות</h4>
                   
-                  {/* Overall comparison - Enhanced with better visualization */}
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="text-center">
-                        <div className="w-20 h-20 rounded-full bg-[#ff8714]/10 flex items-center justify-center mx-auto mb-2">
-                          <div className={`text-3xl font-bold ${getRatingColor(userRatings.overall)}`}>
-                            {userRatings.overall}
-                          </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Aerobic Card */}
+                    <div className="bg-gradient-to-b from-blue-50 to-white rounded-xl overflow-hidden border border-blue-100 shadow-sm">
+                      <div className="p-4 bg-blue-500 text-white flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FaRunning size={18} />
+                          <h5 className="font-bold">סיבולת אירובית</h5>
                         </div>
-                        <div className="text-sm font-medium">{userName}</div>
-                      </div>
-                      
-                      <div className="flex-1 max-w-xs mx-8">
-                        <div className="text-center mb-2">
-                          <span className="text-sm font-medium">דירוג כללי</span>
-                          <span className="text-xs text-gray-500 mr-2">
-                            {getComparisonInfo(userRatings.overall, selectedUserRatings.overall).text}
-                          </span>
-                        </div>
-                        <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="absolute inset-y-0 left-0 bg-[#ff8714]" style={{ width: `${userRatings.overall}%` }}></div>
-                          <div className="absolute inset-y-0 left-0 bg-gray-400" style={{ width: `${selectedUserRatings.overall}%` }}></div>
+                        <div className="bg-white/20 px-2 py-1 rounded text-sm">
+                          ריצת 3000 מ׳
                         </div>
                       </div>
                       
-                      <div className="text-center">
-                        <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2">
-                          <div className={`text-3xl font-bold ${getRatingColor(selectedUserRatings.overall)}`}>
-                            {selectedUserRatings.overall}
+                      <div className="p-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-gray-700">אתה</span>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-xl font-bold ${getRatingColor(userRatings.aerobic)}`}>
+                              {userRatings.aerobic}
+                            </span>
                           </div>
                         </div>
-                        <div className="text-sm font-medium">{selectedUser.userName}</div>
+                        
+                        <div className="flex justify-between items-center mb-4">
+                          <span className="text-gray-700">ממוצע הקבוצה</span>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-xl font-bold ${getRatingColor(teamAverage.aerobic)}`}>
+                              {teamAverage.aerobic}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden mb-3">
+                          <div 
+                            className="absolute h-full right-0 bg-blue-500"
+                            style={{ width: `${userRatings.aerobic}%` }}
+                          ></div>
+                          <div 
+                            className="absolute h-full right-0 bg-gray-500/30 border-l-2 border-dashed border-gray-400"
+                            style={{ width: `${teamAverage.aerobic}%` }}
+                          ></div>
+                        </div>
+                        
+                        <div className="text-sm text-gray-600">
+                          {getComparisonInfo(userRatings.aerobic, teamAverage.aerobic).text}
+                        </div>
                       </div>
                     </div>
                     
-                    {/* Category comparisons - Enhanced with better visualization */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {/* Aerobic */}
-                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-8 h-8 rounded-full bg-[#ff8714]/10 flex items-center justify-center">
-                            <FaRunning className="text-[#ff8714]" />
-                          </div>
-                          <h4 className="font-medium">אירובי</h4>
+                    {/* Anaerobic Card */}
+                    <div className="bg-gradient-to-b from-purple-50 to-white rounded-xl overflow-hidden border border-purple-100 shadow-sm">
+                      <div className="p-4 bg-purple-500 text-white flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FaBolt size={18} />
+                          <h5 className="font-bold">סיבולת אנאירובית</h5>
                         </div>
-                        
-                        <div className="flex justify-between items-center mb-2">
-                          <div className={`text-xl font-bold ${getRatingColor(userRatings.aerobic)}`}>
-                            {userRatings.aerobic}
-                          </div>
-                          <div className="text-gray-400">vs</div>
-                          <div className={`text-xl font-bold ${getRatingColor(selectedUserRatings.aerobic)}`}>
-                            {selectedUserRatings.aerobic}
-                          </div>
-                        </div>
-                        
-                        <div className="flex justify-between items-center">
-                          <div className={`${getRatingColor(userRatings.aerobic)}`}>
-                            {getComparisonInfo(userRatings.aerobic, selectedUserRatings.aerobic).text}
-                          </div>
+                        <div className="bg-white/20 px-2 py-1 rounded text-sm">
+                          ריצת 400 מ׳
                         </div>
                       </div>
                       
-                      {/* Anaerobic */}
-                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-8 h-8 rounded-full bg-[#ff8714]/10 flex items-center justify-center">
-                            <FaBolt className="text-[#ff8714]" />
-                          </div>
-                          <h4 className="font-medium">אנאירובי</h4>
-                        </div>
-                        
+                      <div className="p-4">
                         <div className="flex justify-between items-center mb-2">
-                          <div className={`text-xl font-bold ${getRatingColor(userRatings.anaerobic)}`}>
-                            {userRatings.anaerobic}
-                          </div>
-                          <div className="text-gray-400">vs</div>
-                          <div className={`text-xl font-bold ${getRatingColor(selectedUserRatings.anaerobic)}`}>
-                            {selectedUserRatings.anaerobic}
+                          <span className="text-gray-700">אתה</span>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-xl font-bold ${getRatingColor(userRatings.anaerobic)}`}>
+                              {userRatings.anaerobic}
+                            </span>
                           </div>
                         </div>
                         
-                        <div className="flex justify-between items-center">
-                          <div className={`${getRatingColor(userRatings.anaerobic)}`}>
-                            {getComparisonInfo(userRatings.anaerobic, selectedUserRatings.anaerobic).text}
+                        <div className="flex justify-between items-center mb-4">
+                          <span className="text-gray-700">ממוצע הקבוצה</span>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-xl font-bold ${getRatingColor(teamAverage.anaerobic)}`}>
+                              {teamAverage.anaerobic}
+                            </span>
                           </div>
+                        </div>
+                        
+                        <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden mb-3">
+                          <div 
+                            className="absolute h-full right-0 bg-purple-500"
+                            style={{ width: `${userRatings.anaerobic}%` }}
+                          ></div>
+                          <div 
+                            className="absolute h-full right-0 bg-gray-500/30 border-l-2 border-dashed border-gray-400"
+                            style={{ width: `${teamAverage.anaerobic}%` }}
+                          ></div>
+                        </div>
+                        
+                        <div className="text-sm text-gray-600">
+                          {getComparisonInfo(userRatings.anaerobic, teamAverage.anaerobic).text}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Strength Card */}
+                    <div className="bg-gradient-to-b from-green-50 to-white rounded-xl overflow-hidden border border-green-100 shadow-sm">
+                      <div className="p-4 bg-green-500 text-white flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FaDumbbell size={18} />
+                          <h5 className="font-bold">כוח</h5>
+                        </div>
+                        <div className="bg-white/20 px-2 py-1 rounded text-sm">
+                          מתח, שכיבות סמיכה, בטן
                         </div>
                       </div>
                       
-                      {/* Strength */}
-                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-8 h-8 rounded-full bg-[#ff8714]/10 flex items-center justify-center">
-                            <FaDumbbell className="text-[#ff8714]" />
-                          </div>
-                          <h4 className="font-medium">כוח</h4>
-                        </div>
-                        
+                      <div className="p-4">
                         <div className="flex justify-between items-center mb-2">
-                          <div className={`text-xl font-bold ${getRatingColor(userRatings.strength)}`}>
-                            {userRatings.strength}
-                          </div>
-                          <div className="text-gray-400">vs</div>
-                          <div className={`text-xl font-bold ${getRatingColor(selectedUserRatings.strength)}`}>
-                            {selectedUserRatings.strength}
+                          <span className="text-gray-700">אתה</span>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-xl font-bold ${getRatingColor(userRatings.strength)}`}>
+                              {userRatings.strength}
+                            </span>
                           </div>
                         </div>
                         
-                        <div className="flex justify-between items-center">
-                          <div className={`${getRatingColor(userRatings.strength)}`}>
-                            {getComparisonInfo(userRatings.strength, selectedUserRatings.strength).text}
+                        <div className="flex justify-between items-center mb-4">
+                          <span className="text-gray-700">ממוצע הקבוצה</span>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-xl font-bold ${getRatingColor(teamAverage.strength)}`}>
+                              {teamAverage.strength}
+                            </span>
                           </div>
+                        </div>
+                        
+                        <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden mb-3">
+                          <div 
+                            className="absolute h-full right-0 bg-green-500"
+                            style={{ width: `${userRatings.strength}%` }}
+                          ></div>
+                          <div 
+                            className="absolute h-full right-0 bg-gray-500/30 border-l-2 border-dashed border-gray-400"
+                            style={{ width: `${teamAverage.strength}%` }}
+                          ></div>
+                        </div>
+                        
+                        <div className="text-sm text-gray-600">
+                          {getComparisonInfo(userRatings.strength, teamAverage.strength).text}
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

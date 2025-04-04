@@ -198,6 +198,11 @@ export default function MetricsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Only run validation and submission if we're on the final step
+    if (currentStep !== 3) {
+      return;
+    }
+    
     try {
       const loadingToast = toast.loading('שומר מדדים...') as string;
 
@@ -381,6 +386,28 @@ export default function MetricsPage() {
   
   // A direct step selector that doesn't validate
   const selectStep = (step: number) => {
+    // Add validation for going forward in steps
+    if (step > currentStep) {
+      // Going from step 1 to later steps - validate 3000m first
+      if (currentStep === 1) {
+        const run3000Time = `${timeInputs.run3000m.minutes || "0"}:${timeInputs.run3000m.seconds.padStart(2, '0')}`;
+        if (run3000Time === "0:00") {
+          toast.error('יש להזין זמן תקין עבור ריצת 3,000 מטר');
+          return;
+        }
+      }
+      
+      // Going from step 2 to step 3 - validate 400m first
+      if (currentStep === 2 && step > 2) {
+        const run400Time = `${timeInputs.run400m.minutes || "0"}:${timeInputs.run400m.seconds.padStart(2, '0')}`;
+        if (run400Time === "0:00") {
+          toast.error('יש להזין זמן תקין עבור ריצת 400 מטר');
+          return;
+        }
+      }
+    }
+    
+    // If validation passed or going backwards, update the step
     setCurrentStep(step);
   };
   
@@ -477,7 +504,10 @@ export default function MetricsPage() {
                               ? 'bg-[#ff8714] text-white' 
                               : 'text-gray-500 hover:bg-gray-200'
                           }`}
-                          onClick={() => selectStep(step)}
+                          onClick={(e) => {
+                            e.preventDefault(); // Prevent form submission
+                            selectStep(step);
+                          }}
                         >
                           {step}
                         </div>
@@ -722,7 +752,10 @@ export default function MetricsPage() {
                           {currentStep > 1 && (
                             <button
                               type="button"
-                              onClick={prevStep}
+                              onClick={(e) => {
+                                e.preventDefault(); // Prevent form submission
+                                prevStep();
+                              }}
                               className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1"
                             >
                               <span>הקודם</span>
@@ -745,7 +778,10 @@ export default function MetricsPage() {
                           {currentStep < 3 ? (
                             <button
                               type="button"
-                              onClick={nextStep}
+                              onClick={(e) => {
+                                e.preventDefault(); // Prevent form submission
+                                nextStep();
+                              }}
                               className="px-4 py-2 bg-[#ff8714] text-white rounded-lg hover:bg-[#e67200] transition-colors flex items-center gap-1 ml-auto"
                             >
                               <span>הבא</span>
