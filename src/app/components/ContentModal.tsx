@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { FaPlay, FaBook, FaMicrophone, FaTimes } from 'react-icons/fa';
+import { FaPlay, FaBook, FaMicrophone, FaTimes, FaApple, FaSpotify } from 'react-icons/fa';
 
 interface ContentModalProps {
   item: {
@@ -12,6 +12,9 @@ interface ContentModalProps {
     category: string;
     image?: string;
     duration?: string;
+    spotifyUrl?: string;
+    applePodcastsUrl?: string;
+    href?: string;
   };
   onClose: () => void;
 }
@@ -19,6 +22,7 @@ interface ContentModalProps {
 export default function ContentModal({ item, onClose }: ContentModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const [showPlatformSelection, setShowPlatformSelection] = useState(false);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -45,6 +49,23 @@ export default function ContentModal({ item, onClose }: ContentModalProps) {
       default:
         return null;
     }
+  };
+
+  const handleActionClick = () => {
+    if (item.category === 'podcasts' || item.category === 'five-fingers-podcast') {
+      setShowPlatformSelection(true);
+    } else {
+      // Handle other content types
+      window.open(item.href, '_blank');
+    }
+  };
+
+  const handlePlatformSelect = (platform: 'spotify' | 'apple') => {
+    const url = platform === 'spotify' ? item.spotifyUrl : item.applePodcastsUrl;
+    if (url) {
+      window.open(url, '_blank');
+    }
+    setShowPlatformSelection(false);
   };
 
   return (
@@ -88,16 +109,53 @@ export default function ContentModal({ item, onClose }: ContentModalProps) {
 
         {/* Content */}
         <div className="p-8">
+          {item.category === 'five-fingers-podcast' && (
+            <div className="mb-6 bg-[#ff8714]/10 p-4 rounded-lg">
+              <h3 className="text-xl font-bold mb-2 text-[#ff8714]">פודקאסט חמש אצבעות</h3>
+              <p className="text-gray-300">
+                הפודקאסט הרשמי של חמש אצבעות - פודקאסט שבועי עם תובנות, טיפים וסיפורים מעולם האימון והלחימה.
+                בהגשת צוות חמש אצבעות, עם אורחים מיוחדים מהשטח.
+              </p>
+            </div>
+          )}
           <div className="flex gap-4">
-            <button className="bg-[#ff8714] text-white px-8 py-3 rounded-lg hover:bg-[#ff7a2e] transition-colors flex items-center gap-2">
+            <button 
+              onClick={handleActionClick}
+              className="bg-[#ff8714] text-white px-8 py-3 rounded-lg hover:bg-[#ff7a2e] transition-colors flex items-center gap-2"
+            >
               {getIcon()}
-              <span>התחל לצפות</span>
+              <span>{item.category === 'podcasts' || item.category === 'five-fingers-podcast' ? 'האזן לפודקאסט' : 'התחל לצפות'}</span>
             </button>
             <button className="bg-white/20 backdrop-blur-sm text-white px-8 py-3 rounded-lg hover:bg-white/30 transition-colors">
               מידע נוסף
             </button>
           </div>
         </div>
+
+        {/* Platform Selection Modal */}
+        {showPlatformSelection && (
+          <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4">
+            <div className="bg-[#181818] rounded-lg p-8 max-w-md w-full">
+              <h3 className="text-2xl font-bold mb-6 text-center">בחר פלטפורמה להאזנה</h3>
+              <div className="space-y-4">
+                <button
+                  onClick={() => handlePlatformSelect('spotify')}
+                  className="w-full bg-[#1DB954] text-white px-6 py-4 rounded-lg hover:bg-[#1ed760] transition-colors flex items-center justify-center gap-3"
+                >
+                  <FaSpotify className="w-6 h-6" />
+                  <span>האזן ב-Spotify</span>
+                </button>
+                <button
+                  onClick={() => handlePlatformSelect('apple')}
+                  className="w-full bg-[#FC3C44] text-white px-6 py-4 rounded-lg hover:bg-[#ff4d55] transition-colors flex items-center justify-center gap-3"
+                >
+                  <FaApple className="w-6 h-6" />
+                  <span>האזן ב-Apple Podcasts</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
