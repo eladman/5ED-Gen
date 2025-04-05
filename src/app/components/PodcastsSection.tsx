@@ -15,7 +15,9 @@ const podcasts = [
     category: 'הצלחה',
     episodes: 156,
     rating: 4.9,
-    image: 'https://example.com/podcast1.jpg'
+    image: 'https://example.com/podcast1.jpg',
+    spotifyUrl: 'https://open.spotify.com/show/1pkoB14iPwztzO8LXkqGaR',
+    applePodcastsUrl: 'https://podcasts.apple.com/il/podcast/%D7%9E%D7%A1%D7%A2-%D7%9C%D7%94%D7%A6%D7%9C%D7%97%D7%94/id1234567890'
   },
   {
     id: '2',
@@ -25,7 +27,9 @@ const podcasts = [
     category: 'מודעות',
     episodes: 89,
     rating: 4.8,
-    image: 'https://example.com/podcast2.jpg'
+    image: 'https://example.com/podcast2.jpg',
+    spotifyUrl: 'https://open.spotify.com/show/2pkoB14iPwztzO8LXkqGaR',
+    applePodcastsUrl: 'https://podcasts.apple.com/il/podcast/%D7%97%D7%9B%D7%9E%D7%AA-%D7%94%D7%A8%D7%92%D7%A9/id1234567891'
   },
   {
     id: '3',
@@ -35,7 +39,9 @@ const podcasts = [
     category: 'מנהיגות',
     episodes: 124,
     rating: 4.7,
-    image: 'https://example.com/podcast3.jpg'
+    image: 'https://example.com/podcast3.jpg',
+    spotifyUrl: 'https://open.spotify.com/show/3pkoB14iPwztzO8LXkqGaR',
+    applePodcastsUrl: 'https://podcasts.apple.com/il/podcast/%D7%9E%D7%A0%D7%94%D7%99%D7%92%D7%95%D7%AA-%D7%95%D7%94%D7%A9%D7%A4%D7%A2%D7%94/id1234567892'
   },
   {
     id: '4',
@@ -45,7 +51,9 @@ const podcasts = [
     category: 'פסיכולוגיה',
     episodes: 203,
     rating: 4.9,
-    image: 'https://example.com/podcast4.jpg'
+    image: 'https://example.com/podcast4.jpg',
+    spotifyUrl: 'https://open.spotify.com/show/4pkoB14iPwztzO8LXkqGaR',
+    applePodcastsUrl: 'https://podcasts.apple.com/il/podcast/%D7%A4%D7%A1%D7%99%D7%9B%D7%95%D7%9C%D7%95%D7%92%D7%99%D7%94-%D7%9E%D7%A2%D7%A9%D7%99%D7%AA/id1234567893'
   },
   {
     id: '5',
@@ -55,7 +63,9 @@ const podcasts = [
     category: 'יצירתיות',
     episodes: 67,
     rating: 4.6,
-    image: 'https://example.com/podcast5.jpg'
+    image: 'https://example.com/podcast5.jpg',
+    spotifyUrl: 'https://open.spotify.com/show/5pkoB14iPwztzO8LXkqGaR',
+    applePodcastsUrl: 'https://podcasts.apple.com/il/podcast/%D7%99%D7%A6%D7%99%D7%A8%D7%AA%D7%99%D7%95%D7%AA-%D7%95%D7%97%D7%93%D7%A9%D7%A0%D7%95%D7%AA/id1234567894'
   },
   {
     id: '6',
@@ -65,7 +75,9 @@ const podcasts = [
     category: 'איזון',
     episodes: 92,
     rating: 4.8,
-    image: 'https://example.com/podcast6.jpg'
+    image: 'https://example.com/podcast6.jpg',
+    spotifyUrl: 'https://open.spotify.com/show/6pkoB14iPwztzO8LXkqGaR',
+    applePodcastsUrl: 'https://podcasts.apple.com/il/podcast/%D7%90%D7%99%D7%96%D7%95%D7%9F-%D7%A2%D7%91%D7%95%D7%93%D7%94-%D7%97%D7%99%D7%99%D7%9D/id1234567895'
   }
 ];
 

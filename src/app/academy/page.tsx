@@ -7,6 +7,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ContentModal from '../components/ContentModal';
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
+
+// Dynamically import SplashScreen with no SSR
+const SplashScreen = dynamic(() => import('../components/SplashScreen'), { ssr: false });
 
 const SPOTIFY_CLIENT_ID = '86096c3b744045a898cbdf7731f63525';
 const SPOTIFY_CLIENT_SECRET = '4d5f8ceee0044b2fb58bdcea0c81f555';
@@ -56,17 +61,224 @@ const getActionText = (category: string) => {
   }
 };
 
+// Types
+interface Item {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  category: string;
+  image: string;
+  duration: string;
+  recommendedBy?: string;
+  actionText?: string;
+  spotifyId?: string;
+  spotifyUrl?: string;
+  applePodcastsUrl?: string;
+}
+
+interface Category {
+  id: string;
+  title: string;
+  icon: any;
+  color: string;
+  items: Item[];
+}
+
+interface AcademyContentProps {
+  categories: Category[];
+  isLoaded: boolean;
+  handleItemClick: (e: React.MouseEvent, item: Item) => void;
+  selectedItem: Item | null;
+  handleCloseModal: () => void;
+  checkScrollability: (elementId: string) => void;
+}
+
+// Client Component for Academy Content
+function AcademyContent({ 
+  categories, 
+  isLoaded, 
+  handleItemClick, 
+  selectedItem, 
+  handleCloseModal,
+  checkScrollability 
+}: AcademyContentProps) {
+  return (
+    <div className="min-h-screen bg-[#F5F5F5] font-heebo text-right">
+      <main className="px-4 md:px-8 py-8 pt-24">
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-2xl md:text-3xl font-bold mb-8 md:mb-10 text-[#ff8714] text-center"
+        >
+          האקדמיה
+        </motion.h1>
+        
+        {/* Content Rows */}
+        <motion.div 
+          className="space-y-8 md:space-y-12"
+          variants={containerVariants}
+          initial="hidden"
+          animate={isLoaded ? "show" : "hidden"}
+        >
+          {categories.map((category) => (
+            <motion.div 
+              key={category.id} 
+              className="group/row relative"
+              variants={itemVariants}
+            >
+              <div className="flex items-center gap-3 mb-4 md:mb-6 px-2">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800">{category.title}</h2>
+                <category.icon className={`text-2xl text-[#ff8714]`} />
+              </div>
+
+              {/* Scrolling Container */}
+              <div 
+                id={`scroll-${category.id}`}
+                className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth -mx-4 md:-mx-8 px-4 md:px-8
+                py-8 md:py-12 -my-8 md:-my-12"
+                style={{ 
+                  scrollbarWidth: 'none', 
+                  msOverflowStyle: 'none',
+                  WebkitOverflowScrolling: 'touch'
+                }}
+                onScroll={() => checkScrollability(`scroll-${category.id}`)}
+                dir="rtl"
+              >
+                {category.items.map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    className="flex-none w-[280px] md:w-[320px] group/item relative"
+                    onClick={(e) => handleItemClick(e, item)}
+                    variants={{
+                      hidden: { opacity: 0, x: 50 },
+                      show: { 
+                        opacity: 1, 
+                        x: 0,
+                        transition: {
+                          duration: 0.5,
+                          delay: index * 0.1
+                        }
+                      }
+                    }}
+                  >
+                    <div className="relative aspect-video cursor-pointer overflow-visible rounded-2xl 
+                      transition-all duration-300 ease-out 
+                      hover:shadow-xl
+                      group-hover/item:z-[999] 
+                      transform-gpu hover:scale-[1.15]">
+                      <Image
+                        src={item.image}
+                        alt={item.title}
+                        fill
+                        className="object-cover rounded-2xl"
+                        sizes="(max-width: 768px) 280px, 320px"
+                      />
+                      {/* Dark gradient overlay - only at the bottom */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent rounded-2xl" />
+                      
+                      {/* Content overlay */}
+                      <div className="absolute inset-0 p-4 flex flex-col rounded-2xl">
+                        {/* Top: Title */}
+                        <h3 className="text-lg md:text-xl font-bold mb-2 text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+                          {item.title}
+                        </h3>
+                        
+                        {/* Middle: Description - visible on hover */}
+                        <div className="flex-1 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300">
+                          <p className="text-sm text-gray-200 line-clamp-3 mb-4">
+                            {item.description}
+                          </p>
+                        </div>
+                        
+                        {/* Bottom: Duration and Recommendation */}
+                        <div className="mt-auto">
+                          <div className="flex items-center gap-2 text-sm text-gray-300 mb-1">
+                            <span className="text-white font-medium">{item.duration}</span>
+                            <span>•</span>
+                            <span>HD</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="bg-[#ff8714] text-white text-sm font-medium px-3 py-1 rounded-full
+                              opacity-0 group-hover/item:opacity-100 transition-opacity duration-300
+                              md:opacity-0 md:group-hover/item:opacity-100">
+                              {getActionText(category.id)}
+                            </span>
+                            <span className="text-sm text-gray-200">
+                              המלצת {item.recommendedBy}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </main>
+
+      {/* Modal */}
+      {selectedItem && (
+        <ContentModal
+          item={selectedItem}
+          onClose={handleCloseModal}
+        />
+      )}
+    </div>
+  );
+}
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.3
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: "easeOut"
+    }
+  }
+};
+
 export default function AcademyPage() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [scrollPositions, setScrollPositions] = useState<{ [key: string]: { canScrollLeft: boolean; canScrollRight: boolean } }>({});
   const [spotifyEpisodes, setSpotifyEpisodes] = useState<any[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
 
-  const handleItemClick = (e: React.MouseEvent, item: any) => {
+  interface Item {
+    id: string;
+    title: string;
+    description: string;
+    href: string;
+    category: string;
+    image: string;
+    duration: string;
+    recommendedBy?: string;
+    actionText?: string;
+    spotifyId?: string;
+    spotifyUrl?: string;
+    applePodcastsUrl?: string;
+  }
+
+  const handleItemClick = (e: React.MouseEvent, item: Item) => {
     e.preventDefault();
-    if (item.category === 'five-fingers-podcast') {
-      window.open(item.href, '_blank');
-      return;
-    }
     setSelectedItem(item);
   };
 
@@ -121,6 +333,10 @@ export default function AcademyPage() {
     fetchEpisodes();
   }, []);
 
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
+
   const categories = [
     {
       id: 'podcasts',
@@ -135,7 +351,8 @@ export default function AcademyPage() {
           href: '/academy/podcasts/1',
           category: 'podcasts',
           image: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?q=80&w=1000&auto=format&fit=crop',
-          duration: '45 דקות'
+          duration: '45 דקות',
+          recommendedBy: 'סא"ל יובל כהן'
         },
         {
           id: '2',
@@ -144,7 +361,8 @@ export default function AcademyPage() {
           href: '/academy/podcasts/2',
           category: 'podcasts',
           image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1000&auto=format&fit=crop',
-          duration: '35 דקות'
+          duration: '35 דקות',
+          recommendedBy: 'רס"ן דן לוי'
         },
         {
           id: '3',
@@ -153,7 +371,8 @@ export default function AcademyPage() {
           href: '/academy/podcasts/3',
           category: 'podcasts',
           image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1000&auto=format&fit=crop',
-          duration: '40 דקות'
+          duration: '40 דקות',
+          recommendedBy: 'סרן עמית ישראלי'
         },
         {
           id: '4',
@@ -190,7 +409,8 @@ export default function AcademyPage() {
           href: '/academy/books/1',
           category: 'books',
           image: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=1000&auto=format&fit=crop',
-          duration: '300 דקות'
+          duration: '300 דקות',
+          recommendedBy: 'אל"מ רועי שמיר'
         },
         {
           id: '2',
@@ -245,7 +465,8 @@ export default function AcademyPage() {
           href: '/academy/videos/1',
           category: 'videos',
           image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop',
-          duration: '15 דקות'
+          duration: '15 דקות',
+          recommendedBy: 'רס"ן גיא אברהם'
         },
         {
           id: '2',
@@ -301,145 +522,25 @@ export default function AcademyPage() {
         image: episode.images[0].url,
         duration: `${Math.floor(episode.duration_ms / 60000)} דקות`,
         spotifyId: episode.id,
-        spotifyUrl: episode.external_urls.spotify
+        spotifyUrl: episode.external_urls.spotify,
+        applePodcastsUrl: `https://podcasts.apple.com/il/podcast/%D7%97%D7%9E%D7%A9-%D7%90%D7%A6%D7%91%D7%A2%D7%95%D7%AA/id${episode.id}`,
+        recommendedBy: 'צוות חמש אצבעות'
       }))
     }
   ];
 
   return (
-    <main className="min-h-screen bg-white text-gray-900">
-      <Navbar />
-      
-      {/* Hero Section */}
-      <div className="relative h-[40vh] w-full">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#ff8714]/90 via-[#ff8714]/50 to-transparent z-10" />
-        <div className="absolute inset-0">
-          <Image
-            src="/images/podcasts/leadership.jpg"
-            alt="Hero"
-            fill
-            className="object-cover brightness-90"
-            priority
-          />
-        </div>
-        <div className="relative z-20 h-full flex items-center">
-          <div className="container mx-auto px-4">
-            <h1 className="text-4xl font-bold mb-2 text-zinc-900 drop-shadow-lg">האקדמיה של חמש</h1>
-            <p className="text-xl mb-4 max-w-2xl text-zinc-800 drop-shadow-lg">המקום להתפתח, ללמוד ולהתקדם. גלה תוכן איכותי בפודקאסטים, ספרים וסרטים.</p>
-            <div className="flex gap-4">
-              <button className="bg-[#ff8714] text-white px-6 py-2 rounded-lg hover:bg-[#e67200] transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                התחל לצפות
-              </button>
-              <button className="bg-zinc-900/90 backdrop-blur px-6 py-2 rounded-lg hover:bg-zinc-800 transition-all text-white border border-zinc-800 hover:border-zinc-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                מידע נוסף
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Content Rows */}
-      <div className="space-y-2 py-8">
-        {categories.map((category) => (
-          <div key={category.id} className="group/row relative px-4 -mx-4 mb-2">
-            <h2 className="text-2xl font-bold mb-1 px-4">{category.title}</h2>
-            <div className="relative group">
-              {/* Navigation Arrows */}
-              {scrollPositions[`scroll-${category.id}`]?.canScrollRight && (
-                <button 
-                  onClick={() => handleScroll('left', `scroll-${category.id}`)}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-40 w-12 h-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center bg-gradient-to-r from-white/90 to-transparent"
-                  aria-label="גלול שמאלה"
-                >
-                  <FaChevronLeft className="w-6 h-6 text-zinc-900 drop-shadow-lg" />
-                </button>
-              )}
-              {scrollPositions[`scroll-${category.id}`]?.canScrollLeft && (
-                <button 
-                  onClick={() => handleScroll('right', `scroll-${category.id}`)}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 z-40 w-12 h-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center bg-gradient-to-l from-white/90 to-transparent"
-                  aria-label="גלול ימינה"
-                >
-                  <FaChevronRight className="w-6 h-6 text-zinc-900 drop-shadow-lg" />
-                </button>
-              )}
-
-              <div 
-                id={`scroll-${category.id}`} 
-                className="flex gap-4 overflow-x-auto scrollbar-hide px-4 scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pt-[2%] pb-[8%]"
-                onScroll={() => checkScrollability(`scroll-${category.id}`)}
-              >
-                {category.items.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    className="flex-none w-[300px] relative group/item"
-                    onClick={(e) => handleItemClick(e, item)}
-                  >
-                    <div className="relative aspect-square rounded overflow-hidden transition-[transform,z-index] duration-300 ease-in-out origin-bottom
-                    group-hover/item:scale-[1.15]
-                    group-hover/item:z-50
-                    group-hover/item:-translate-y-[5%]
-                    group-hover/item:shadow-[0_0_2rem_rgba(0,0,0,0.3)]
-                    group-hover/item:rounded-lg
-                    group-hover/item:delay-100">
-                      <Image
-                        src={item.image || '/images/placeholder.jpg'}
-                        alt={item.title}
-                        fill
-                        className="object-cover bg-zinc-900"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        priority
-                      />
-                      {/* Overlay on Hover */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover/item:opacity-100 transition-all duration-300" />
-                      
-                      {/* Content on Hover */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 group-hover/item:opacity-100 transition-all duration-300 scale-90 group-hover/item:scale-100">
-                        <h3 className="text-lg font-bold mb-1 text-white">{item.title}</h3>
-                        
-                        {/* Info Row */}
-                        <div className="flex items-center gap-2 text-sm mb-2">
-                          <span className="text-[#ff8714] font-medium">{item.duration}</span>
-                          <span className="text-white/80">•</span>
-                          <span className="text-white/80">HD</span>
-                        </div>
-                        
-                        {/* Description */}
-                        <p className="text-sm text-white/90 mb-3 line-clamp-2">{item.description}</p>
-                        
-                        {/* Buttons */}
-                        <div className="flex items-center gap-2">
-                          <button className="bg-white text-black px-4 py-1.5 rounded-md flex items-center gap-2 hover:bg-white/90 transition-colors">
-                            <FaPlay className="w-4 h-4" />
-                            <span>נגן</span>
-                          </button>
-                          <button 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleItemClick(e, item);
-                            }}
-                            className="bg-white/30 text-white px-4 py-1.5 rounded-md hover:bg-white/40 transition-colors"
-                          >
-                            מידע נוסף
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Modal */}
-      {selectedItem && (
-        <ContentModal
-          item={selectedItem}
-          onClose={handleCloseModal}
+    <main>
+      {showSplash ? (
+        <SplashScreen onFinish={() => setShowSplash(false)} />
+      ) : (
+        <AcademyContent 
+          categories={categories}
+          isLoaded={isLoaded}
+          handleItemClick={handleItemClick}
+          selectedItem={selectedItem}
+          handleCloseModal={handleCloseModal}
+          checkScrollability={checkScrollability}
         />
       )}
     </main>
