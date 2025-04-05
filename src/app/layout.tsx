@@ -1,6 +1,6 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Heebo } from 'next/font/google'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
 import { ProfileProvider } from '@/lib/contexts/ProfileContext'
 import { DeepgramProvider } from '@/lib/contexts/DeepgramContext'
@@ -9,7 +9,11 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import Navbar from './components/Navbar'
 
-const inter = Inter({ subsets: ['latin'] })
+const heebo = Heebo({ 
+  subsets: ['hebrew', 'latin'],
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  variable: '--font-heebo'
+})
 
 export const metadata: Metadata = {
   title: 'חמש אצבעות - תוכניות אימון אישיות',
@@ -23,7 +27,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="he" dir="rtl">
-      <body className={`${inter.className} bg-white min-h-screen`}>
+      <body className={`${heebo.className} bg-white min-h-screen`}>
         <AuthProvider>
           <ProfileProvider>
             <DeepgramProvider>
