@@ -5,7 +5,15 @@ import {
   FaRunning, FaBolt, FaDumbbell, FaChevronUp, 
   FaChevronDown, FaEquals, FaSearch, FaTrophy, FaUsers, FaChartBar
 } from 'react-icons/fa';
-import { threeKRunScore, pullUpsScore, pushUpsScore } from '@/lib/fitnessUtils';
+import { 
+  threeKRunScore, 
+  pullUpsScore, 
+  pushUpsScore,
+  pullUpsScoreMaleEasierBreak27,
+  pullUpsScoreFemale, 
+  pushUpsScoreMale, 
+  pushUpsScoreFemale
+} from '@/lib/fitnessUtils';
 import { teams as allTeamsData } from '@/lib/teamUtils';
 
 export interface MetricsComparisonProps {
@@ -137,11 +145,21 @@ export default function MetricsComparison({
         const reps = parseInt(value, 10);
         
         if (metricType === 'pullUps') {
-          // Pull-ups logic using proper gender-specific function
-          return pullUpsScore(reps, gender);
+          try {
+            // Try using the generic function first
+            return pullUpsScore(reps, gender);
+          } catch (e) {
+            // Fallback to gender-specific functions
+            return gender === 'female' ? pullUpsScoreFemale(reps) : pullUpsScoreMaleEasierBreak27(reps);
+          }
         } else if (metricType === 'pushUps') {
-          // Push-ups logic using proper gender-specific function
-          return pushUpsScore(reps, gender);
+          try {
+            // Try using the generic function first
+            return pushUpsScore(reps, gender);
+          } catch (e) {
+            // Fallback to gender-specific functions
+            return gender === 'female' ? pushUpsScoreFemale(reps) : pushUpsScoreMale(reps);
+          }
         }
         // Other rep-based calculations
       }
@@ -157,12 +175,40 @@ export default function MetricsComparison({
     const aerobicScore = metrics.run3000m ? calculateRating(metrics.run3000m, 'time', 'run3000m', gender) : 0;
     const anaerobicScore = metrics.run400m ? calculateRating(metrics.run400m, 'time', 'run400m', gender) : 0;
     
-    const pullUpsScore = metrics.pullUps ? calculateRating(metrics.pullUps.toString(), 'reps', 'pullUps', gender) : 0;
-    const pushUpsScore = metrics.pushUps ? calculateRating(metrics.pushUps.toString(), 'reps', 'pushUps', gender) : 0;
+    let pullUpsRating = 0;
+    let pushUpsRating = 0;
+    
+    // Calculate pull-ups score
+    if (metrics.pullUps) {
+      const pullUpsReps = parseInt(metrics.pullUps.toString(), 10);
+      if (!isNaN(pullUpsReps)) {
+        try {
+          pullUpsRating = gender === 'female' 
+            ? pullUpsScoreFemale(pullUpsReps) 
+            : pullUpsScoreMaleEasierBreak27(pullUpsReps);
+        } catch (error) {
+          console.error('Error calculating pull-ups score:', error);
+        }
+      }
+    }
+    
+    // Calculate push-ups score
+    if (metrics.pushUps) {
+      const pushUpsReps = parseInt(metrics.pushUps.toString(), 10);
+      if (!isNaN(pushUpsReps)) {
+        try {
+          pushUpsRating = gender === 'female' 
+            ? pushUpsScoreFemale(pushUpsReps) 
+            : pushUpsScoreMale(pushUpsReps);
+        } catch (error) {
+          console.error('Error calculating push-ups score:', error);
+        }
+      }
+    }
     
     // Strength is average of pull-ups and push-ups
-    const strengthScore = pullUpsScore > 0 || pushUpsScore > 0 
-      ? Math.round((pullUpsScore + pushUpsScore) / 2) 
+    const strengthScore = pullUpsRating > 0 || pushUpsRating > 0 
+      ? Math.round((pullUpsRating + pushUpsRating) / 2) 
       : 0;
     
     // Overall score is average of the three categories
