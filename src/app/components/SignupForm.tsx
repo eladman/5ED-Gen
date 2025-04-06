@@ -69,26 +69,63 @@ export default function SignupForm() {
     setIsLoading(true);
     setSaveStatus('saving');
     
-    try {
-      // Save user profile to Firestore
-      await saveProfile(user.uid, formData);
+    // Try to save the profile with up to 2 retries
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`Saving profile attempt ${attempts}/${maxAttempts}`);
       
-      // Refresh profile in context
-      await refreshProfile();
-      
-      setSaveStatus('success');
-      setTimeout(() => {
-        setSaveStatus('idle');
-        // Redirect to main page after successful save
-        router.push('/');
-      }, 1000);
-    } catch (error: any) {
-      console.error('Error saving profile:', error);
-      setSaveStatus('error');
-      alert(`שמירת הפרופיל נכשלה: ${error.message || 'שגיאה לא ידועה'}`);
-    } finally {
-      setIsLoading(false);
+      try {
+        // Save user profile to Firestore (or localStorage fallback)
+        const result = await saveProfile(user.uid, formData);
+        console.log('Save profile result:', result);
+        
+        if (result && result.success) {
+          // Refresh profile in context
+          await refreshProfile();
+          
+          setSaveStatus('success');
+          console.log('Profile saved successfully');
+          
+          setTimeout(() => {
+            setSaveStatus('idle');
+            // Redirect to main page after successful save
+            router.push('/');
+          }, 1500);
+          
+          return; // Exit the loop on success
+        }
+      } catch (error: any) {
+        console.error(`Profile save attempt ${attempts} failed:`, error);
+        
+        if (attempts >= maxAttempts) {
+          // Only show error after last attempt
+          console.error('All save attempts failed');
+          setSaveStatus('error');
+          
+          // Create a more user-friendly error message
+          let errorMessage = 'שגיאה לא ידועה';
+          
+          if (error.message && error.message.includes('permission-denied')) {
+            errorMessage = 'אין הרשאה לשמור את הפרופיל. אנא יש לצאת ולהיכנס מחדש.';
+          } else if (error.message && error.message.includes('network')) {
+            errorMessage = 'בעיית תקשורת. אנא בדוק את החיבור לאינטרנט שלך ונסה שוב.';
+          } else if (error.message) {
+            errorMessage = `שגיאה: ${error.message}`;
+          }
+          
+          alert(`שמירת הפרופיל נכשלה: ${errorMessage}`);
+          break; // Exit the loop after displaying the error
+        }
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
+    
+    setIsLoading(false);
   };
 
   return (
