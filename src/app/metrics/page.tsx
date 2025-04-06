@@ -113,58 +113,51 @@ export default function MetricsPage() {
           }
         }
         
-        // Get user metrics from Firestore
+        // Get user metrics using our enhanced util with localStorage fallback
         console.log("Fetching metrics for user:", user.uid);
-        const metricsRef = collection(db, "metrics");
-        const q = query(
-          metricsRef,
-          where("userId", "==", user.uid)
-        );
-        
-        const querySnapshot = await getDocs(q);
-        console.log("Metrics query returned size:", querySnapshot.size);
-        
-        const metricsData: Metrics[] = [];
-        
-        querySnapshot.forEach((doc) => {
-          console.log("Processing metric document:", doc.id);
-          metricsData.push({
-            id: doc.id,
-            ...doc.data()
-          } as Metrics);
-        });
-        
-        // Sort by createdAt on the client-side
-        metricsData.sort((a, b) => {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        });
-        
-        console.log("Total metrics loaded:", metricsData.length);
-        setPreviousMetrics(metricsData);
-        
-        // If there are metrics, pre-fill form with most recent values
-        if (metricsData.length > 0) {
-          console.log("Pre-filling form with latest metrics");
-          const latestMetrics = metricsData[0];
+        try {
+          // Use our enhanced getDocuments with localStorage fallback
+          const metricsData = await getDocuments("metrics") as Metrics[];
           
-          // Pre-fill the form if the user wants to add a new entry
-          // For 3K run
-          const [run3000mMinutes, run3000mSeconds] = latestMetrics.run3000m.split(':');
-          // For 400m
-          const [run400mMinutes, run400mSeconds] = latestMetrics.run400m.split(':');
+          // Filter metrics by user ID on the client side
+          const userMetrics = metricsData.filter(metric => metric.userId === user.uid);
+          console.log("Filtered metrics for current user:", userMetrics.length);
           
-          setTimeInputs({
-            run3000m: {
-              minutes: run3000mMinutes,
-              seconds: run3000mSeconds
-            },
-            run400m: {
-              minutes: run400mMinutes,
-              seconds: run400mSeconds
-            }
+          // Sort by createdAt on the client-side
+          userMetrics.sort((a, b) => {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
           });
-        } else {
-          console.log("No metrics found to pre-fill the form");
+          
+          console.log("Total metrics loaded:", userMetrics.length);
+          setPreviousMetrics(userMetrics);
+          
+          // If there are metrics, pre-fill form with most recent values
+          if (userMetrics.length > 0) {
+            console.log("Pre-filling form with latest metrics");
+            const latestMetrics = userMetrics[0];
+            
+            // Pre-fill the form if the user wants to add a new entry
+            // For 3K run
+            const [run3000mMinutes, run3000mSeconds] = latestMetrics.run3000m.split(':');
+            // For 400m
+            const [run400mMinutes, run400mSeconds] = latestMetrics.run400m.split(':');
+            
+            setTimeInputs({
+              run3000m: {
+                minutes: run3000mMinutes,
+                seconds: run3000mSeconds
+              },
+              run400m: {
+                minutes: run400mMinutes,
+                seconds: run400mSeconds
+              }
+            });
+          } else {
+            console.log("No metrics found to pre-fill the form");
+          }
+        } catch (error) {
+          console.error("Error loading metrics:", error);
+          setError("אירעה שגיאה בטעינת המדדים");
         }
       } catch (error) {
         console.error("Error loading metrics:", error);
@@ -203,9 +196,9 @@ export default function MetricsPage() {
       return;
     }
     
+    let loadingToast = toast.loading('שומר מדדים...') as string;
+    
     try {
-      const loadingToast = toast.loading('שומר מדדים...') as string;
-
       // Format time inputs into metrics format
       const formattedMetrics = {
         ...metrics,
@@ -252,9 +245,74 @@ export default function MetricsPage() {
 
       console.log("Saving metrics data:", metricsData);
       
-      // Save to Firebase
-      const savedMetric = await addDocument('metrics', metricsData);
-      console.log("Successfully saved metric with ID:", savedMetric.id);
+      // Try to save to Firestore with localStorage fallback
+      let savedMetric;
+      try {
+        // Try up to 3 times if needed
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+          attempts++;
+          console.log(`Saving metrics attempt ${attempts}/${maxAttempts}`);
+          
+          try {
+            // Save metrics data
+            savedMetric = await addDocument('metrics', metricsData);
+            console.log("Save result:", savedMetric);
+            
+            // If successful, break out of retry loop
+            if (savedMetric && savedMetric.id) {
+              break;
+            }
+          } catch (saveError: any) {
+            console.error(`Metrics save attempt ${attempts} failed:`, saveError);
+            
+            // Only throw on the last attempt
+            if (attempts >= maxAttempts) {
+              throw saveError;
+            }
+            
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      } catch (saveError: any) {
+        console.error("All save attempts failed:", saveError);
+        
+        // Show a more specific error based on error type
+        let errorMessage = 'אירעה שגיאה בשמירת המדדים';
+        
+        if (saveError.message && saveError.message.includes('permission-denied')) {
+          errorMessage = 'אין הרשאה לשמור את המדדים. הנתונים נשמרו מקומית.';
+          toast.error(errorMessage, { id: loadingToast });
+          
+          // Try to save locally as a last resort
+          savedMetric = {
+            id: `local_fallback_${Date.now()}`,
+            ...metricsData,
+            savedToFirestore: false
+          };
+        } else {
+          // For other errors, show the error and exit
+          toast.error(errorMessage, { id: loadingToast });
+          return;
+        }
+      }
+      
+      // Check if we actually have a saved metric
+      if (!savedMetric || !savedMetric.id) {
+        console.error("Failed to save metric (no ID returned)");
+        toast.error('אירעה שגיאה בשמירת המדדים', { id: loadingToast });
+        return;
+      }
+      
+      // Show appropriate success message based on where it was saved
+      if (savedMetric.savedToFirestore) {
+        toast.success('המדדים נשמרו בהצלחה!', { id: loadingToast });
+      } else {
+        toast.success('המדדים נשמרו בהצלחה (נשמר מקומית)', { id: loadingToast });
+      }
       
       // Create a complete metrics object
       const completeMetric: Metrics = {
@@ -263,7 +321,7 @@ export default function MetricsPage() {
         userId: user?.uid || '' // Ensure userId is not undefined
       };
       
-      // Update local state
+      // Update local state immediately
       setPreviousMetrics(prev => [completeMetric, ...prev]);
       
       // Reset form
@@ -280,43 +338,40 @@ export default function MetricsPage() {
       });
       setCurrentStep(1);
       setShowForm(false);
-
-      toast.success('המדדים נשמרו בהצלחה!', { id: loadingToast });
       
-      // Fetch the latest metrics again to ensure we have the latest data
-      console.log("Re-fetching metrics after save...");
+      // Fetch latest metrics to update state
       try {
-        // Use a simpler query that doesn't require a composite index
-        const metricsRef = collection(db, "metrics");
-        const q = query(
-          metricsRef,
-          where("userId", "==", user?.uid || '')
-        );
+        // Use enhanced getDocuments with localStorage fallback
+        const metricsData = await getDocuments("metrics") as Metrics[];
         
-        const querySnapshot = await getDocs(q);
-        const refreshedMetricsData: Metrics[] = [];
+        // Filter metrics by user ID 
+        const userMetrics = metricsData.filter(metric => metric.userId === user?.uid);
         
-        querySnapshot.forEach((doc) => {
-          refreshedMetricsData.push({
-            id: doc.id,
-            ...doc.data()
-          } as Metrics);
-        });
-        
-        // Sort the metrics by createdAt on the client-side
-        refreshedMetricsData.sort((a, b) => {
+        // Sort by createdAt
+        userMetrics.sort((a, b) => {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
         
-        console.log("Fetched updated metrics:", refreshedMetricsData.length);
-        setPreviousMetrics(refreshedMetricsData);
+        console.log("Fetched updated metrics:", userMetrics.length);
+        setPreviousMetrics(userMetrics);
       } catch (error) {
         console.error("Error fetching updated metrics:", error);
+        // Non-fatal error, don't show toast as the save was successful
       }
       
-    } catch (error) {
-      console.error('Error saving metrics:', error);
-      toast.error('אירעה שגיאה בשמירת המדדים');
+    } catch (error: any) {
+      console.error('Error in metrics submission:', error);
+      
+      // More descriptive error message
+      let errorMessage = 'אירעה שגיאה בשמירת המדדים';
+      
+      if (error.message && error.message.includes('permission')) {
+        errorMessage = 'אין הרשאה לשמור את המדדים. אנא התחבר מחדש.';
+      } else if (error.message && error.message.includes('network')) {
+        errorMessage = 'בעיית תקשורת. אנא בדוק את החיבור לאינטרנט שלך ונסה שוב.';
+      }
+      
+      toast.error(errorMessage, { id: loadingToast });
     }
   };
 
@@ -425,14 +480,21 @@ export default function MetricsPage() {
   };
 
   const handleDelete = async (metricId: string) => {
-    try {
-      const loadingToast = toast.loading('מוחק מדד...') as string;
-      await deleteDocument('metrics', metricId);
-      setPreviousMetrics(prev => prev.filter(metric => metric.id !== metricId));
-      toast.success('המדד נמחק בהצלחה!', { id: loadingToast });
-    } catch (error) {
-      console.error('Error deleting metric:', error);
-      toast.error('אירעה שגיאה במחיקת המדד');
+    if (confirm('האם אתה בטוח שברצונך למחוק את המדדים?')) {
+      try {
+        const loadingToast = toast.loading('מוחק מדדים...') as string;
+        
+        // Delete from Firebase/localStorage with enhanced utility
+        await deleteDocument('metrics', metricId);
+        
+        // Update local state
+        setPreviousMetrics(prev => prev.filter(metric => metric.id !== metricId));
+        
+        toast.success('המדדים נמחקו בהצלחה!', { id: loadingToast });
+      } catch (error) {
+        console.error('Error deleting metrics:', error);
+        toast.error('אירעה שגיאה במחיקת המדדים');
+      }
     }
   };
 
