@@ -68,26 +68,28 @@ export default function MetricsComparison({
   // Custom scoring functions implemented directly in the component
   const calculatePullUpsScore = useCallback((reps: number, gender: string): number => {
     if (gender === 'female') {
-      // Female pull-ups scoring - completely revised
-      if (reps <= 0) return 0;
-      if (reps >= 12) return 100;
+      // Female pull-ups scoring - Corrected formula
+      if (reps <= 0) return 0;           // 0 pull-ups => 0 points
+      if (reps >= 15) return 100;        // 15 or more => 100 points
       
-      // First segment: 1-2 reps, base scores
-      if (reps === 1) return 60;
-      if (reps === 2) return 65;
+      // Fixed anchor points for females
+      if (reps === 1) return 55;        // 1 pull-up => 55 points
+      if (reps === 2) return 60;        // 2 pull-ups => 60 points
       
-      // Second segment: 3-5 reps
-      if (reps <= 5) {
-        return 65 + 5 * (reps - 2); // 70, 75, 80 for 3, 4, 5 reps
+      // Segment C: 3..9 (inclusive) => from (2,60) to (10,90)
+      if (reps >= 3 && reps <= 9) {
+        // slope = (90 - 60) / (10 - 2) = 30/8 = 3.75
+        return Math.round(60 + 3.75 * (reps - 2));
       }
       
-      // Third segment: 6-8 reps
-      if (reps <= 8) {
-        return 80 + 5 * (reps - 5); // 85, 90, 95 for 6, 7, 8 reps
+      // Segment D: 10..14 (inclusive) => from (10,90) to (15,100)
+      if (reps >= 10 && reps <= 14) {
+        // slope = (100 - 90) / (15 - 10) = 10/5 = 2
+        return Math.round(90 + 2 * (reps - 10));
       }
       
-      // Final segment: 9-11 reps
-      return 95 + (reps - 8); // 96, 97, 98, 99 for 9, 10, 11 reps
+      // Should never reach here if our conditions are complete
+      return Math.round(90 + 2 * (reps - 10)); // Use segment D formula as fallback
     } else {
       // Male pull-ups scoring (equivalent to pullUpsScoreMaleEasierBreak27)
       if (reps <= 0) return 0;
@@ -113,26 +115,24 @@ export default function MetricsComparison({
   
   const calculatePushUpsScore = useCallback((reps: number, gender: string): number => {
     if (gender === 'female') {
-      // Female push-ups scoring - completely revised formula
-      if (reps <= 0) return 0;
+      // Female push-ups scoring - Corrected formula
+      if (reps <= 0) return 0;         // 0 reps => 0 points
+      if (reps >= 80) return 100;      // 80 or more => 100 points
       
-      // Full score at 40 push-ups or more (reduced from 50)
-      if (reps >= 40) return 100;
-      
-      // First segment: 0-10 reps, score 0-50
-      if (reps <= 10) {
-        // Linear from 0-50 points (increased from 40)
-        return Math.round(5 * reps);
+      // Segment A: 1..9 (inclusive) => slope=4 => score=4*R
+      if (reps <= 9) {
+        return Math.round(4 * reps);  // 1=>4, 2=>8, ..., 9=>36
       }
       
-      // Second segment: 11-20 reps, score 51-75
-      if (reps <= 20) {
-        // Linear from 51-75 points
-        return Math.round(50 + 2.5 * (reps - 10));
+      // Segment B: 10..24 (inclusive) => score from 40 to 80
+      if (reps <= 24) {
+        // slope = (80 - 40) / (25 - 10) = 40/15 ≈ 2.667
+        return Math.round(40 + (80 - 40) / 15 * (reps - 10));
       }
       
-      // Third segment: 21-40 reps, score 76-100
-      return Math.round(75 + 1.25 * (reps - 20));
+      // Segment C: 25..79 (inclusive) => score from 80 to 100
+      // slope = (100 - 80) / (80 - 25) = 20/55 ≈ 0.364
+      return Math.round(80 + (100 - 80) / 55 * (reps - 25));
     } else {
       // Male push-ups scoring
       if (reps <= 0) return 0;
@@ -155,29 +155,28 @@ export default function MetricsComparison({
     const totalSeconds = minutes * 60 + seconds;
     
     if (gender === 'female') {
-      // Female 400m scoring - revised
-      // Key time thresholds in seconds
-      const t100 = 65;   // 1:05 => 100 (faster threshold)
-      const t80  = 85;   // 1:25 => 80  
-      const t60  = 105;  // 1:45 => 60
-      const t0   = 140;  // 2:20 => 0 (reduced from 2:30)
+      // Female 400m scoring
+      const t100 = 60;   // 1:00 => 100
+      const t80  = 82;   // 1:22 => 80
+      const t60  = 106;  // 1:46 => 60
+      const t0   = 150;  // 2:30 => 0
       
       // Clamp extremes
       if (totalSeconds <= t100) return 100;
       if (totalSeconds >= t0) return 0;
       
-      // Segment 1: (65, 85] => 100..80
+      // Segment 1: (60, 82] => 100..80
       if (totalSeconds <= t80) {
-        return Math.round(100 - (totalSeconds - t100) * (20 / (t80 - t100)));
+        return Math.round(100 - 0.90909 * (totalSeconds - t100));
       }
       
-      // Segment 2: (85, 105] => 80..60
+      // Segment 2: (82, 106] => 80..60
       if (totalSeconds <= t60) {
-        return Math.round(80 - (totalSeconds - t80) * (20 / (t60 - t80)));
+        return Math.round(80 - 0.8333 * (totalSeconds - t80));
       }
       
-      // Segment 3: (105, 140) => 60..0
-      return Math.round(60 - (totalSeconds - t60) * (60 / (t0 - t60)));
+      // Segment 3: (106, 150) => 60..0
+      return Math.round(60 - 1.363636 * (totalSeconds - t60));
     } else {
       // Male 400m scoring
       if (totalSeconds <= 55) return 100; // 0:55 or faster => 100
@@ -380,7 +379,6 @@ export default function MetricsComparison({
       if (!isNaN(pullUpsReps)) {
         try {
           pullUpsRating = calculatePullUpsScore(pullUpsReps, gender);
-          console.log(`DEBUG: ${gender} pull-ups: ${pullUpsReps} reps = ${pullUpsRating} points`);
         } catch (error) {
           console.error('Error calculating pull-ups score:', error);
         }
@@ -393,7 +391,6 @@ export default function MetricsComparison({
       if (!isNaN(pushUpsReps)) {
         try {
           pushUpsRating = calculatePushUpsScore(pushUpsReps, gender);
-          console.log(`DEBUG: ${gender} push-ups: ${pushUpsReps} reps = ${pushUpsRating} points`);
         } catch (error) {
           console.error('Error calculating push-ups score:', error);
         }
@@ -404,8 +401,6 @@ export default function MetricsComparison({
     const strengthScore = pullUpsRating > 0 || pushUpsRating > 0 
       ? Math.round((pullUpsRating + pushUpsRating) / 2) 
       : 0;
-    
-    console.log(`DEBUG: Strength score calculation: (${pullUpsRating} + ${pushUpsRating}) / 2 = ${strengthScore}`);
     
     // Overall score is average of the three categories
     const validScores = [
