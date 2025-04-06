@@ -99,10 +99,10 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
 
   // Calculate category ratings
   const aerobicRating = calculateRating(metrics.run3000m, 'time', '3000m');
-  const anaerobicRating = fourHundredMeterScoreFromString(metrics.run400m);
+  const anaerobicRating = fourHundredMeterScoreFromString(metrics.run400m, userGender);
   
   // Use the new strength score calculation (50% pull-ups, 50% push-ups)
-  const strengthRating = strengthScoreFromString(metrics.pullUps, metrics.pushUps);
+  const strengthRating = strengthScoreFromString(metrics.pullUps, metrics.pushUps, userGender);
   
   // Sit-ups rating as a separate category
   const sitUpsRating = calculateRating(metrics.sitUps2min, 'reps', 'sitUps');

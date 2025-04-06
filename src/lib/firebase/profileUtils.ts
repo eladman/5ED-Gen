@@ -41,6 +41,9 @@ export const saveProfile = async (userId: string, data: ProfileData) => {
       throw new Error('User ID is required to save profile');
     }
     
+    // Log the incoming data with specific focus on gender
+    console.log(`Saving profile for user ${userId} with gender:`, data.gender);
+    
     // Create a clean copy of the data without undefined values
     const cleanData: Record<string, any> = {};
     
@@ -48,6 +51,9 @@ export const saveProfile = async (userId: string, data: ProfileData) => {
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined) {
         cleanData[key] = value;
+        if (key === 'gender') {
+          console.log(`Gender value being saved: ${value}`);
+        }
       }
     });
 
@@ -59,7 +65,20 @@ export const saveProfile = async (userId: string, data: ProfileData) => {
     try {
       // First try to save to Firestore
       await setDoc(doc(db, 'profiles', userId), cleanData, { merge: true });
-      console.log('Profile saved to Firestore successfully');
+      
+      // Special handling for gender field - make an explicit update
+      if (data.gender !== undefined) {
+        try {
+          console.log(`Making explicit gender update to: ${data.gender}`);
+          const userProfileRef = doc(db, 'profiles', userId);
+          await setDoc(userProfileRef, { gender: data.gender }, { merge: true });
+          console.log('Gender field explicitly updated in Firestore');
+        } catch (genderUpdateError) {
+          console.error('Failed to explicitly update gender field:', genderUpdateError);
+        }
+      }
+      
+      console.log('Profile saved to Firestore successfully with gender:', cleanData.gender);
       savedToFirestore = true;
     } catch (error: any) {
       firestoreError = error;

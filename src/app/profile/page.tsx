@@ -63,7 +63,23 @@ export default function ProfilePage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name === 'phone' && !/^\d*$/.test(value)) return;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Special debug logging for gender changes
+    if (name === 'gender') {
+      console.log(`Gender changed to: ${value}`);
+      console.log(`Previous form data:`, formData);
+    }
+    
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      
+      // Log the new form data after gender changes
+      if (name === 'gender') {
+        console.log(`New form data:`, newData);
+      }
+      
+      return newData;
+    });
     setSaveStatus('idle');
   };
 
@@ -115,6 +131,10 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!user) return;
 
+    // Log form data being submitted
+    console.log('Submitting profile with data:', formData);
+    console.log('Gender value at submit time:', formData.gender);
+
     setIsLoading(true);
     setSaveStatus('saving');
     
@@ -137,14 +157,28 @@ export default function ProfilePage() {
         photoData = profileImage;
       }
 
-      console.log('Saving profile data...');
-      await saveProfile(user.uid, {
+      // Create the data to be saved and log it
+      const dataToSave = {
         ...formData,
         photoData,
-      });
+      };
+      console.log('Saving profile data with gender:', dataToSave.gender);
+
+      console.log('Saving profile data...');
+      const result = await saveProfile(user.uid, dataToSave);
+      console.log('Profile save result:', result);
       console.log('Profile data saved successfully');
 
       setSaveStatus('success');
+      
+      // Store a flag in sessionStorage to indicate successful profile completion
+      try {
+        sessionStorage.setItem('profileCompleted', 'true');
+        console.log('Set profile completion flag in sessionStorage');
+      } catch (storageError) {
+        console.error('Could not set sessionStorage flag:', storageError);
+      }
+      
       setTimeout(() => {
         setSaveStatus('idle');
         // Redirect to main page after successful save
@@ -255,7 +289,14 @@ export default function ProfilePage() {
                       name="gender"
                       value="male"
                       checked={formData.gender === 'male'}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        console.log("Male gender selected", e.target.value);
+                        setFormData(prev => ({
+                          ...prev,
+                          gender: e.target.value
+                        }));
+                        setSaveStatus('idle');
+                      }}
                       className="ml-2"
                       required
                     />
@@ -267,7 +308,14 @@ export default function ProfilePage() {
                       name="gender"
                       value="female"
                       checked={formData.gender === 'female'}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        console.log("Female gender selected", e.target.value);
+                        setFormData(prev => ({
+                          ...prev,
+                          gender: e.target.value
+                        }));
+                        setSaveStatus('idle');
+                      }}
                       className="ml-2"
                     />
                     <span>נקבה</span>
