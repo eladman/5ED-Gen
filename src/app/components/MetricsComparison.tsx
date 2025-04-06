@@ -68,26 +68,26 @@ export default function MetricsComparison({
   // Custom scoring functions implemented directly in the component
   const calculatePullUpsScore = useCallback((reps: number, gender: string): number => {
     if (gender === 'female') {
-      // Female pull-ups scoring
+      // Female pull-ups scoring - completely revised
       if (reps <= 0) return 0;
-      if (reps >= 15) return 100;
-      if (reps === 1) return 55;
-      if (reps === 2) return 60;
+      if (reps >= 12) return 100;
       
-      // Segments for different rep ranges
-      if (reps >= 3 && reps < 10) {
-        // Formula: 60 + 3.75 * (reps - 2)
-        // For 10 reps: 60 + 3.75 * 8 = 90
-        return Math.round(60 + 3.75 * (reps - 2));
+      // First segment: 1-2 reps, base scores
+      if (reps === 1) return 60;
+      if (reps === 2) return 65;
+      
+      // Second segment: 3-5 reps
+      if (reps <= 5) {
+        return 65 + 5 * (reps - 2); // 70, 75, 80 for 3, 4, 5 reps
       }
       
-      if (reps >= 10 && reps < 15) {
-        // Formula: 90 + 2 * (reps - 10)
-        // For 15 reps: 90 + 2 * 5 = 100
-        return Math.round(90 + 2 * (reps - 10));
+      // Third segment: 6-8 reps
+      if (reps <= 8) {
+        return 80 + 5 * (reps - 5); // 85, 90, 95 for 6, 7, 8 reps
       }
       
-      return 100;
+      // Final segment: 9-11 reps
+      return 95 + (reps - 8); // 96, 97, 98, 99 for 9, 10, 11 reps
     } else {
       // Male pull-ups scoring (equivalent to pullUpsScoreMaleEasierBreak27)
       if (reps <= 0) return 0;
@@ -116,26 +116,23 @@ export default function MetricsComparison({
       // Female push-ups scoring - completely revised formula
       if (reps <= 0) return 0;
       
-      // Full score at 50 push-ups or more
-      if (reps >= 50) return 100;
+      // Full score at 40 push-ups or more (reduced from 50)
+      if (reps >= 40) return 100;
       
-      // First segment: 0-10 reps, score 0-40
+      // First segment: 0-10 reps, score 0-50
       if (reps <= 10) {
-        // Linear from 0-40 points
-        return Math.round(4 * reps);
+        // Linear from 0-50 points (increased from 40)
+        return Math.round(5 * reps);
       }
       
-      // Second segment: 11-25 reps, score 41-70
-      if (reps <= 25) {
-        // Linear from 41-70 points
-        // 40 + (reps - 10) * 2 = 40 + (reps - 10) * 30/15
-        return Math.round(40 + (reps - 10) * 2);
+      // Second segment: 11-20 reps, score 51-75
+      if (reps <= 20) {
+        // Linear from 51-75 points
+        return Math.round(50 + 2.5 * (reps - 10));
       }
       
-      // Third segment: 26-50 reps, score 71-100
-      // 70 + (reps - 25) * 30/25
-      return Math.round(70 + (reps - 25) * 1.2);
-      
+      // Third segment: 21-40 reps, score 76-100
+      return Math.round(75 + 1.25 * (reps - 20));
     } else {
       // Male push-ups scoring
       if (reps <= 0) return 0;
@@ -158,28 +155,29 @@ export default function MetricsComparison({
     const totalSeconds = minutes * 60 + seconds;
     
     if (gender === 'female') {
-      // Female 400m scoring
-      const t100 = 60;   // 1:00 => 100
-      const t80  = 82;   // 1:22 => 80
-      const t60  = 106;  // 1:46 => 60
-      const t0   = 150;  // 2:30 => 0
+      // Female 400m scoring - revised
+      // Key time thresholds in seconds
+      const t100 = 65;   // 1:05 => 100 (faster threshold)
+      const t80  = 85;   // 1:25 => 80  
+      const t60  = 105;  // 1:45 => 60
+      const t0   = 140;  // 2:20 => 0 (reduced from 2:30)
       
       // Clamp extremes
       if (totalSeconds <= t100) return 100;
       if (totalSeconds >= t0) return 0;
       
-      // Segment 1: (60, 82] => 100..80
+      // Segment 1: (65, 85] => 100..80
       if (totalSeconds <= t80) {
-        return Math.round(100 - 0.90909 * (totalSeconds - t100));
+        return Math.round(100 - (totalSeconds - t100) * (20 / (t80 - t100)));
       }
       
-      // Segment 2: (82, 106] => 80..60
+      // Segment 2: (85, 105] => 80..60
       if (totalSeconds <= t60) {
-        return Math.round(80 - 0.8333 * (totalSeconds - t80));
+        return Math.round(80 - (totalSeconds - t80) * (20 / (t60 - t80)));
       }
       
-      // Segment 3: (106, 150) => 60..0
-      return Math.round(60 - 1.363636 * (totalSeconds - t60));
+      // Segment 3: (105, 140) => 60..0
+      return Math.round(60 - (totalSeconds - t60) * (60 / (t0 - t60)));
     } else {
       // Male 400m scoring
       if (totalSeconds <= 55) return 100; // 0:55 or faster => 100
