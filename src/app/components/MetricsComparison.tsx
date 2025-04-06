@@ -5,15 +5,15 @@ import {
   FaRunning, FaBolt, FaDumbbell, FaChevronUp, 
   FaChevronDown, FaEquals, FaSearch, FaTrophy, FaUsers, FaChartBar
 } from 'react-icons/fa';
-import { 
-  threeKRunScore, 
-  pullUpsScore, 
-  pushUpsScore,
-  pullUpsScoreMaleEasierBreak27,
-  pullUpsScoreFemale, 
-  pushUpsScoreMale, 
-  pushUpsScoreFemale
-} from '@/lib/fitnessUtils';
+// Try to import, but don't rely on it being available
+let threeKRunScoreImported: ((minutes: number, seconds: number, gender?: string) => number) | null = null;
+try {
+  const fitnessUtils = require('@/lib/fitnessUtils');
+  threeKRunScoreImported = fitnessUtils.threeKRunScore;
+} catch (error) {
+  console.error('Failed to import threeKRunScore from fitnessUtils:', error);
+  threeKRunScoreImported = null;
+}
 import { teams as allTeamsData } from '@/lib/teamUtils';
 
 export interface MetricsComparisonProps {
@@ -64,6 +64,200 @@ export default function MetricsComparison({
     anaerobic: 0,
     strength: 0
   });
+  
+  // Custom scoring functions implemented directly in the component
+  const calculatePullUpsScore = useCallback((reps: number, gender: string): number => {
+    if (gender === 'female') {
+      // Female pull-ups scoring
+      if (reps <= 0) return 0;
+      if (reps >= 15) return 100;
+      if (reps === 1) return 55;
+      if (reps === 2) return 60;
+      
+      // Segments for different rep ranges
+      if (reps >= 3 && reps < 10) {
+        return Math.round(60 + 3.75 * (reps - 2));
+      }
+      
+      if (reps >= 10 && reps < 15) {
+        return Math.round(90 + 2 * (reps - 10));
+      }
+      
+      return 100;
+    } else {
+      // Male pull-ups scoring (equivalent to pullUpsScoreMaleEasierBreak27)
+      if (reps <= 0) return 0;
+      if (reps >= 40) return 100;
+      
+      if (reps <= 9) {
+        const slope1 = 6.25;
+        const score = 10 + slope1 * (reps - 1);
+        return Math.round(score);
+      }
+      
+      if (reps <= 27) {
+        const slope2 = 30 / 18;
+        const score = 60 + slope2 * (reps - 9);
+        return Math.round(score);
+      }
+      
+      const slope3 = 10 / 13;
+      const score = 90 + slope3 * (reps - 27);
+      return Math.round(score);
+    }
+  }, []);
+  
+  const calculatePushUpsScore = useCallback((reps: number, gender: string): number => {
+    if (gender === 'female') {
+      // Female push-ups scoring
+      if (reps <= 0) return 0;
+      if (reps >= 80) return 100;
+      
+      if (reps < 10) {
+        return Math.round(4 * reps);
+      }
+      
+      if (reps < 25) {
+        return Math.round(40 + 2.67 * (reps - 10));
+      }
+      
+      return Math.round(80 + 20 * (reps - 25) / 55);
+    } else {
+      // Male push-ups scoring
+      if (reps <= 0) return 0;
+      if (reps >= 120) return 100;
+      
+      if (reps < 37) {
+        const slope1 = 60 / 37;
+        const score = slope1 * reps;
+        return Math.round(score);
+      }
+      
+      const slope2 = 40 / 83;
+      const score = 60 + slope2 * (reps - 37);
+      return Math.round(score);
+    }
+  }, []);
+  
+  const calculate400mRunScore = useCallback((minutes: number, seconds: number, gender: string): number => {
+    // Convert to total seconds
+    const totalSeconds = minutes * 60 + seconds;
+    
+    if (gender === 'female') {
+      // Female 400m scoring
+      const t100 = 60;   // 1:00 => 100
+      const t80  = 82;   // 1:22 => 80
+      const t60  = 106;  // 1:46 => 60
+      const t0   = 150;  // 2:30 => 0
+      
+      // Clamp extremes
+      if (totalSeconds <= t100) return 100;
+      if (totalSeconds >= t0) return 0;
+      
+      // Segment 1: (60, 82] => 100..80
+      if (totalSeconds <= t80) {
+        return Math.round(100 - 0.90909 * (totalSeconds - t100));
+      }
+      
+      // Segment 2: (82, 106] => 80..60
+      if (totalSeconds <= t60) {
+        return Math.round(80 - 0.8333 * (totalSeconds - t80));
+      }
+      
+      // Segment 3: (106, 150) => 60..0
+      return Math.round(60 - 1.363636 * (totalSeconds - t60));
+    } else {
+      // Male 400m scoring
+      if (totalSeconds <= 55) return 100; // 0:55 or faster => 100
+      if (totalSeconds >= 120) return 0;  // 2:00 or slower => 0
+      
+      // -- Segment 1: 55..60 => 100..90 --
+      if (totalSeconds <= 60) {
+        return Math.round(100 - 2 * (totalSeconds - 55));
+      }
+      
+      // -- Segment 2: 60..80 => 90..60 --
+      if (totalSeconds <= 80) {
+        return Math.round(90 - 1.5 * (totalSeconds - 60));
+      }
+      
+      // -- Segment 3: 80..120 => 60..0 --
+      return Math.round(60 - 1.5 * (totalSeconds - 80));
+    }
+  }, []);
+  
+  const calculate3kRunScore = useCallback((minutes: number, seconds: number, gender: string): number => {
+    // If the imported function is available, use it
+    if (threeKRunScoreImported) {
+      try {
+        return threeKRunScoreImported(minutes, seconds, gender);
+      } catch (error) {
+        console.error('Error using imported threeKRunScore, falling back to local implementation:', error);
+      }
+    }
+    
+    // Otherwise use our local implementation
+    if (gender === 'female') {
+      // Convert total time to decimal minutes
+      const T = minutes + (seconds / 60.0);
+
+      // Key times in minutes
+      const t100 = 11.5;    // 11:30 => score 100
+      const tPass = 17.25;  // 17:15 => score 60
+      const tZero = 21.0;   // 21:00 => score 0
+
+      // Slopes for each segment
+      // Segment 1: 100 -> 60
+      const slope1 = (60 - 100) / (tPass - t100); // -40 / 5.75
+      // Segment 2: 60 -> 0
+      const slope2 = (0 - 60) / (tZero - tPass);  // -60 / 3.75
+
+      // Piecewise logic
+      if (T <= t100) {
+        return 100;        // 11:30 or faster
+      } else if (T < tPass) {
+        // 11:30 < T < 17:15
+        return Math.round(100 + slope1 * (T - t100));
+      } else if (T < tZero) {
+        // 17:15 <= T < 21:00
+        return Math.round(60 + slope2 * (T - tPass));
+      } else {
+        return 0;          // 21:00 or slower
+      }
+    } else {
+      // Male calculation
+      // Convert total time to decimal minutes
+      const T = minutes + seconds / 60.0;
+      
+      // Define key time boundaries (in decimal minutes)
+      const time100 = 9.5;      // 9:30
+      const timePass = 14.25;   // 14:15
+      const timeZero = 18.0;    // 18:00
+
+      // Slopes for the linear segments:
+      // Segment 1 slope (9:30 → 14:15 => 100 → 60)
+      const slope1 = (60 - 100) / (timePass - time100);
+      // Segment 2 slope (14:15 → 18:00 => 60 → 0)
+      const slope2 = (0 - 60) / (timeZero - timePass);
+
+      // Piecewise logic
+      if (T <= time100) {
+        // 9:30 or faster ⇒ 100
+        return 100;
+      } else if (T < timePass) {
+        // Between 9:30 and 14:15 ⇒ [100..60]
+        const score = 100 + slope1 * (T - time100);
+        return Math.round(score);
+      } else if (T < timeZero) {
+        // Between 14:15 and 18:00 ⇒ [60..0]
+        const score = 60 + slope2 * (T - timePass);
+        return Math.round(score);
+      } else {
+        // 18:00 or slower ⇒ 0
+        return 0;
+      }
+    }
+  }, []);
   
   // Generate random time for running metrics
   const generateRandomTime = (minMinutes: number, maxMinutes: number, minSeconds: number, maxSeconds: number) => {
@@ -137,7 +331,9 @@ export default function MetricsComparison({
         const [mins, secs] = value.split(':').map(Number);
         
         if (metricType === 'run3000m') {
-          return threeKRunScore(mins, secs, gender);
+          return calculate3kRunScore(mins, secs, gender);
+        } else if (metricType === 'run400m') {
+          return calculate400mRunScore(mins, secs, gender);
         }
         // Other time-based calculations can go here
       } else if (type === 'reps') {
@@ -145,21 +341,9 @@ export default function MetricsComparison({
         const reps = parseInt(value, 10);
         
         if (metricType === 'pullUps') {
-          try {
-            // Try using the generic function first
-            return pullUpsScore(reps, gender);
-          } catch (e) {
-            // Fallback to gender-specific functions
-            return gender === 'female' ? pullUpsScoreFemale(reps) : pullUpsScoreMaleEasierBreak27(reps);
-          }
+          return calculatePullUpsScore(reps, gender);
         } else if (metricType === 'pushUps') {
-          try {
-            // Try using the generic function first
-            return pushUpsScore(reps, gender);
-          } catch (e) {
-            // Fallback to gender-specific functions
-            return gender === 'female' ? pushUpsScoreFemale(reps) : pushUpsScoreMale(reps);
-          }
+          return calculatePushUpsScore(reps, gender);
         }
         // Other rep-based calculations
       }
@@ -168,7 +352,7 @@ export default function MetricsComparison({
     }
     
     return 0; // Default fallback
-  }, []);
+  }, [calculatePullUpsScore, calculatePushUpsScore, calculate400mRunScore, calculate3kRunScore]);
   
   const calculateUserRatings = useCallback((metrics: Metrics, gender: string = 'male') => {
     // Calculate individual scores
@@ -183,9 +367,7 @@ export default function MetricsComparison({
       const pullUpsReps = parseInt(metrics.pullUps.toString(), 10);
       if (!isNaN(pullUpsReps)) {
         try {
-          pullUpsRating = gender === 'female' 
-            ? pullUpsScoreFemale(pullUpsReps) 
-            : pullUpsScoreMaleEasierBreak27(pullUpsReps);
+          pullUpsRating = calculatePullUpsScore(pullUpsReps, gender);
         } catch (error) {
           console.error('Error calculating pull-ups score:', error);
         }
@@ -197,9 +379,7 @@ export default function MetricsComparison({
       const pushUpsReps = parseInt(metrics.pushUps.toString(), 10);
       if (!isNaN(pushUpsReps)) {
         try {
-          pushUpsRating = gender === 'female' 
-            ? pushUpsScoreFemale(pushUpsReps) 
-            : pushUpsScoreMale(pushUpsReps);
+          pushUpsRating = calculatePushUpsScore(pushUpsReps, gender);
         } catch (error) {
           console.error('Error calculating push-ups score:', error);
         }
@@ -228,7 +408,7 @@ export default function MetricsComparison({
       anaerobic: anaerobicScore,
       strength: strengthScore
     };
-  }, [calculateRating]);
+  }, [calculateRating, calculatePullUpsScore, calculatePushUpsScore]);
   
   // Calculate user's rank within their gender category
   const calculateUserRankInGender = useCallback(async () => {
