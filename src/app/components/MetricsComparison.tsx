@@ -76,10 +76,14 @@ export default function MetricsComparison({
       
       // Segments for different rep ranges
       if (reps >= 3 && reps < 10) {
+        // Formula: 60 + 3.75 * (reps - 2)
+        // For 10 reps: 60 + 3.75 * 8 = 90
         return Math.round(60 + 3.75 * (reps - 2));
       }
       
       if (reps >= 10 && reps < 15) {
+        // Formula: 90 + 2 * (reps - 10)
+        // For 15 reps: 90 + 2 * 5 = 100
         return Math.round(90 + 2 * (reps - 10));
       }
       
@@ -109,19 +113,29 @@ export default function MetricsComparison({
   
   const calculatePushUpsScore = useCallback((reps: number, gender: string): number => {
     if (gender === 'female') {
-      // Female push-ups scoring
+      // Female push-ups scoring - completely revised formula
       if (reps <= 0) return 0;
-      if (reps >= 80) return 100;
       
-      if (reps < 10) {
+      // Full score at 50 push-ups or more
+      if (reps >= 50) return 100;
+      
+      // First segment: 0-10 reps, score 0-40
+      if (reps <= 10) {
+        // Linear from 0-40 points
         return Math.round(4 * reps);
       }
       
-      if (reps < 25) {
-        return Math.round(40 + 2.67 * (reps - 10));
+      // Second segment: 11-25 reps, score 41-70
+      if (reps <= 25) {
+        // Linear from 41-70 points
+        // 40 + (reps - 10) * 2 = 40 + (reps - 10) * 30/15
+        return Math.round(40 + (reps - 10) * 2);
       }
       
-      return Math.round(80 + 20 * (reps - 25) / 55);
+      // Third segment: 26-50 reps, score 71-100
+      // 70 + (reps - 25) * 30/25
+      return Math.round(70 + (reps - 25) * 1.2);
+      
     } else {
       // Male push-ups scoring
       if (reps <= 0) return 0;
@@ -368,6 +382,7 @@ export default function MetricsComparison({
       if (!isNaN(pullUpsReps)) {
         try {
           pullUpsRating = calculatePullUpsScore(pullUpsReps, gender);
+          console.log(`DEBUG: ${gender} pull-ups: ${pullUpsReps} reps = ${pullUpsRating} points`);
         } catch (error) {
           console.error('Error calculating pull-ups score:', error);
         }
@@ -380,6 +395,7 @@ export default function MetricsComparison({
       if (!isNaN(pushUpsReps)) {
         try {
           pushUpsRating = calculatePushUpsScore(pushUpsReps, gender);
+          console.log(`DEBUG: ${gender} push-ups: ${pushUpsReps} reps = ${pushUpsRating} points`);
         } catch (error) {
           console.error('Error calculating push-ups score:', error);
         }
@@ -390,6 +406,8 @@ export default function MetricsComparison({
     const strengthScore = pullUpsRating > 0 || pushUpsRating > 0 
       ? Math.round((pullUpsRating + pushUpsRating) / 2) 
       : 0;
+    
+    console.log(`DEBUG: Strength score calculation: (${pullUpsRating} + ${pushUpsRating}) / 2 = ${strengthScore}`);
     
     // Overall score is average of the three categories
     const validScores = [
