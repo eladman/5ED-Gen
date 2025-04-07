@@ -98,6 +98,9 @@ interface AcademyContentProps {
   user: any;
   favoriteItems: string[];
   handleFavoriteClick: (e: React.MouseEvent, item: Item) => void;
+  isLoading: boolean;
+  scrollPositions: { [key: string]: { canScrollLeft: boolean; canScrollRight: boolean } };
+  handleScroll: (direction: 'left' | 'right', elementId: string) => void;
 }
 
 // Client Component for Academy Content
@@ -110,10 +113,14 @@ function AcademyContent({
   checkScrollability,
   user,
   favoriteItems,
-  handleFavoriteClick
+  handleFavoriteClick,
+  isLoading,
+  scrollPositions,
+  handleScroll
 }: AcademyContentProps) {
   return (
-    <div className="min-h-screen bg-black font-heebo text-right overflow-x-hidden">
+    <div className={`min-h-screen bg-black font-heebo text-right overflow-x-hidden overflow-y-hidden transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+      <Navbar isAcademy={true} isLoading={isLoading} />
       <main className="px-4 md:px-8 py-8 pt-24 overflow-x-hidden">
         {/* Content Rows */}
         <motion.div 
@@ -130,6 +137,26 @@ function AcademyContent({
             >
               <div className={`flex items-center gap-3 mb-4 md:mb-6 px-2 ${category.id === 'five-fingers-podcast' ? 'justify-center w-full' : ''}`}>
                 <h2 className="text-xl md:text-2xl font-bold text-white">{category.title}</h2>
+                {category.id !== 'five-fingers-podcast' && (
+                  <div className="flex-grow flex items-center justify-end space-x-2 space-x-reverse mr-auto">
+                    <button 
+                      onClick={() => handleScroll('right', `scroll-${category.id}`)}
+                      disabled={!scrollPositions[`scroll-${category.id}`]?.canScrollRight}
+                      className={`p-1 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 hover:text-white`}
+                      aria-label="Scroll right"
+                    >
+                      <FaChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+                    </button>
+                    <button 
+                      onClick={() => handleScroll('left', `scroll-${category.id}`)}
+                      disabled={!scrollPositions[`scroll-${category.id}`]?.canScrollLeft}
+                      className={`p-1 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 hover:text-white`}
+                      aria-label="Scroll left"
+                    >
+                      <FaChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Scrolling Container */}
@@ -247,13 +274,13 @@ const itemVariants = {
 };
 
 export default function AcademyPage() {
-  const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [scrollPositions, setScrollPositions] = useState<{ [key: string]: { canScrollLeft: boolean; canScrollRight: boolean } }>({});
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [scrollPositions, setScrollPositions] = useState<{ [key: string]: { canScrollLeft: boolean, canScrollRight: boolean } }>({});
   const [spotifyEpisodes, setSpotifyEpisodes] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
-  const [favoriteItems, setFavoriteItems] = useState<string[]>([]);
   const { user } = useAuth();
+  const [favoriteItems, setFavoriteItems] = useState<string[]>([]);
 
   interface Item {
     id: string;
@@ -273,7 +300,14 @@ export default function AcademyPage() {
 
   const handleItemClick = (e: React.MouseEvent, item: Item) => {
     e.preventDefault();
-    setSelectedItem(item);
+    if (
+      item.category === 'five-fingers-lectures' ||
+      item.category === 'five-fingers-magazine'
+    ) {
+      window.open(item.href, '_blank');
+    } else {
+      setSelectedItem(item);
+    }
   };
 
   const handleCloseModal = () => {
@@ -630,22 +664,22 @@ export default function AcademyPage() {
   ];
 
   return (
-    <main>
-      {showSplash ? (
-        <SplashScreen onFinish={() => setShowSplash(false)} />
-      ) : (
-        <AcademyContent 
-          categories={categories}
-          isLoaded={isLoaded}
-          handleItemClick={handleItemClick}
-          selectedItem={selectedItem}
-          handleCloseModal={handleCloseModal}
-          checkScrollability={checkScrollability}
-          user={user}
-          favoriteItems={favoriteItems}
-          handleFavoriteClick={handleFavoriteClick}
-        />
-      )}
-    </main>
+    <div className="relative min-h-screen overflow-hidden">
+      <SplashScreen isLoaded={isLoaded} />
+      <AcademyContent 
+        categories={categories}
+        isLoaded={isLoaded}
+        handleItemClick={handleItemClick}
+        selectedItem={selectedItem}
+        handleCloseModal={handleCloseModal}
+        checkScrollability={checkScrollability}
+        user={user}
+        favoriteItems={favoriteItems}
+        handleFavoriteClick={handleFavoriteClick}
+        isLoading={!isLoaded}
+        scrollPositions={scrollPositions}
+        handleScroll={handleScroll}
+      />
+    </div>
   );
 } 

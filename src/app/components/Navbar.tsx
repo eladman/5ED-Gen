@@ -5,7 +5,12 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import Link from "next/link";
 import { useState } from "react";
 
-export default function Navbar() {
+interface NavbarProps {
+  isAcademy?: boolean;
+  isLoading?: boolean;
+}
+
+export default function Navbar({ isAcademy = false, isLoading = false }: NavbarProps) {
   const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -14,33 +19,33 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-sm border-b">
+    <nav className={`fixed w-full z-50 ${isAcademy || isLoading ? 'bg-black' : 'bg-white/80'} backdrop-blur-sm`}>
       <div className="container-custom">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="text-2xl font-bold text-[#ff8714] hover:text-[#e67200] transition-colors cursor-pointer">
+          <Link href="/" className={`text-2xl font-bold text-[#ff8714] hover:text-[#e67200] transition-colors cursor-pointer`}>
             חמש אצבעות
           </Link>
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8 space-x-reverse">
-            <Link href="/" className="text-gray-600 hover:text-[#ff8714]">ראשי</Link>
-            <Link href="/programs" className="text-gray-600 hover:text-[#ff8714]">
+            <Link href="/" className={`${isAcademy || isLoading ? 'text-white hover:text-gray-200' : 'text-gray-600 hover:text-[#ff8714]'}`}>ראשי</Link>
+            <Link href="/programs" className={`${isAcademy || isLoading ? 'text-white hover:text-gray-200' : 'text-gray-600 hover:text-[#ff8714]'}`}>
               התוכניות שלי
             </Link>
-            <Link href="/metrics" className="text-gray-600 hover:text-[#ff8714]">
+            <Link href="/metrics" className={`${isAcademy || isLoading ? 'text-white hover:text-gray-200' : 'text-gray-600 hover:text-[#ff8714]'}`}>
               מדדים
             </Link>
-            <Link href="/academy" className="text-gray-600 hover:text-[#ff8714]">
+            <Link href="/academy" className={`${isAcademy || isLoading ? 'text-white hover:text-gray-200' : 'text-gray-600 hover:text-[#ff8714]'}`}>
               האקדמיה
             </Link>
-            <Link href="/profile" className="text-gray-600 hover:text-[#ff8714]">
+            <Link href="/profile" className={`${isAcademy || isLoading ? 'text-white hover:text-gray-200' : 'text-gray-600 hover:text-[#ff8714]'}`}>
               פרופיל
             </Link>
           </div>
 
           {/* Mobile Menu Button */}
           <button 
-            className="md:hidden p-2 text-gray-600 focus:outline-none" 
+            className={`md:hidden p-2 ${isAcademy || isLoading ? 'text-white' : 'text-gray-600'} focus:outline-none`}
             onClick={toggleMobileMenu}
             aria-label="Toggle mobile menu"
           >
@@ -60,45 +65,45 @@ export default function Navbar() {
           </button>
 
           <div className="flex items-center space-x-4 space-x-reverse">
-            <LoginButton />
+            <LoginButton isAcademy={isAcademy || isLoading} />
           </div>
         </div>
 
         {/* Mobile Navigation Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-white border-t pb-4 pt-2 shadow-lg">
+          <div className={`md:hidden ${isAcademy || isLoading ? 'bg-black' : 'bg-white'} ${isAcademy ? '' : 'border-t'} pb-4 pt-2 shadow-lg`}>
             <div className="flex flex-col space-y-3 px-4">
               <Link 
                 href="/" 
-                className="text-gray-600 hover:text-[#ff8714] py-2 border-b border-gray-100"
+                className={`${isAcademy || isLoading ? 'text-white hover:text-gray-200' : 'text-gray-600 hover:text-[#ff8714]'} py-2 ${isAcademy ? '' : 'border-b border-gray-100'}`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 ראשי
               </Link>
               <Link 
                 href="/programs" 
-                className="text-gray-600 hover:text-[#ff8714] py-2 border-b border-gray-100"
+                className={`${isAcademy || isLoading ? 'text-white hover:text-gray-200' : 'text-gray-600 hover:text-[#ff8714]'} py-2 ${isAcademy ? '' : 'border-b border-gray-100'}`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 התוכניות שלי
               </Link>
               <Link 
                 href="/metrics" 
-                className="text-gray-600 hover:text-[#ff8714] py-2 border-b border-gray-100"
+                className={`${isAcademy || isLoading ? 'text-white hover:text-gray-200' : 'text-gray-600 hover:text-[#ff8714]'} py-2 ${isAcademy ? '' : 'border-b border-gray-100'}`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 מדדים
               </Link>
               <Link 
                 href="/academy" 
-                className="text-gray-600 hover:text-[#ff8714] py-2 border-b border-gray-100"
+                className={`${isAcademy || isLoading ? 'text-white hover:text-gray-200' : 'text-gray-600 hover:text-[#ff8714]'} py-2 ${isAcademy ? '' : 'border-b border-gray-100'}`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 האקדמיה
               </Link>
               <Link 
                 href="/profile" 
-                className="text-gray-600 hover:text-[#ff8714] py-2"
+                className={`${isAcademy || isLoading ? 'text-white hover:text-gray-200' : 'text-gray-600 hover:text-[#ff8714]'} py-2`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 פרופיל
