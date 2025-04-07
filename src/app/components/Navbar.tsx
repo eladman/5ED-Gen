@@ -90,11 +90,11 @@ export default function Navbar() {
                 מדדים
               </Link>
               <Link 
-                href="/library" 
+                href="/academy" 
                 className="text-gray-600 hover:text-[#ff8714] py-2 border-b border-gray-100"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                ספרייה
+                האקדמיה
               </Link>
               <Link 
                 href="/profile" 
