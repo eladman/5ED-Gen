@@ -1,6 +1,6 @@
 "use client";
 
-import { FaPlay, FaBook, FaMicrophone, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaPlay, FaBook, FaMicrophone, FaChevronLeft, FaChevronRight, FaHeart } from 'react-icons/fa';
 import Navbar from '../components/Navbar';
 import CategorySection from '../components/CategorySection';
 import Link from 'next/link';
@@ -9,6 +9,8 @@ import ContentModal from '../components/ContentModal';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { addToFavorites, removeFromFavorites, isInFavorites } from '@/lib/firebase/firebaseUtils';
 
 // Dynamically import SplashScreen with no SSR
 const SplashScreen = dynamic(() => import('../components/SplashScreen'), { ssr: false });
@@ -75,6 +77,7 @@ interface Item {
   spotifyId?: string;
   spotifyUrl?: string;
   applePodcastsUrl?: string;
+  isFavorite?: boolean;
 }
 
 interface Category {
@@ -92,6 +95,9 @@ interface AcademyContentProps {
   selectedItem: Item | null;
   handleCloseModal: () => void;
   checkScrollability: (elementId: string) => void;
+  user: any;
+  favoriteItems: string[];
+  handleFavoriteClick: (e: React.MouseEvent, item: Item) => void;
 }
 
 // Client Component for Academy Content
@@ -101,14 +107,17 @@ function AcademyContent({
   handleItemClick, 
   selectedItem, 
   handleCloseModal,
-  checkScrollability 
+  checkScrollability,
+  user,
+  favoriteItems,
+  handleFavoriteClick
 }: AcademyContentProps) {
   return (
-    <div className="min-h-screen bg-black font-heebo text-right">
-      <main className="px-4 md:px-8 py-8 pt-24">
+    <div className="min-h-screen bg-black font-heebo text-right overflow-x-hidden">
+      <main className="px-4 md:px-8 py-8 pt-24 overflow-x-hidden">
         {/* Content Rows */}
         <motion.div 
-          className="space-y-8 md:space-y-12"
+          className="space-y-8 md:space-y-12 overflow-x-hidden"
           variants={containerVariants}
           initial="hidden"
           animate={isLoaded ? "show" : "hidden"}
@@ -166,6 +175,20 @@ function AcademyContent({
                           className="object-cover rounded-lg"
                           sizes="(max-width: 768px) 280px, 320px"
                         />
+                        {user && category.id !== 'five-fingers-podcast' && (
+                          <button
+                            onClick={(e) => handleFavoriteClick(e, item)}
+                            className="absolute bottom-2 left-2 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+                          >
+                            <FaHeart
+                              className={`w-4 h-4 ${
+                                favoriteItems.includes(item.id)
+                                  ? 'text-red-500'
+                                  : 'text-white'
+                              }`}
+                            />
+                          </button>
+                        )}
                       </div>
                       
                       {/* Content below image */}
@@ -229,6 +252,8 @@ export default function AcademyPage() {
   const [spotifyEpisodes, setSpotifyEpisodes] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [favoriteItems, setFavoriteItems] = useState<string[]>([]);
+  const { user } = useAuth();
 
   interface Item {
     id: string;
@@ -243,6 +268,7 @@ export default function AcademyPage() {
     spotifyId?: string;
     spotifyUrl?: string;
     applePodcastsUrl?: string;
+    isFavorite?: boolean;
   }
 
   const handleItemClick = (e: React.MouseEvent, item: Item) => {
@@ -305,6 +331,38 @@ export default function AcademyPage() {
     setIsLoaded(true);
   }, []);
 
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (user) {
+        try {
+          const favorites = await isInFavorites(user.uid);
+          setFavoriteItems(favorites);
+        } catch (error) {
+          console.error('Error loading favorites:', error);
+        }
+      }
+    };
+
+    loadFavorites();
+  }, [user]);
+
+  const handleFavoriteClick = async (e: React.MouseEvent, item: Item) => {
+    e.stopPropagation();
+    if (!user) return;
+
+    try {
+      if (favoriteItems.includes(item.id)) {
+        await removeFromFavorites(user.uid, item.id);
+        setFavoriteItems(prev => prev.filter(id => id !== item.id));
+      } else {
+        await addToFavorites(user.uid, item.id);
+        setFavoriteItems(prev => [...prev, item.id]);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
   const categories = [
     {
       id: 'five-fingers-podcast',
@@ -322,7 +380,8 @@ export default function AcademyPage() {
           duration: 'פודקאסט שבועי',
           recommendedBy: 'חמש אצבעות',
           spotifyUrl: 'https://open.spotify.com/show/1pkoB14iPwztzO8LXkqGaR',
-          applePodcastsUrl: 'https://podcasts.apple.com/il/podcast/%D7%97%D7%9E%D7%A9-%D7%90%D7%A6%D7%91%D7%A2%D7%95%D7%AA-%D7%97%D7%99%D7%A0%D7%95%D7%9A-%D7%AA%D7%A8%D7%91%D7%95%D7%AA-%D7%9E%D7%A0%D7%94%D7%99%D7%92%D7%95%D7%AA/id1480173467'
+          applePodcastsUrl: 'https://podcasts.apple.com/il/podcast/%D7%97%D7%9E%D7%A9-%D7%90%D7%A6%D7%91%D7%A2%D7%95%D7%AA-%D7%97%D7%99%D7%A0%D7%95%D7%9A-%D7%AA%D7%A8%D7%91%D7%95%D7%AA-%D7%9E%D7%A0%D7%94%D7%99%D7%92%D7%95%D7%AA/id1480173467',
+          isFavorite: favoriteItems.includes('five-fingers-main')
         },
         {
           id: 'five-fingers-lectures',
@@ -332,7 +391,8 @@ export default function AcademyPage() {
           category: 'five-fingers-lectures',
           image: '/images/hamesh/Podcast.png',
           duration: 'סדרת הרצאות',
-          recommendedBy: 'חמש אצבעות'
+          recommendedBy: 'חמש אצבעות',
+          isFavorite: favoriteItems.includes('five-fingers-lectures')
         },
         {
           id: 'five-fingers-magazine',
@@ -342,7 +402,8 @@ export default function AcademyPage() {
           category: 'five-fingers-magazine',
           image: '/images/hamesh/Podcast.png',
           duration: 'מגזין דיגיטלי',
-          recommendedBy: 'חמש אצבעות'
+          recommendedBy: 'חמש אצבעות',
+          isFavorite: favoriteItems.includes('five-fingers-magazine')
         }
       ]
     },
@@ -360,7 +421,8 @@ export default function AcademyPage() {
           category: 'books',
           image: '/images/books/Wisdom of Indifference Cover.jpg',
           duration: '200 עמודים',
-          recommendedBy: 'חמש אצבעות'
+          recommendedBy: 'חמש אצבעות',
+          isFavorite: favoriteItems.includes('wisdom-of-indifference')
         },
         {
           id: 'grit',
@@ -370,7 +432,8 @@ export default function AcademyPage() {
           category: 'books',
           image: '/images/books/Grit Angela Dakworth.jpg',
           duration: '400 עמודים',
-          recommendedBy: 'חמש אצבעות'
+          recommendedBy: 'חמש אצבעות',
+          isFavorite: favoriteItems.includes('grit')
         },
         {
           id: '12-rules',
@@ -380,7 +443,8 @@ export default function AcademyPage() {
           category: 'books',
           image: '/images/books/12-rules-for-life.jpeg',
           duration: '448 עמודים',
-          recommendedBy: 'חמש אצבעות'
+          recommendedBy: 'חמש אצבעות',
+          isFavorite: favoriteItems.includes('12-rules')
         },
         {
           id: 'flexible-brain',
@@ -390,7 +454,8 @@ export default function AcademyPage() {
           category: 'books',
           image: '/images/books/המוח הגמיש.jpg',
           duration: '448 עמודים',
-          recommendedBy: 'חמש אצבעות'
+          recommendedBy: 'חמש אצבעות',
+          isFavorite: favoriteItems.includes('flexible-brain')
         },
         {
           id: 'beyond-limits',
@@ -400,7 +465,8 @@ export default function AcademyPage() {
           category: 'books',
           image: '/images/books/Beyond Limits Alon Ullman.jpg',
           duration: '300 עמודים',
-          recommendedBy: 'חמש אצבעות'
+          recommendedBy: 'חמש אצבעות',
+          isFavorite: favoriteItems.includes('beyond-limits')
         },
         {
           id: 'who-moved-my-cheese',
@@ -410,7 +476,8 @@ export default function AcademyPage() {
           category: 'books',
           image: '/images/books/Who Moved My Cheese.jpg',
           duration: '96 עמודים',
-          recommendedBy: 'חמש אצבעות'
+          recommendedBy: 'חמש אצבעות',
+          isFavorite: favoriteItems.includes('who-moved-my-cheese')
         },
         {
           id: 'michael-master',
@@ -420,7 +487,8 @@ export default function AcademyPage() {
           category: 'books',
           image: '/images/books/Michael Master.jpg',
           duration: '250 עמודים',
-          recommendedBy: 'חמש אצבעות'
+          recommendedBy: 'חמש אצבעות',
+          isFavorite: favoriteItems.includes('michael-master')
         },
         {
           id: 'what-doesnt-kill',
@@ -430,7 +498,8 @@ export default function AcademyPage() {
           category: 'books',
           image: '/images/books/מה שלא הורג.jpg',
           duration: '280 עמודים',
-          recommendedBy: 'חמש אצבעות'
+          recommendedBy: 'חמש אצבעות',
+          isFavorite: favoriteItems.includes('what-doesnt-kill')
         }
       ]
     },
@@ -448,7 +517,8 @@ export default function AcademyPage() {
           category: 'videos',
           image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop',
           duration: '15 דקות',
-          recommendedBy: 'רס"ן גיא אברהם'
+          recommendedBy: 'רס"ן גיא אברהם',
+          isFavorite: favoriteItems.includes('1')
         },
         {
           id: '2',
@@ -457,7 +527,8 @@ export default function AcademyPage() {
           href: '/academy/videos/2',
           category: 'videos',
           image: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?q=80&w=1000&auto=format&fit=crop',
-          duration: '20 דקות'
+          duration: '20 דקות',
+          isFavorite: favoriteItems.includes('2')
         },
         {
           id: '3',
@@ -466,7 +537,8 @@ export default function AcademyPage() {
           href: '/academy/videos/3',
           category: 'videos',
           image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1000&auto=format&fit=crop',
-          duration: '10 דקות'
+          duration: '10 דקות',
+          isFavorite: favoriteItems.includes('3')
         },
         {
           id: '4',
@@ -476,7 +548,8 @@ export default function AcademyPage() {
           href: '/academy/videos/4',
           category: 'videos',
           image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1000&auto=format&fit=crop',
-          duration: '25 דקות'
+          duration: '25 דקות',
+          isFavorite: favoriteItems.includes('4')
         },
         {
           id: '5',
@@ -486,7 +559,8 @@ export default function AcademyPage() {
           href: '/academy/videos/5',
           category: 'videos',
           image: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?q=80&w=1000&auto=format&fit=crop',
-          duration: '18 דקות'
+          duration: '18 דקות',
+          isFavorite: favoriteItems.includes('5')
         }
       ]
     },
@@ -504,7 +578,8 @@ export default function AcademyPage() {
           category: 'podcasts',
           image: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?q=80&w=1000&auto=format&fit=crop',
           duration: '45 דקות',
-          recommendedBy: 'סא"ל יובל כהן'
+          recommendedBy: 'סא"ל יובל כהן',
+          isFavorite: favoriteItems.includes('1')
         },
         {
           id: '2',
@@ -514,7 +589,8 @@ export default function AcademyPage() {
           category: 'podcasts',
           image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1000&auto=format&fit=crop',
           duration: '35 דקות',
-          recommendedBy: 'רס"ן דן לוי'
+          recommendedBy: 'רס"ן דן לוי',
+          isFavorite: favoriteItems.includes('2')
         },
         {
           id: '3',
@@ -524,7 +600,8 @@ export default function AcademyPage() {
           category: 'podcasts',
           image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1000&auto=format&fit=crop',
           duration: '40 דקות',
-          recommendedBy: 'סרן עמית ישראלי'
+          recommendedBy: 'סרן עמית ישראלי',
+          isFavorite: favoriteItems.includes('3')
         },
         {
           id: '4',
@@ -534,7 +611,8 @@ export default function AcademyPage() {
           href: '/academy/podcasts/4',
           category: 'podcasts',
           image: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?q=80&w=1000&auto=format&fit=crop',
-          duration: '50 דקות'
+          duration: '50 דקות',
+          isFavorite: favoriteItems.includes('4')
         },
         {
           id: '5',
@@ -544,7 +622,8 @@ export default function AcademyPage() {
           href: '/academy/podcasts/5',
           category: 'podcasts',
           image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop',
-          duration: '30 דקות'
+          duration: '30 דקות',
+          isFavorite: favoriteItems.includes('5')
         }
       ]
     }
@@ -562,6 +641,9 @@ export default function AcademyPage() {
           selectedItem={selectedItem}
           handleCloseModal={handleCloseModal}
           checkScrollability={checkScrollability}
+          user={user}
+          favoriteItems={favoriteItems}
+          handleFavoriteClick={handleFavoriteClick}
         />
       )}
     </main>
