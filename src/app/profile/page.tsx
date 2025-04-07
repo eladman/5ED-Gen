@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { saveProfile, getProfile, processProfileImage } from '@/lib/firebase/profileUtils';
 import Navbar from '@/app/components/Navbar';
 import TeamSelector from '@/components/TeamSelector';
-import { getTeamById, getTeamType } from '@/lib/teamUtils';
+import { getTeamById, getTeamAge } from '@/lib/teamUtils';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -84,9 +84,8 @@ export default function ProfilePage() {
   };
 
   const handleTeamChange = (teamId: string) => {
-    const team = getTeamById(teamId);
-    const teamType = team ? getTeamType(team.name) : '';
-    setFormData(prev => ({ ...prev, team: teamId, teamType }));
+    const teamAge = getTeamAge(teamId);
+    setFormData(prev => ({ ...prev, team: teamId, teamType: teamAge }));
     setSaveStatus('idle');
   };
 
@@ -230,7 +229,7 @@ export default function ProfilePage() {
                   />
                 ) : (
                   <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center border-4 border-[#ff8714]">
-                    <span className="text-gray-400">תמונה</span>
+                    <span className="text-gray-700">תמונה</span>
                   </div>
                 )}
               </div>
@@ -242,7 +241,6 @@ export default function ProfilePage() {
                   className="hidden"
                   onChange={handleImageChange}
                   onClick={(e) => {
-                    // Reset the input value to allow selecting the same file again
                     (e.target as HTMLInputElement).value = '';
                   }}
                 />
@@ -259,8 +257,9 @@ export default function ProfilePage() {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full p-2 border rounded-md text-right focus:ring-2 focus:ring-[#ff8714] focus:border-transparent"
+                  className="w-full p-2 border rounded-md text-right focus:ring-2 focus:ring-[#ff8714] focus:border-transparent text-black placeholder:text-gray-400"
                   required
+                  placeholder="הזן שם מלא"
                 />
               </div>
 
@@ -273,8 +272,9 @@ export default function ProfilePage() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="w-full p-2 border rounded-md text-right focus:ring-2 focus:ring-[#ff8714] focus:border-transparent"
+                  className="w-full p-2 border rounded-md text-right focus:ring-2 focus:ring-[#ff8714] focus:border-transparent text-black placeholder:text-gray-400"
                   required
+                  placeholder="הזן מספר טלפון"
                 />
               </div>
 
@@ -300,7 +300,7 @@ export default function ProfilePage() {
                       className="ml-2"
                       required
                     />
-                    <span>זכר</span>
+                    <span className="text-gray-700">זכר</span>
                   </label>
                   <label className="flex items-center">
                     <input
@@ -318,7 +318,7 @@ export default function ProfilePage() {
                       }}
                       className="ml-2"
                     />
-                    <span>נקבה</span>
+                    <span className="text-gray-700">נקבה</span>
                   </label>
                 </div>
               </div>

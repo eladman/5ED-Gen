@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
-import { FaRunning, FaDumbbell, FaStopwatch, FaPlus, FaTrash, FaUsers, FaChartBar } from "react-icons/fa";
+import { FaRunning, FaDumbbell, FaStopwatch, FaPlus, FaTrash, FaUsers, FaChartBar, FaPencilAlt } from "react-icons/fa";
 import { GiSittingDog } from "react-icons/gi";
 import toast from "react-hot-toast";
-import { addDocument, getDocuments, deleteDocument } from "@/lib/firebase/firebaseUtils";
+import { addDocument, getDocuments, deleteDocument, updateDocument } from "@/lib/firebase/firebaseUtils";
 import MetricsFifaCard from "@/app/components/MetricsFifaCard";
 import MetricsComparison, { MetricsComparisonProps } from "@/app/components/MetricsComparison";
 import { getProfile } from "@/lib/firebase/profileUtils";
@@ -56,6 +56,8 @@ export default function MetricsPage() {
   const [userTeamType, setUserTeamType] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingMetric, setEditingMetric] = useState<Metrics | null>(null);
 
   // Check user authentication and profile completion
   useEffect(() => {
@@ -196,7 +198,7 @@ export default function MetricsPage() {
       return;
     }
     
-    let loadingToast = toast.loading('שומר מדדים...') as string;
+    let loadingToast = toast.loading(isEditing ? 'מעדכן מדדים...' : 'שומר מדדים...') as string;
     
     try {
       // Format time inputs into metrics format
@@ -236,93 +238,116 @@ export default function MetricsPage() {
         return;
       }
 
-      // Add timestamp and user ID to metrics
-      const metricsData = {
-        ...formattedMetrics,
-        userId: user?.uid || '',
-        createdAt: new Date().toISOString(),
-      };
-
-      console.log("Saving metrics data:", metricsData);
-      
-      // Try to save to Firestore with localStorage fallback
-      let savedMetric;
-      try {
-        // Try up to 3 times if needed
-        let attempts = 0;
-        const maxAttempts = 3;
-        
-        while (attempts < maxAttempts) {
-          attempts++;
-          console.log(`Saving metrics attempt ${attempts}/${maxAttempts}`);
+      if (isEditing && editingMetric) {
+        // This is an update operation
+        try {
+          await updateDocument('metrics', editingMetric.id, formattedMetrics);
           
-          try {
-            // Save metrics data
-            savedMetric = await addDocument('metrics', metricsData);
-            console.log("Save result:", savedMetric);
-            
-            // If successful, break out of retry loop
-            if (savedMetric && savedMetric.id) {
-              break;
-            }
-          } catch (saveError: any) {
-            console.error(`Metrics save attempt ${attempts} failed:`, saveError);
-            
-            // Only throw on the last attempt
-            if (attempts >= maxAttempts) {
-              throw saveError;
-            }
-            
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      } catch (saveError: any) {
-        console.error("All save attempts failed:", saveError);
-        
-        // Show a more specific error based on error type
-        let errorMessage = 'אירעה שגיאה בשמירת המדדים';
-        
-        if (saveError.message && saveError.message.includes('permission-denied')) {
-          errorMessage = 'אין הרשאה לשמור את המדדים. הנתונים נשמרו מקומית.';
-          toast.error(errorMessage, { id: loadingToast });
+          // Update the metrics in the local state
+          setPreviousMetrics(prev => 
+            prev.map(metric => 
+              metric.id === editingMetric.id 
+                ? { ...metric, ...formattedMetrics } 
+                : metric
+            )
+          );
           
-          // Try to save locally as a last resort
-          savedMetric = {
-            id: `local_fallback_${Date.now()}`,
-            ...metricsData,
-            savedToFirestore: false
-          };
-        } else {
-          // For other errors, show the error and exit
-          toast.error(errorMessage, { id: loadingToast });
+          toast.success('המדדים עודכנו בהצלחה!', { id: loadingToast });
+        } catch (error) {
+          console.error('Error updating metrics:', error);
+          toast.error('אירעה שגיאה בעדכון המדדים', { id: loadingToast });
           return;
         }
-      }
-      
-      // Check if we actually have a saved metric
-      if (!savedMetric || !savedMetric.id) {
-        console.error("Failed to save metric (no ID returned)");
-        toast.error('אירעה שגיאה בשמירת המדדים', { id: loadingToast });
-        return;
-      }
-      
-      // Show appropriate success message based on where it was saved
-      if (savedMetric.savedToFirestore) {
-        toast.success('המדדים נשמרו בהצלחה!', { id: loadingToast });
       } else {
-        toast.success('המדדים נשמרו בהצלחה (נשמר מקומית)', { id: loadingToast });
+        // This is a new metrics creation - original code for adding new metrics
+        // Add timestamp and user ID to metrics
+        const metricsData = {
+          ...formattedMetrics,
+          userId: user?.uid || '',
+          createdAt: new Date().toISOString(),
+        };
+
+        console.log("Saving metrics data:", metricsData);
+        
+        // Try to save to Firestore with localStorage fallback
+        let savedMetric;
+        try {
+          // Try up to 3 times if needed
+          let attempts = 0;
+          const maxAttempts = 3;
+          
+          while (attempts < maxAttempts) {
+            attempts++;
+            console.log(`Saving metrics attempt ${attempts}/${maxAttempts}`);
+            
+            try {
+              // Save metrics data
+              savedMetric = await addDocument('metrics', metricsData);
+              console.log("Save result:", savedMetric);
+              
+              // If successful, break out of retry loop
+              if (savedMetric && savedMetric.id) {
+                break;
+              }
+            } catch (saveError: any) {
+              console.error(`Metrics save attempt ${attempts} failed:`, saveError);
+              
+              // Only throw on the last attempt
+              if (attempts >= maxAttempts) {
+                throw saveError;
+              }
+              
+              // Wait before retrying
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+        } catch (saveError: any) {
+          console.error("All save attempts failed:", saveError);
+          
+          // Show a more specific error based on error type
+          let errorMessage = 'אירעה שגיאה בשמירת המדדים';
+          
+          if (saveError.message && saveError.message.includes('permission-denied')) {
+            errorMessage = 'אין הרשאה לשמור את המדדים. הנתונים נשמרו מקומית.';
+            toast.error(errorMessage, { id: loadingToast });
+            
+            // Try to save locally as a last resort
+            savedMetric = {
+              id: `local_fallback_${Date.now()}`,
+              ...metricsData,
+              savedToFirestore: false
+            };
+          } else {
+            // For other errors, show the error and exit
+            toast.error(errorMessage, { id: loadingToast });
+            return;
+          }
+        }
+        
+        // Check if we actually have a saved metric
+        if (!savedMetric || !savedMetric.id) {
+          console.error("Failed to save metric (no ID returned)");
+          toast.error('אירעה שגיאה בשמירת המדדים', { id: loadingToast });
+          return;
+        }
+        
+        // Show appropriate success message based on where it was saved
+        if (savedMetric.savedToFirestore) {
+          toast.success('המדדים נשמרו בהצלחה!', { id: loadingToast });
+        } else {
+          toast.success('המדדים נשמרו בהצלחה (נשמר מקומית)', { id: loadingToast });
+        }
+        
+        // Create a complete metrics object
+        const completeMetric: Metrics = {
+          ...metricsData,
+          id: savedMetric.id,
+          userId: user?.uid || '' // Ensure userId is not undefined
+        };
+        
+        // Update local state immediately
+        setPreviousMetrics(prev => [completeMetric, ...prev]);
       }
-      
-      // Create a complete metrics object
-      const completeMetric: Metrics = {
-        ...metricsData,
-        id: savedMetric.id,
-        userId: user?.uid || '' // Ensure userId is not undefined
-      };
-      
-      // Update local state immediately
-      setPreviousMetrics(prev => [completeMetric, ...prev]);
       
       // Reset form
       setMetrics({
@@ -338,6 +363,8 @@ export default function MetricsPage() {
       });
       setCurrentStep(1);
       setShowForm(false);
+      setIsEditing(false);
+      setEditingMetric(null);
       
       // Fetch latest metrics to update state
       try {
@@ -498,6 +525,38 @@ export default function MetricsPage() {
     }
   };
 
+  const handleEdit = (metric: Metrics) => {
+    // Pre-fill the form with the metric values
+    setMetrics({
+      run3000m: metric.run3000m,
+      pullUps: metric.pullUps,
+      pushUps: metric.pushUps,
+      run400m: metric.run400m,
+      sitUps2min: metric.sitUps2min,
+    });
+
+    // Parse time inputs
+    const [run3000mMinutes, run3000mSeconds] = metric.run3000m.split(':');
+    const [run400mMinutes, run400mSeconds] = metric.run400m.split(':');
+    
+    setTimeInputs({
+      run3000m: {
+        minutes: run3000mMinutes,
+        seconds: run3000mSeconds
+      },
+      run400m: {
+        minutes: run400mMinutes,
+        seconds: run400mSeconds
+      }
+    });
+
+    // Set editing state
+    setIsEditing(true);
+    setEditingMetric(metric);
+    setShowForm(true);
+    setCurrentStep(1);
+  };
+
   if (!user || isCheckingProfile) {
     return null;
   }
@@ -539,24 +598,60 @@ export default function MetricsPage() {
           {activeTab === 'personal' ? (
             <div className="animate-fadeIn">
               {/* Personal Metrics Tab Content */}
-              {/* Add New Metrics Button - Floating action button style */}
-              <div className="fixed bottom-6 right-6 z-10">
-                <button
-                  onClick={() => setShowForm(!showForm)}
-                  className={`flex items-center justify-center w-14 h-14 rounded-full bg-[#ff8714] text-white shadow-lg hover:bg-[#e67200] transition-all duration-200 ${
-                    showForm ? 'rotate-45' : ''
-                  }`}
-                  aria-label={showForm ? "Close form" : "Add new metrics"}
-                >
-                  <FaPlus className="w-5 h-5" />
-                </button>
-              </div>
+              {/* Add New Metrics Button - Only show if no metrics exist */}
+              {previousMetrics.length === 0 && (
+                <div className="fixed bottom-6 right-6 z-10">
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditingMetric(null);
+                      setShowForm(!showForm);
+                    }}
+                    className={`flex items-center justify-center w-14 h-14 rounded-full bg-[#ff8714] text-white shadow-lg hover:bg-[#e67200] transition-all duration-200 ${
+                      showForm ? 'rotate-45' : ''
+                    }`}
+                    aria-label={showForm ? "Close form" : "Add new metrics"}
+                  >
+                    <FaPlus className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+              
+              {/* Edit button when user has metrics but form is not open */}
+              {previousMetrics.length > 0 && !showForm && (
+                <div className="fixed bottom-6 right-6 z-10">
+                  <button
+                    onClick={() => handleEdit(previousMetrics[0])}
+                    className="flex items-center justify-center w-14 h-14 rounded-full bg-[#ff8714] text-white shadow-lg hover:bg-[#e67200] transition-all duration-200"
+                    aria-label="Edit metrics"
+                  >
+                    <FaPencilAlt className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Close button when editing metrics */}
+              {showForm && (
+                <div className="fixed bottom-6 right-6 z-10">
+                  <button
+                    onClick={() => {
+                      setShowForm(false);
+                      setIsEditing(false);
+                      setEditingMetric(null);
+                    }}
+                    className="flex items-center justify-center w-14 h-14 rounded-full bg-gray-400 text-white shadow-lg hover:bg-gray-500 transition-all duration-200 rotate-45"
+                    aria-label="Close form"
+                  >
+                    <FaPlus className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
             
               {/* Metrics Form - Showing with animation */}
               {showForm && (
                 <div className="bg-white rounded-xl p-6 mb-8 shadow-xl border border-gray-200 animate-slideUp">
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold">הזנת מדדים חדשים</h2>
+                    <h2 className="text-xl font-bold">{isEditing ? 'עריכת מדדים' : 'הזנת מדדים חדשים'}</h2>
                     <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1">
                       {[1, 2, 3].map(step => (
                         <div
@@ -853,7 +948,7 @@ export default function MetricsPage() {
                               type="submit"
                               className="px-4 py-2 bg-[#ff8714] text-white rounded-lg hover:bg-[#e67200] transition-colors flex items-center gap-1 ml-auto"
                             >
-                              <span>שמור</span>
+                              <span>{isEditing ? 'עדכן' : 'שמור'}</span>
                             </button>
                           )}
                         </div>
@@ -868,7 +963,7 @@ export default function MetricsPage() {
                 <div className="space-y-6">
                   <h2 className="text-xl font-bold flex items-center gap-2">
                     <span className="w-1 h-6 bg-[#ff8714] rounded-full"></span>
-                    המדדים שלי
+                    מדדים מאי 2025
                   </h2>
                   
                   {/* Latest Metrics Card - Featured */}
@@ -883,16 +978,29 @@ export default function MetricsPage() {
                           <div className="text-sm text-gray-500">{formatDate(previousMetrics[0].createdAt)}</div>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => handleDelete(previousMetrics[0].id)}
-                        className="text-gray-400 hover:text-red-500 transition-colors p-2"
-                        aria-label="Delete metric"
-                      >
-                        <FaTrash />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleEdit(previousMetrics[0])}
+                          className="text-gray-400 hover:text-[#ff8714] transition-colors p-2"
+                          aria-label="Edit metric"
+                        >
+                          <FaPencilAlt />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(previousMetrics[0].id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors p-2"
+                          aria-label="Delete metric"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                    {userTeamType === 'נוער' && (
+                      <MetricsFifaCard metrics={previousMetrics[0]} />
+                    )}
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
                       <div className="bg-gray-50 rounded-lg p-3 text-center">
                         <div className="text-xs text-gray-500 mb-1">ריצת 3,000 מטר</div>
                         <div className="font-bold text-lg">{previousMetrics[0].run3000m}</div>
@@ -918,10 +1026,6 @@ export default function MetricsPage() {
                         <div className="font-bold text-lg">{previousMetrics[0].sitUps2min}</div>
                       </div>
                     </div>
-                    
-                    {userTeamType === 'נוער' && (
-                      <MetricsFifaCard metrics={previousMetrics[0]} />
-                    )}
                   </div>
                   
                   {/* Previous Metrics History */}
@@ -935,13 +1039,22 @@ export default function MetricsPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {previousMetrics.slice(1).map((metric) => (
                           <div key={metric.id} className="bg-white rounded-xl p-4 shadow border border-gray-200 relative hover:shadow-md transition-shadow group">
-                            <button 
-                              onClick={() => handleDelete(metric.id)}
-                              className="absolute top-3 left-3 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                              aria-label="Delete metric"
-                            >
-                              <FaTrash />
-                            </button>
+                            <div className="absolute top-3 left-3 flex items-center">
+                              <button 
+                                onClick={() => handleEdit(metric)}
+                                className="text-gray-400 hover:text-[#ff8714] opacity-0 group-hover:opacity-100 transition-opacity p-1 mr-1"
+                                aria-label="Edit metric"
+                              >
+                                <FaPencilAlt />
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(metric.id)}
+                                className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                aria-label="Delete metric"
+                              >
+                                <FaTrash />
+                              </button>
+                            </div>
                             
                             <div className="text-sm text-gray-500 mb-3">{formatDate(metric.createdAt)}</div>
                             
@@ -993,7 +1106,11 @@ export default function MetricsPage() {
                   <h3 className="text-xl font-medium mb-2">אין לך עדיין מדדים</h3>
                   <p className="text-gray-500 mb-6">הוסף מדדים חדשים כדי לראות את הנתונים שלך</p>
                   <button
-                    onClick={() => setShowForm(true)}
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditingMetric(null);
+                      setShowForm(true);
+                    }}
                     className="px-6 py-3 bg-[#ff8714] text-white rounded-full font-medium hover:bg-[#e67200] transition-colors inline-flex items-center gap-2"
                   >
                     <FaPlus /> הזן מדדים חדשים
@@ -1023,6 +1140,8 @@ export default function MetricsPage() {
                     <button
                       onClick={() => {
                         setActiveTab('personal');
+                        setIsEditing(false);
+                        setEditingMetric(null);
                         setShowForm(true);
                       }}
                       className="px-6 py-3 bg-[#ff8714] text-white rounded-full font-medium hover:bg-[#e67200] transition-colors inline-flex items-center gap-2"

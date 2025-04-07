@@ -147,70 +147,78 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
 
   return (
     <div className="w-full max-w-sm mx-auto">
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        {/* Top Profile Bar - Minimal */}
-        <div className="p-3 flex items-center justify-between border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-white flex items-center justify-center shadow-sm">
-              {profileImage ? (
-                <Image 
-                  src={profileImage} 
-                  alt={userName || "User"} 
-                  width={32} 
-                  height={32} 
-                  className="object-cover w-full h-full"
-                />
-              ) : (
-                <div className="text-slate-700 text-sm font-bold">
-                  {userName?.charAt(0) || "U"}
-                </div>
-              )}
-            </div>
-            <div className="text-sm text-slate-600">{userName || "משתמש"}</div>
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-slate-100">
+        {/* Enhanced Header with User Info */}
+        <div className="bg-gradient-to-r from-slate-800 to-slate-700 p-6 flex items-center gap-5">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-white flex items-center justify-center shadow-md border-4 border-white">
+            {profileImage ? (
+              <Image 
+                src={profileImage} 
+                alt={userName || "User"} 
+                width={80} 
+                height={80} 
+                className="object-cover w-full h-full"
+              />
+            ) : (
+              <div className="text-slate-700 text-3xl font-bold">
+                {userName?.charAt(0) || "U"}
+              </div>
+            )}
           </div>
-          <div className="text-xs text-slate-400">{formatDate(metrics.createdAt)}</div>
+          <div className="flex-1">
+            <div className="text-xl font-bold text-white mb-1">{userName || "משתמש"}</div>
+            <div className="text-xs text-slate-300">{formatDate(metrics.createdAt)}</div>
+          </div>
         </div>
         
-        {/* Main Rating Focus */}
-        <div className="p-5 flex justify-center items-center">
+        {/* Main Rating Focus - Larger and more prominent */}
+        <div className="p-6 flex flex-col items-center bg-slate-50">
           <div 
-            className="w-28 h-28 rounded-full flex items-center justify-center" 
+            className="w-40 h-40 rounded-full flex items-center justify-center mb-4" 
             style={{ 
               background: `conic-gradient(${getAccentColor(overallRating)} ${overallRating}%, #f1f5f9 0)`,
-              boxShadow: `0 0 0 6px #ffffff, 0 0 0 7px ${getAccentColor(overallRating)}20`
+              boxShadow: `0 0 0 8px #ffffff, 0 0 0 9px ${getAccentColor(overallRating)}20`
             }}
           >
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
+            <div className="w-28 h-28 bg-white rounded-full flex items-center justify-center shadow-sm">
               <div className="text-center">
-                <div className={`text-4xl font-bold ${getRatingColor(overallRating)}`}>
+                <div className={`text-5xl font-bold ${getRatingColor(overallRating)}`}>
                   {overallRating}
                 </div>
-                <div className="text-xs text-slate-500">דירוג כללי</div>
+                <div className="text-sm text-slate-500 mt-1 font-medium">דירוג כללי</div>
               </div>
             </div>
           </div>
-        </div>
-        
-        {/* Category Ratings Grid */}
-        <div className="px-5 pb-5 grid grid-cols-3 gap-4">
-          <RatingBlock 
-            label="אירובי" 
-            rating={aerobicRating} 
-            accent={getAccentColor(aerobicRating)}
-            icon={<FaRunning size={12} />} 
-          />
-          <RatingBlock 
-            label="אנאירובי" 
-            rating={anaerobicRating} 
-            accent={getAccentColor(anaerobicRating)}
-            icon={<FaBolt size={12} />} 
-          />
-          <RatingBlock 
-            label="כוח" 
-            rating={strengthRating} 
-            accent={getAccentColor(strengthRating)}
-            icon={<FaDumbbell size={12} />} 
-          />
+          
+          {/* Secondary Categories Section - Now below the main rating */}
+          <div className="w-full mt-2">
+            <div className="px-4 py-2 border-t border-b border-slate-200">
+              <h3 className="text-sm font-medium text-slate-500 text-center">פירוט קטגוריות</h3>
+            </div>
+            <div className="px-4 py-4 grid grid-cols-3 gap-3">
+              <RatingBlock 
+                label="אירובי" 
+                rating={aerobicRating} 
+                accent={getAccentColor(aerobicRating)}
+                icon={<FaRunning size={12} />} 
+                description="ריצת 3000 מ׳"
+              />
+              <RatingBlock 
+                label="אנאירובי" 
+                rating={anaerobicRating} 
+                accent={getAccentColor(anaerobicRating)}
+                icon={<FaBolt size={12} />} 
+                description="ריצת 400 מ׳"
+              />
+              <RatingBlock 
+                label="כוח" 
+                rating={strengthRating} 
+                accent={getAccentColor(strengthRating)}
+                icon={<FaDumbbell size={12} />} 
+                description="מתח ושכיבות"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -222,20 +230,24 @@ function RatingBlock({
   label, 
   rating, 
   accent,
-  icon
+  icon,
+  description
 }: { 
   label: string; 
   rating: number; 
   accent: string;
   icon: React.ReactNode;
+  description: string;
 }) {
   return (
-    <div className="flex flex-col items-center p-3 rounded-lg" style={{ backgroundColor: `${accent}10` }}>
-      <div className="text-2xl font-bold" style={{ color: accent }}>{rating}</div>
+    <div className="flex flex-col items-center p-3 rounded-lg border border-slate-100" 
+         style={{ backgroundColor: `${accent}05` }}>
+      <div className="text-xl font-bold" style={{ color: accent }}>{rating}</div>
       <div className="flex items-center gap-1 mt-1">
         <span className="text-slate-600">{icon}</span>
-        <span className="text-xs text-slate-600">{label}</span>
+        <span className="text-xs text-slate-600 font-medium">{label}</span>
       </div>
+      <div className="text-[10px] text-slate-400 mt-1">{description}</div>
     </div>
   );
 }

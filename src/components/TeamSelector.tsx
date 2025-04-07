@@ -44,7 +44,7 @@ export default function TeamSelector({ value, onChange, className = '' }: TeamSe
         className="flex items-center justify-between border border-gray-300 rounded-md p-2 cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <div className="flex-1 text-right">
+        <div className="flex-1 text-right text-black">
           {selectedTeam ? selectedTeam.name : 'בחר קבוצה'}
         </div>
         <div className="text-gray-500">
@@ -62,7 +62,7 @@ export default function TeamSelector({ value, onChange, className = '' }: TeamSe
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="חיפוש קבוצה..."
-              className="w-full p-2 border border-gray-300 rounded-md text-right"
+              className="w-full p-2 border border-gray-300 rounded-md text-right text-black placeholder:text-gray-400"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
@@ -72,7 +72,7 @@ export default function TeamSelector({ value, onChange, className = '' }: TeamSe
               {filteredTeams.map((team) => (
                 <li 
                   key={team.id}
-                  className={`px-4 py-2 hover:bg-gray-100 cursor-pointer text-right ${selectedTeam?.id === team.id ? 'bg-gray-100' : ''}`}
+                  className={`px-4 py-2 hover:bg-gray-100 cursor-pointer text-right text-black ${selectedTeam?.id === team.id ? 'bg-gray-100' : ''}`}
                   onClick={() => handleSelectTeam(team)}
                 >
                   {team.name}

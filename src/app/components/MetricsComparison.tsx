@@ -37,6 +37,7 @@ interface Team {
   id: string;
   name: string;
   gender: string; // 'male' or 'female'
+  age: string;
 }
 
 export default function MetricsComparison({ 
@@ -484,28 +485,47 @@ export default function MetricsComparison({
       try {
         setIsLoading(true);
         
-        // Skip Firebase and use predefined teams directly
-        console.log("Using predefined teams from teamUtils");
-        
+        // More robust function to determine team gender
+        const determineTeamGender = (teamName: string): 'male' | 'female' => {
+          // First check for explicit female indicators
+          const femaleIndicators = ['בנות', 'נערות', 'מאמנות'];
+          for (const indicator of femaleIndicators) {
+            if (teamName.includes(indicator)) {
+              return 'female';
+            }
+          }
+          
+          // Then check for explicit male indicators
+          const maleIndicators = ['בנים', 'מאמנים'];
+          for (const indicator of maleIndicators) {
+            if (teamName.includes(indicator)) {
+              return 'male';
+            }
+          }
+          
+          // Default to male if no indicators found
+          return 'male';
+        };
+
         // Create teams from the predefined list with appropriate gender
         const allTeams = allTeamsData.map(team => {
-          const isMaleTeam = team.name.includes('בנים') || 
-            (!team.name.includes('בנות') && !team.name.includes('נערות'));
-          
           return {
             id: team.id,
             name: team.name,
-            gender: isMaleTeam ? 'male' : 'female'
+            gender: determineTeamGender(team.name),
+            age: team.age
           } as Team;
         });
         
-        // Filter teams based on user's gender
+        // Filter teams based on user's gender and age category
         const filteredTeams = allTeams.filter(team => {
-          // Check gender match (primary filter)
+          // Check gender match
           const genderMatch = team.gender === userGender;
           
-          // Allow any team type for now to make sure some teams appear
-          return genderMatch;
+          // Check age category match (נוער)
+          const ageMatch = team.age === 'נוער';
+          
+          return genderMatch && ageMatch;
         });
 
         console.log("Filtered teams:", filteredTeams);
