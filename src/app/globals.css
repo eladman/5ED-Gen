@@ -3,18 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
+  --foreground-rgb: 255, 255, 255;
   --primary-color: #ff8714;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: white;
+  background: #121212;
 }
 
 @layer base {
   body {
-    @apply bg-white text-gray-900;
+    @apply bg-[#121212] text-white;
   }
 }
 
@@ -32,11 +32,11 @@ body {
   }
 
   .heading-1 {
-    @apply text-4xl md:text-5xl lg:text-6xl font-bold;
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold text-white;
   }
 
   .heading-2 {
-    @apply text-3xl md:text-4xl font-bold;
+    @apply text-3xl md:text-4xl font-bold text-white;
   }
 
   .text-gradient {
@@ -58,11 +58,11 @@ body {
   }
   
   .heading-1 {
-    @apply text-4xl md:text-5xl font-bold leading-tight;
+    @apply text-4xl md:text-5xl font-bold leading-tight text-white;
   }
   
   .heading-2 {
-    @apply text-3xl md:text-4xl font-bold;
+    @apply text-3xl md:text-4xl font-bold text-white;
   }
   
   .text-gradient {
