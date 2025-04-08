@@ -15,6 +15,8 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [userGender, setUserGender] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [displayRating, setDisplayRating] = useState(0);
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -112,6 +114,24 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
     (aerobicRating + anaerobicRating + strengthRating + sitUpsRating) / 4
   );
 
+  // Animate the rating display
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+        let currentRating = 0;
+        const interval = setInterval(() => {
+          currentRating += 1;
+          setDisplayRating(currentRating);
+          if (currentRating >= overallRating) {
+            clearInterval(interval);
+          }
+        }, 20);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, overallRating]);
+
   // Get rating color based on value
   const getRatingColor = (rating: number) => {
     if (rating >= 90) return "text-green-500";
@@ -174,16 +194,18 @@ export default function MetricsFifaCard({ metrics }: MetricsFifaCardProps) {
         {/* Main Rating Focus - Larger and more prominent */}
         <div className="p-6 flex flex-col items-center bg-slate-50">
           <div 
-            className="w-40 h-40 rounded-full flex items-center justify-center mb-4" 
+            className={`w-40 h-40 rounded-full flex items-center justify-center mb-4 transition-all duration-1000 ease-out`} 
             style={{ 
-              background: `conic-gradient(${getAccentColor(overallRating)} ${overallRating}%, #f1f5f9 0)`,
-              boxShadow: `0 0 0 8px #ffffff, 0 0 0 9px ${getAccentColor(overallRating)}20`
+              background: `conic-gradient(${getAccentColor(displayRating)} ${displayRating}%, #f1f5f9 0)`,
+              boxShadow: `0 0 0 8px #ffffff, 0 0 0 9px ${getAccentColor(displayRating)}20`,
+              transform: isLoading ? 'scale(0.8)' : 'scale(1)',
+              opacity: isLoading ? 0.5 : 1
             }}
           >
             <div className="w-28 h-28 bg-white rounded-full flex items-center justify-center shadow-sm">
               <div className="text-center">
-                <div className={`text-5xl font-bold ${getRatingColor(overallRating)}`}>
-                  {overallRating}
+                <div className={`text-5xl font-bold ${getRatingColor(displayRating)} transition-colors duration-500`}>
+                  {displayRating}
                 </div>
                 <div className="text-sm text-slate-500 mt-1 font-medium">דירוג כללי</div>
               </div>

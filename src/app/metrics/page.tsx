@@ -903,55 +903,52 @@ export default function MetricsPage() {
                     )}
                     
                     {/* Navigation Buttons - Enhanced with progress indicator */}
-                    <div className="pt-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <div className="w-24">
-                          {currentStep > 1 && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault(); // Prevent form submission
-                                prevStep();
-                              }}
-                              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1"
-                            >
-                              <span>הקודם</span>
-                            </button>
-                          )}
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          {[1, 2, 3].map(step => (
-                            <div 
-                              key={step}
-                              className={`w-2 h-2 rounded-full ${
-                                currentStep === step ? 'bg-[#ff8714]' : 'bg-gray-300'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        
-                        <div className="w-24 text-right">
-                          {currentStep < 3 ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault(); // Prevent form submission
-                                nextStep();
-                              }}
-                              className="px-4 py-2 bg-[#ff8714] text-white rounded-lg hover:bg-[#e67200] transition-colors flex items-center gap-1 ml-auto"
-                            >
-                              <span>הבא</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="submit"
-                              className="px-4 py-2 bg-[#ff8714] text-white rounded-lg hover:bg-[#e67200] transition-colors flex items-center gap-1 ml-auto"
-                            >
-                              <span>{isEditing ? 'עדכן' : 'שמור'}</span>
-                            </button>
-                          )}
-                        </div>
+                    <div className="flex justify-between items-center mt-8">
+                      <div className="flex items-center gap-2">
+                        {currentStep > 1 && (
+                          <button
+                            type="button"
+                            onClick={prevStep}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
+                          >
+                            <span>חזור</span>
+                          </button>
+                        )}
+                        {isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowForm(false);
+                              setIsEditing(false);
+                              setEditingMetric(null);
+                              setCurrentStep(1);
+                            }}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
+                          >
+                            <span>ביטול</span>
+                          </button>
+                        )}
+                      </div>
+                      <div className="w-24 text-right">
+                        {currentStep < 3 ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault(); // Prevent form submission
+                              nextStep();
+                            }}
+                            className="px-4 py-2 bg-[#ff8714] text-white rounded-lg hover:bg-[#e67200] transition-colors flex items-center gap-1 ml-auto"
+                          >
+                            <span>הבא</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="submit"
+                            className="px-4 py-2 bg-[#ff8714] text-white rounded-lg hover:bg-[#e67200] transition-colors flex items-center gap-1 ml-auto"
+                          >
+                            <span>{isEditing ? 'עדכן' : 'שמור'}</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </form>

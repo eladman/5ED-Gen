@@ -12,6 +12,23 @@ body {
   background: #121212;
 }
 
+/* PWA Styles */
+@media (display-mode: standalone) {
+  html, body {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+    background-color: #ffffff;
+  }
+  /* Hide any potential browser UI elements */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer base {
   body {
     @apply bg-[#121212] text-white;

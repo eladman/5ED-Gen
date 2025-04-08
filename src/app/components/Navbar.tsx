@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import Link from "next/link";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import InstallPWAButton from "./InstallPWAButton";
 
 interface NavbarProps {
   isAcademy?: boolean;
@@ -64,6 +65,8 @@ export default function Navbar({ isAcademy = false, isLoading = false }: NavbarP
           </div>
           
           <div className="flex items-center space-x-4 space-x-reverse">
+            {/* PWA Install Button - Only show when user is signed in */}
+            {user && <InstallPWAButton />}
             <LoginButton isAcademy={isAcademy || isLoading} />
           </div>
         </div>

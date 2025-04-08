@@ -619,32 +619,27 @@ export default function MetricsComparison({
     if (diff > 10) {
       return {
         icon: <FaChevronUp className="text-emerald-600" />,
-        color: 'text-emerald-600',
-        text: `אתה מוביל ב-${diff} נקודות`
+        color: 'text-emerald-600'
       };
     } else if (diff > 0) {
       return {
         icon: <FaChevronUp className="text-emerald-500" />,
-        color: 'text-emerald-500',
-        text: `אתה מוביל במעט (${diff} נקודות)`
+        color: 'text-emerald-500'
       };
     } else if (diff === 0) {
       return {
         icon: <FaEquals className="text-slate-500" />,
-        color: 'text-slate-500',
-        text: 'תיקו - אותו דירוג'
+        color: 'text-slate-500'
       };
     } else if (diff > -10) {
       return {
         icon: <FaChevronDown className="text-indigo-500" />,
-        color: 'text-indigo-500',
-        text: `אתה מפגר במעט (${Math.abs(diff)} נקודות)`
+        color: 'text-indigo-500'
       };
     } else {
       return {
         icon: <FaChevronDown className="text-slate-700" />,
-        color: 'text-slate-700',
-        text: `אתה מפגר ב-${Math.abs(diff)} נקודות`
+        color: 'text-slate-700'
       };
     };
   };
@@ -782,368 +777,353 @@ export default function MetricsComparison({
             
             {/* Team Overview Section */}
             {selectedTeamId && !isLoading && !error && (
-              <div className="space-y-8 animate-fadeIn">
-                {/* Team Header & Overview */}
-                <div className="bg-slate-50 p-5 rounded-xl relative overflow-hidden border border-slate-200">
-                  <div className="relative z-10">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div>
-                        <h4 className="font-medium text-xl text-slate-800">
-                          {teams.find(t => t.id === selectedTeamId)?.name}
-                        </h4>
-                        <p className="text-slate-500 text-sm">
-                          השוואה בין המדדים שלך לביצועי הקבוצה
-                        </p>
-                      </div>
-                      
-                      <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-200 text-center min-w-[150px]">
-                        <div className="flex items-center justify-center mb-1">
-                          <span className={`text-2xl font-bold ${getRatingColor(userRatings.overall)}`}>
-                            {userRatings.overall}
-                          </span>
-                          <span className="text-slate-400 mx-2 text-lg">vs</span>
-                          <span className={`text-2xl font-bold ${getRatingColor(teamAverage.overall)}`}>
-                            {teamAverage.overall}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500">הציון הכללי שלך מול ממוצע הקבוצה</p>
-                      </div>
+              <div className="space-y-6 animate-fadeIn">
+                {/* Team Overview Section */}
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <div>
+                      <h4 className="text-xl font-medium text-slate-800">
+                        {teams.find(t => t.id === selectedTeamId)?.name}
+                      </h4>
+                      <p className="text-slate-500 text-sm mt-1">
+                        השוואה בין המדדים שלך לביצועי הקבוצה
+                      </p>
                     </div>
-                    
-                    {/* Comparison Summary */}
-                    <div className="mt-6 p-3 bg-slate-100 rounded-lg border border-slate-200">
-                      <div className="flex items-center gap-2">
-                        {getComparisonInfo(userRatings.overall, teamAverage.overall).icon}
-                        <span className={`${getComparisonInfo(userRatings.overall, teamAverage.overall).color} font-medium`}>
-                          {getComparisonInfo(userRatings.overall, teamAverage.overall).text}
-                        </span>
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                        <span className="text-sm text-slate-600">אתה</span>
                       </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full bg-slate-400"></div>
+                        <span className="text-sm text-slate-600">ממוצע</span>
+                      </div>
+                      {bestTeamMember && (
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                          <span className="text-sm text-slate-600">מוביל/ה</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-                
-                {/* Best Team Member Comparison */}
-                {bestTeamMember && (
-                  <div className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
-                    <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white p-4">
-                      <h4 className="font-medium text-lg flex items-center gap-2">
-                        <FaTrophy className="text-amber-400" />
-                        השוואה למוביל/ה בקבוצה
-                      </h4>
+
+                  {/* Team Leader Profile - New Section */}
+                  {bestTeamMember && (
+                    <div className="mb-6 flex items-center gap-4 p-4 bg-gradient-to-r from-amber-50 to-amber-100/50 rounded-lg border border-amber-200/50">
+                      <div className="flex-shrink-0">
+                        {bestTeamMember.photoURL ? (
+                          <Image
+                            src={bestTeamMember.photoURL}
+                            alt={bestTeamMember.userName}
+                            width={40}
+                            height={40}
+                            className="rounded-full"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-amber-200 flex items-center justify-center">
+                            <span className="text-amber-700 font-medium text-sm">
+                              {bestTeamMember.userName.charAt(0)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h6 className="font-medium text-slate-800">{bestTeamMember.userName}</h6>
+                          <span className="bg-amber-200/50 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                            מוביל/ה
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-600 mt-0.5">
+                          ציון כללי: {calculateUserRatings(bestTeamMember).overall}
+                        </p>
+                      </div>
                     </div>
-                    
-                    <div className="p-5">
-                      <div className="flex flex-col md:flex-row gap-6">
-                        {/* Top Performer Card */}
-                        <div className="md:w-1/3 bg-slate-50 rounded-xl border border-slate-200 p-4">
-                          <div className="flex flex-col items-center text-center">
-                            <div className="relative w-20 h-20 overflow-hidden rounded-full border-4 border-slate-100 mb-3">
-                              {bestTeamMember.photoURL ? (
-                                <Image 
-                                  src={bestTeamMember.photoURL} 
-                                  alt={bestTeamMember.userName}
-                                  fill
-                                  className="object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xl">
-                                  {bestTeamMember.userName.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                              <div className="absolute -bottom-1 -right-1 bg-amber-400 text-slate-800 rounded-full w-8 h-8 flex items-center justify-center">
-                                <FaTrophy size={14} />
-                              </div>
-                            </div>
-                            
-                            <h5 className="font-semibold text-lg mb-1">{bestTeamMember.userName}</h5>
-                            <p className="text-slate-500 text-sm mb-3">מוביל/ה בקבוצה</p>
-                            
-                            <div className="bg-slate-100 rounded-full px-6 py-2 inline-flex items-center gap-2">
-                              <span className="text-slate-600">ציון כללי:</span>
-                              <span className={`font-bold text-xl ${getRatingColor(calculateUserRatings(bestTeamMember).overall)}`}>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Overall Score Card - Moved to first position */}
+                    <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 md:col-span-2">
+                      <div className="flex justify-between items-center mb-6">
+                        <h5 className="font-medium text-slate-700">ציון כללי</h5>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className={`font-medium ${getRatingColor(userRatings.overall)}`}>
+                            {userRatings.overall}
+                          </span>
+                          <span className="text-slate-400">/</span>
+                          <span className={`font-medium text-slate-500`}>
+                            {teamAverage.overall}
+                          </span>
+                          {bestTeamMember && (
+                            <>
+                              <span className="text-slate-400">/</span>
+                              <span className={`font-medium text-amber-500`}>
                                 {calculateUserRatings(bestTeamMember).overall}
                               </span>
-                            </div>
-                          </div>
+                            </>
+                          )}
                         </div>
-                        
-                        {/* Comparison Metrics */}
-                        <div className="md:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="bg-white border border-slate-200 rounded-lg p-4">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-slate-700">סיבולת אירובית</span>
-                              <div className="flex items-center gap-2">
-                                <span className={`font-bold ${getRatingColor(userRatings.aerobic)}`}>{userRatings.aerobic}</span>
-                                <span className="text-slate-400 mx-1">vs</span>
-                                <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).aerobic)}`}>
-                                  {calculateUserRatings(bestTeamMember).aerobic}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-2">
-                              <div 
-                                className="absolute h-full right-0 bg-blue-500/80"
-                                style={{ width: `${userRatings.aerobic}%` }}
-                              ></div>
-                              <div 
-                                className="absolute h-full right-0 border-l border-amber-400"
-                                style={{ width: `${calculateUserRatings(bestTeamMember).aerobic}%` }}
-                              ></div>
-                            </div>
-                            
-                            <div className="text-sm flex items-center gap-1">
-                              {getComparisonInfo(userRatings.aerobic, calculateUserRatings(bestTeamMember).aerobic).icon}
-                              <span className={getComparisonInfo(userRatings.aerobic, calculateUserRatings(bestTeamMember).aerobic).color}>
-                                {getComparisonInfo(userRatings.aerobic, calculateUserRatings(bestTeamMember).aerobic).text}
-                              </span>
-                            </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        {/* User's score */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-slate-600 w-16">אתה</span>
+                          <div className="flex-1 relative h-2.5">
+                            <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                            <div 
+                              className="absolute inset-0 bg-blue-500 rounded-full"
+                              style={{ width: `${userRatings.overall}%` }}
+                            ></div>
                           </div>
-                          
-                          <div className="bg-white border border-slate-200 rounded-lg p-4">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-slate-700">סיבולת אנאירובית</span>
-                              <div className="flex items-center gap-2">
-                                <span className={`font-bold ${getRatingColor(userRatings.anaerobic)}`}>{userRatings.anaerobic}</span>
-                                <span className="text-slate-400 mx-1">vs</span>
-                                <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).anaerobic)}`}>
-                                  {calculateUserRatings(bestTeamMember).anaerobic}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-2">
-                              <div 
-                                className="absolute h-full right-0 bg-indigo-500/80"
-                                style={{ width: `${userRatings.anaerobic}%` }}
-                              ></div>
-                              <div 
-                                className="absolute h-full right-0 border-l border-amber-400"
-                                style={{ width: `${calculateUserRatings(bestTeamMember).anaerobic}%` }}
-                              ></div>
-                            </div>
-                            
-                            <div className="text-sm flex items-center gap-1">
-                              {getComparisonInfo(userRatings.anaerobic, calculateUserRatings(bestTeamMember).anaerobic).icon}
-                              <span className={getComparisonInfo(userRatings.anaerobic, calculateUserRatings(bestTeamMember).anaerobic).color}>
-                                {getComparisonInfo(userRatings.anaerobic, calculateUserRatings(bestTeamMember).anaerobic).text}
-                              </span>
-                            </div>
+                          <span className={`text-sm font-medium ${getRatingColor(userRatings.overall)}`}>{userRatings.overall}</span>
+                        </div>
+
+                        {/* Team average */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-slate-600 w-16">ממוצע</span>
+                          <div className="flex-1 relative h-2.5">
+                            <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                            <div 
+                              className="absolute inset-0 bg-slate-400 rounded-full"
+                              style={{ width: `${teamAverage.overall}%` }}
+                            ></div>
                           </div>
-                          
-                          <div className="bg-white border border-slate-200 rounded-lg p-4">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-slate-700">כוח</span>
-                              <div className="flex items-center gap-2">
-                                <span className={`font-bold ${getRatingColor(userRatings.strength)}`}>{userRatings.strength}</span>
-                                <span className="text-slate-400 mx-1">vs</span>
-                                <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).strength)}`}>
-                                  {calculateUserRatings(bestTeamMember).strength}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-2">
+                          <span className="text-sm font-medium text-slate-600">{teamAverage.overall}</span>
+                        </div>
+
+                        {/* Best score */}
+                        {bestTeamMember && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-slate-600 w-16">מוביל/ה</span>
+                            <div className="flex-1 relative h-2.5">
+                              <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
                               <div 
-                                className="absolute h-full right-0 bg-emerald-500/80"
-                                style={{ width: `${userRatings.strength}%` }}
-                              ></div>
-                              <div 
-                                className="absolute h-full right-0 border-l border-amber-400"
-                                style={{ width: `${calculateUserRatings(bestTeamMember).strength}%` }}
-                              ></div>
-                            </div>
-                            
-                            <div className="text-sm flex items-center gap-1">
-                              {getComparisonInfo(userRatings.strength, calculateUserRatings(bestTeamMember).strength).icon}
-                              <span className={getComparisonInfo(userRatings.strength, calculateUserRatings(bestTeamMember).strength).color}>
-                                {getComparisonInfo(userRatings.strength, calculateUserRatings(bestTeamMember).strength).text}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="bg-white border border-slate-200 rounded-lg p-4">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-slate-700">ציון כללי</span>
-                              <div className="flex items-center gap-2">
-                                <span className={`font-bold ${getRatingColor(userRatings.overall)}`}>{userRatings.overall}</span>
-                                <span className="text-slate-400 mx-1">vs</span>
-                                <span className={`font-bold ${getRatingColor(calculateUserRatings(bestTeamMember).overall)}`}>
-                                  {calculateUserRatings(bestTeamMember).overall}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-2">
-                              <div 
-                                className="absolute h-full right-0 bg-slate-700/80"
-                                style={{ width: `${userRatings.overall}%` }}
-                              ></div>
-                              <div 
-                                className="absolute h-full right-0 border-l border-amber-400"
+                                className="absolute inset-0 bg-amber-400 rounded-full"
                                 style={{ width: `${calculateUserRatings(bestTeamMember).overall}%` }}
                               ></div>
                             </div>
-                            
-                            <div className="text-sm flex items-center gap-1">
-                              {getComparisonInfo(userRatings.overall, calculateUserRatings(bestTeamMember).overall).icon}
-                              <span className={getComparisonInfo(userRatings.overall, calculateUserRatings(bestTeamMember).overall).color}>
-                                {getComparisonInfo(userRatings.overall, calculateUserRatings(bestTeamMember).overall).text}
-                              </span>
-                            </div>
+                            <span className="text-sm font-medium text-amber-500">
+                              {calculateUserRatings(bestTeamMember).overall}
+                            </span>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                )}
-                
-                {/* Metrics Comparison Tabs */}
-                <div className="p-5 border border-slate-200 rounded-xl shadow-sm bg-white">
-                  <h4 className="font-medium text-lg mb-6 text-slate-800">השוואה לממוצע הקבוצה לפי קטגוריות</h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
                     {/* Aerobic Card */}
-                    <div className="bg-slate-50 rounded-xl overflow-hidden border border-slate-200">
-                      <div className="p-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FaRunning size={16} />
-                          <h5 className="font-medium">סיבולת אירובית</h5>
+                    <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <h5 className="font-medium text-slate-700">סיבולת אירובית</h5>
+                          <p className="text-sm text-slate-500 mt-1">ריצת 3,000</p>
                         </div>
-                        <div className="bg-white/10 px-2 py-1 rounded text-xs">
-                          ריצת 3000 מ׳
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className={`font-medium ${getRatingColor(userRatings.aerobic)}`}>
+                            {userRatings.aerobic}
+                          </span>
+                          <span className="text-slate-400">/</span>
+                          <span className={`font-medium text-slate-500`}>
+                            {teamAverage.aerobic}
+                          </span>
+                          {bestTeamMember && (
+                            <>
+                              <span className="text-slate-400">/</span>
+                              <span className={`font-medium text-amber-500`}>
+                                {calculateUserRatings(bestTeamMember).aerobic}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                       
-                      <div className="p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-slate-600">אתה</span>
-                          <div className="flex items-center gap-1">
-                            <span className={`text-xl font-bold ${getRatingColor(userRatings.aerobic)}`}>
-                              {userRatings.aerobic}
+                      <div className="space-y-3">
+                        {/* User's score */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-slate-600 w-16">אתה</span>
+                          <div className="flex-1 relative h-2">
+                            <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                            <div 
+                              className="absolute inset-0 bg-blue-500 rounded-full"
+                              style={{ width: `${userRatings.aerobic}%` }}
+                            ></div>
+                          </div>
+                          <span className={`text-sm font-medium ${getRatingColor(userRatings.aerobic)}`}>{userRatings.aerobic}</span>
+                        </div>
+
+                        {/* Team average */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-slate-600 w-16">ממוצע</span>
+                          <div className="flex-1 relative h-2">
+                            <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                            <div 
+                              className="absolute inset-0 bg-slate-400 rounded-full"
+                              style={{ width: `${teamAverage.aerobic}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-medium text-slate-600">{teamAverage.aerobic}</span>
+                        </div>
+
+                        {/* Best score */}
+                        {bestTeamMember && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-slate-600 w-16">מוביל/ה</span>
+                            <div className="flex-1 relative h-2">
+                              <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                              <div 
+                                className="absolute inset-0 bg-amber-400 rounded-full"
+                                style={{ width: `${calculateUserRatings(bestTeamMember).aerobic}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-medium text-amber-500">
+                              {calculateUserRatings(bestTeamMember).aerobic}
                             </span>
                           </div>
-                        </div>
-                        
-                        <div className="flex justify-between items-center mb-4">
-                          <span className="text-slate-600">ממוצע הקבוצה</span>
-                          <div className="flex items-center gap-1">
-                            <span className={`text-xl font-bold ${getRatingColor(teamAverage.aerobic)}`}>
-                              {teamAverage.aerobic}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
-                          <div 
-                            className="absolute h-full right-0 bg-blue-500/80"
-                            style={{ width: `${userRatings.aerobic}%` }}
-                          ></div>
-                          <div 
-                            className="absolute h-full right-0 border-l border-slate-400"
-                            style={{ width: `${teamAverage.aerobic}%` }}
-                          ></div>
-                        </div>
-                        
-                        <div className="text-sm text-slate-600">
-                          {getComparisonInfo(userRatings.aerobic, teamAverage.aerobic).text}
-                        </div>
+                        )}
                       </div>
                     </div>
-                    
+
                     {/* Anaerobic Card */}
-                    <div className="bg-slate-50 rounded-xl overflow-hidden border border-slate-200">
-                      <div className="p-4 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FaBolt size={16} />
-                          <h5 className="font-medium">סיבולת אנאירובית</h5>
+                    <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <h5 className="font-medium text-slate-700">סיבולת אנאירובית</h5>
+                          <p className="text-sm text-slate-500 mt-1">ריצת 400</p>
                         </div>
-                        <div className="bg-white/10 px-2 py-1 rounded text-xs">
-                          ריצת 400 מ׳
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className={`font-medium ${getRatingColor(userRatings.anaerobic)}`}>
+                            {userRatings.anaerobic}
+                          </span>
+                          <span className="text-slate-400">/</span>
+                          <span className={`font-medium text-slate-500`}>
+                            {teamAverage.anaerobic}
+                          </span>
+                          {bestTeamMember && (
+                            <>
+                              <span className="text-slate-400">/</span>
+                              <span className={`font-medium text-amber-500`}>
+                                {calculateUserRatings(bestTeamMember).anaerobic}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                       
-                      <div className="p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-slate-600">אתה</span>
-                          <div className="flex items-center gap-1">
-                            <span className={`text-xl font-bold ${getRatingColor(userRatings.anaerobic)}`}>
-                              {userRatings.anaerobic}
+                      <div className="space-y-3">
+                        {/* User's score */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-slate-600 w-16">אתה</span>
+                          <div className="flex-1 relative h-2">
+                            <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                            <div 
+                              className="absolute inset-0 bg-blue-500 rounded-full"
+                              style={{ width: `${userRatings.anaerobic}%` }}
+                            ></div>
+                          </div>
+                          <span className={`text-sm font-medium ${getRatingColor(userRatings.anaerobic)}`}>{userRatings.anaerobic}</span>
+                        </div>
+
+                        {/* Team average */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-slate-600 w-16">ממוצע</span>
+                          <div className="flex-1 relative h-2">
+                            <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                            <div 
+                              className="absolute inset-0 bg-slate-400 rounded-full"
+                              style={{ width: `${teamAverage.anaerobic}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-medium text-slate-600">{teamAverage.anaerobic}</span>
+                        </div>
+
+                        {/* Best score */}
+                        {bestTeamMember && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-slate-600 w-16">מוביל/ה</span>
+                            <div className="flex-1 relative h-2">
+                              <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                              <div 
+                                className="absolute inset-0 bg-amber-400 rounded-full"
+                                style={{ width: `${calculateUserRatings(bestTeamMember).anaerobic}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-medium text-amber-500">
+                              {calculateUserRatings(bestTeamMember).anaerobic}
                             </span>
                           </div>
-                        </div>
-                        
-                        <div className="flex justify-between items-center mb-4">
-                          <span className="text-slate-600">ממוצע הקבוצה</span>
-                          <div className="flex items-center gap-1">
-                            <span className={`text-xl font-bold ${getRatingColor(teamAverage.anaerobic)}`}>
-                              {teamAverage.anaerobic}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
-                          <div 
-                            className="absolute h-full right-0 bg-indigo-500/80"
-                            style={{ width: `${userRatings.anaerobic}%` }}
-                          ></div>
-                          <div 
-                            className="absolute h-full right-0 border-l border-slate-400"
-                            style={{ width: `${teamAverage.anaerobic}%` }}
-                          ></div>
-                        </div>
-                        
-                        <div className="text-sm text-slate-600">
-                          {getComparisonInfo(userRatings.anaerobic, teamAverage.anaerobic).text}
-                        </div>
+                        )}
                       </div>
                     </div>
-                    
+
                     {/* Strength Card */}
-                    <div className="bg-slate-50 rounded-xl overflow-hidden border border-slate-200">
-                      <div className="p-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FaDumbbell size={16} />
-                          <h5 className="font-medium">כוח</h5>
+                    <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <h5 className="font-medium text-slate-700">כוח</h5>
+                          <p className="text-sm text-slate-500 mt-1">שכיבות סמיכה + מתח</p>
                         </div>
-                        <div className="bg-white/10 px-2 py-1 rounded text-xs">
-                          מתח, שכיבות סמיכה, בטן
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className={`font-medium ${getRatingColor(userRatings.strength)}`}>
+                            {userRatings.strength}
+                          </span>
+                          <span className="text-slate-400">/</span>
+                          <span className={`font-medium text-slate-500`}>
+                            {teamAverage.strength}
+                          </span>
+                          {bestTeamMember && (
+                            <>
+                              <span className="text-slate-400">/</span>
+                              <span className={`font-medium text-amber-500`}>
+                                {calculateUserRatings(bestTeamMember).strength}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                       
-                      <div className="p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-slate-600">אתה</span>
-                          <div className="flex items-center gap-1">
-                            <span className={`text-xl font-bold ${getRatingColor(userRatings.strength)}`}>
-                              {userRatings.strength}
+                      <div className="space-y-3">
+                        {/* User's score */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-slate-600 w-16">אתה</span>
+                          <div className="flex-1 relative h-2">
+                            <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                            <div 
+                              className="absolute inset-0 bg-blue-500 rounded-full"
+                              style={{ width: `${userRatings.strength}%` }}
+                            ></div>
+                          </div>
+                          <span className={`text-sm font-medium ${getRatingColor(userRatings.strength)}`}>{userRatings.strength}</span>
+                        </div>
+
+                        {/* Team average */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-slate-600 w-16">ממוצע</span>
+                          <div className="flex-1 relative h-2">
+                            <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                            <div 
+                              className="absolute inset-0 bg-slate-400 rounded-full"
+                              style={{ width: `${teamAverage.strength}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-medium text-slate-600">{teamAverage.strength}</span>
+                        </div>
+
+                        {/* Best score */}
+                        {bestTeamMember && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-slate-600 w-16">מוביל/ה</span>
+                            <div className="flex-1 relative h-2">
+                              <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                              <div 
+                                className="absolute inset-0 bg-amber-400 rounded-full"
+                                style={{ width: `${calculateUserRatings(bestTeamMember).strength}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-medium text-amber-500">
+                              {calculateUserRatings(bestTeamMember).strength}
                             </span>
                           </div>
-                        </div>
-                        
-                        <div className="flex justify-between items-center mb-4">
-                          <span className="text-slate-600">ממוצע הקבוצה</span>
-                          <div className="flex items-center gap-1">
-                            <span className={`text-xl font-bold ${getRatingColor(teamAverage.strength)}`}>
-                              {teamAverage.strength}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
-                          <div 
-                            className="absolute h-full right-0 bg-emerald-500/80"
-                            style={{ width: `${userRatings.strength}%` }}
-                          ></div>
-                          <div 
-                            className="absolute h-full right-0 border-l border-slate-400"
-                            style={{ width: `${teamAverage.strength}%` }}
-                          ></div>
-                        </div>
-                        
-                        <div className="text-sm text-slate-600">
-                          {getComparisonInfo(userRatings.strength, teamAverage.strength).text}
-                        </div>
+                        )}
                       </div>
                     </div>
                   </div>

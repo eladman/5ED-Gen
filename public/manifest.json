@@ -1,0 +1,29 @@
+{
+  "name": "חמש אצבעות",
+  "short_name": "חמש אצבעות",
+  "description": "תוכניות אימון אישיות ומעקב אחר התקדמות",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "he",
+  "prefer_related_applications": false,
+  "display_override": ["standalone", "minimal-ui"],
+  "categories": ["fitness", "health", "lifestyle"]
+} 

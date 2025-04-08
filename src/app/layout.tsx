@@ -8,6 +8,7 @@ import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import Navbar from './components/Navbar'
+import PWAUpdateNotification from './components/PWAUpdateNotification'
 
 const heebo = Heebo({ 
   subsets: ['hebrew', 'latin'],
@@ -18,6 +19,36 @@ const heebo = Heebo({
 export const metadata: Metadata = {
   title: 'חמש אצבעות - תוכניות אימון אישיות',
   description: 'פלטפורמה מתקדמת ליצירת תוכניות אימון אישיות ומעקב אחר התקדמות',
+  manifest: '/manifest.json',
+  themeColor: '#ffffff',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'חמש אצבעות',
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+  icons: {
+    icon: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/icon-192x192.png' },
+    ],
+    shortcut: [
+      { url: '/icons/icon-512x512.png' },
+    ],
+  },
+  other: {
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'white',
+    'mobile-web-app-capable': 'yes',
+  },
 }
 
 export default function RootLayout({
@@ -41,6 +72,7 @@ export default function RootLayout({
                   direction: 'rtl'
                 },
               }} />
+              <PWAUpdateNotification />
               <Analytics />
               <SpeedInsights />
             </DeepgramProvider>
