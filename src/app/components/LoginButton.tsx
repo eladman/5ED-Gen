@@ -15,6 +15,7 @@ export default function LoginButton({ isAcademy = false }: LoginButtonProps) {
   const router = useRouter();
   const [localError, setLocalError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -53,28 +54,34 @@ export default function LoginButton({ isAcademy = false }: LoginButtonProps) {
   };
 
   if (user) {
-    return (
-      <button
-        onClick={signOut}
-        className={`${
-          isAcademy
-            ? 'text-white hover:text-gray-200'
-            : 'text-gray-600 hover:text-[#ff8714]'
-        } transition-colors`}
-      >
-        התנתק
-      </button>
-    );
+    return null;
   }
 
   return (
     <button
       onClick={handleAuth}
-      className={`${
-        isAcademy
-          ? 'text-white hover:text-gray-200'
-          : 'text-gray-600 hover:text-[#ff8714]'
-      } transition-colors`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`
+        relative
+        px-6 py-2.5
+        rounded-full
+        text-sm font-medium
+        transition-all duration-300
+        ${isAcademy 
+          ? 'text-white border border-white/30 hover:border-white/60' 
+          : 'text-[#ff8714] border border-[#ff8714]/30 hover:border-[#ff8714]/60'
+        }
+        before:absolute before:inset-0 before:rounded-full
+        before:transition-all before:duration-300
+        ${isAcademy
+          ? 'before:bg-white/5 hover:before:bg-white/10'
+          : 'before:bg-[#ff8714]/5 hover:before:bg-[#ff8714]/10'
+        }
+        hover:scale-[1.02]
+        active:scale-[0.98]
+        overflow-hidden
+      `}
     >
       התחבר
     </button>

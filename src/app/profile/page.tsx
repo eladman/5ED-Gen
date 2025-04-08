@@ -10,7 +10,7 @@ import TeamSelector from '@/components/TeamSelector';
 import { getTeamById, getTeamAge } from '@/lib/teamUtils';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',
@@ -354,6 +354,16 @@ export default function ProfilePage() {
                     שגיאה בשמירת הפרופיל
                   </div>
                 )}
+              </div>
+
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => signOut().then(() => router.push('/'))}
+                  className="w-full text-gray-500 hover:text-red-500 py-2 rounded-md transition-colors duration-200"
+                >
+                  התנתק
+                </button>
               </div>
             </div>
           </form>

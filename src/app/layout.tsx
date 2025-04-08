@@ -8,7 +8,6 @@ import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import Navbar from './components/Navbar'
-import ScrollProgress from './components/ScrollProgress'
 
 const heebo = Heebo({ 
   subsets: ['hebrew', 'latin'],
@@ -32,7 +31,6 @@ export default function RootLayout({
         <AuthProvider>
           <ProfileProvider>
             <DeepgramProvider>
-              <ScrollProgress />
               <Navbar />
               {children}
               <Toaster position="top-center" toastOptions={{
