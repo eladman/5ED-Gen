@@ -3,9 +3,15 @@
 import LoginButton from "./LoginButton";
 import { useAuth } from "@/lib/hooks/useAuth";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import InstallPWAButton from "./InstallPWAButton";
+import dynamic from "next/dynamic";
+
+// Import PWA button with no SSR to prevent hydration issues
+const InstallPWAButton = dynamic(
+  () => import("./InstallPWAButton"),
+  { ssr: false }
+);
 
 interface NavbarProps {
   isAcademy?: boolean;
@@ -15,6 +21,11 @@ interface NavbarProps {
 export default function Navbar({ isAcademy = false, isLoading = false }: NavbarProps) {
   const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -65,8 +76,8 @@ export default function Navbar({ isAcademy = false, isLoading = false }: NavbarP
           </div>
           
           <div className="flex items-center space-x-4 space-x-reverse">
-            {/* PWA Install Button - Only show when user is signed in */}
-            {user && <InstallPWAButton />}
+            {/* PWA Install Button - Only show when user is signed in and client-side */}
+            {user && isMounted && <InstallPWAButton />}
             <LoginButton isAcademy={isAcademy || isLoading} />
           </div>
         </div>

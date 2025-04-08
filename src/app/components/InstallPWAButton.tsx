@@ -18,57 +18,69 @@ export default function InstallPWAButton() {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches || 
-        (window.navigator as NavigatorWithStandalone).standalone === true) {
-      setIsInstalled(true);
+    // Make sure we're in the browser environment
+    if (typeof window === 'undefined') return;
+
+    try {
+      // Check if already installed
+      if (window.matchMedia('(display-mode: standalone)').matches || 
+          (window.navigator as NavigatorWithStandalone).standalone === true) {
+        setIsInstalled(true);
+        return;
+      }
+
+      const handleBeforeInstallPrompt = (e: Event) => {
+        // Prevent the mini-infobar from appearing on mobile
+        e.preventDefault();
+        // Store the event so it can be triggered later
+        setDeferredPrompt(e as BeforeInstallPromptEvent);
+        // Update UI to notify the user they can install the PWA
+        setIsInstallable(true);
+      };
+
+      const handleAppInstalled = () => {
+        // Hide the app-provided install promotion
+        setIsInstallable(false);
+        setIsInstalled(true);
+        // Clear the deferredPrompt
+        setDeferredPrompt(null);
+      };
+
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.addEventListener('appinstalled', handleAppInstalled);
+
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.removeEventListener('appinstalled', handleAppInstalled);
+      };
+    } catch (error) {
+      console.error('Error in PWA install button setup:', error);
       return;
     }
-
-    const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent the mini-infobar from appearing on mobile
-      e.preventDefault();
-      // Store the event so it can be triggered later
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      // Update UI to notify the user they can install the PWA
-      setIsInstallable(true);
-    };
-
-    const handleAppInstalled = () => {
-      // Hide the app-provided install promotion
-      setIsInstallable(false);
-      setIsInstalled(true);
-      // Clear the deferredPrompt
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
   }, []);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
 
-    // Show the install prompt
-    await deferredPrompt.prompt();
-    
-    // Wait for the user to respond to the prompt
-    const choiceResult = await deferredPrompt.userChoice;
-    
-    if (choiceResult.outcome === 'accepted') {
-      console.log('User accepted the install prompt');
-    } else {
-      console.log('User dismissed the install prompt');
+    try {
+      // Show the install prompt
+      await deferredPrompt.prompt();
+      
+      // Wait for the user to respond to the prompt
+      const choiceResult = await deferredPrompt.userChoice;
+      
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+      
+      // We no longer need the prompt. Clear it up.
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+    } catch (error) {
+      console.error('Error during PWA installation:', error);
     }
-    
-    // We no longer need the prompt. Clear it up.
-    setDeferredPrompt(null);
-    setIsInstallable(false);
   };
 
   if (!isInstallable || isInstalled) {

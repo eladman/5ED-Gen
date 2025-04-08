@@ -8,10 +8,17 @@ export default function PWAUpdateNotification() {
   const [showReload, setShowReload] = useState(false);
 
   useEffect(() => {
-    // Check if we're in a browser and if service workers are supported
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      // Add event listeners for when a new service worker is waiting
-      navigator.serviceWorker.ready.then(registration => {
+    // Make sure we're in the browser environment
+    if (typeof window === 'undefined') return;
+    
+    // Check if service workers are supported
+    if (!('serviceWorker' in navigator)) return;
+
+    const registerServiceWorker = async () => {
+      try {
+        // Wait for the service worker to be ready
+        const registration = await navigator.serviceWorker.ready;
+
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           if (newWorker) {
@@ -67,24 +74,32 @@ export default function PWAUpdateNotification() {
           setWaitingWorker(registration.waiting);
           setShowReload(true);
         }
-      });
 
-      // Add event listener for when a new service worker takes over
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          window.location.reload();
-          refreshing = true;
-        }
-      });
-    }
+        // Add event listener for when a new service worker takes over
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            window.location.reload();
+            refreshing = true;
+          }
+        });
+      } catch (error) {
+        console.error('Service worker registration error:', error);
+      }
+    };
+
+    registerServiceWorker();
   }, []);
 
   const updateServiceWorker = () => {
-    if (waitingWorker) {
+    if (!waitingWorker) return;
+    
+    try {
       // Send skip waiting message to the waiting service worker
       waitingWorker.postMessage({ type: 'SKIP_WAITING' });
       setShowReload(false);
+    } catch (error) {
+      console.error('Error updating service worker:', error);
     }
   };
 

@@ -8,7 +8,13 @@ import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import Navbar from './components/Navbar'
-import PWAUpdateNotification from './components/PWAUpdateNotification'
+import dynamic from 'next/dynamic'
+
+// Import PWA components with no SSR to prevent hydration issues
+const PWAUpdateNotification = dynamic(
+  () => import('./components/PWAUpdateNotification'),
+  { ssr: false }
+)
 
 const heebo = Heebo({ 
   subsets: ['hebrew', 'latin'],
