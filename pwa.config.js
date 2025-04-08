@@ -7,7 +7,7 @@ module.exports = {
   sw: 'sw.js',
   
   // PWA Update Strategy
-  immediatelyClaimClients: false, // Changed to false to allow update notifications
+  clientsClaim: false, // Set to false to allow update notifications
   skipWaiting: false, // Changed to false to allow update notifications
   
   // Cache settings
