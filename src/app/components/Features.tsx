@@ -59,7 +59,7 @@ export default function Features() {
           className="text-center max-w-3xl mx-auto mb-16"
           dir="rtl"
         >
-          <h2 className="heading-2 mb-6 text-gray-900">
+          <h2 className="heading-2 mb-6 text-gray-800">
             למה לבחור ב<span className="text-gradient">חמש אצבעות</span>?
           </h2>
           <p className="text-xl text-gray-600">

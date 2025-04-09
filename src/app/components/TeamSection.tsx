@@ -73,16 +73,6 @@ export default function TeamSection() {
             <motion.p variants={item} className="text-lg text-gray-600">
               אנו משלבים ידע מעמיק בתחום האימון הגופני עם טכנולוגיה מתקדמת כדי ליצור חוויית אימון אישית וייחודית.
             </motion.p>
-            
-            <motion.div variants={item} className="pt-4">
-              <motion.button 
-                className="px-8 py-3 rounded-lg border-2 border-[#ff8714] text-[#ff8714] font-semibold hover:bg-[#ff8714] hover:text-white transition-all duration-300"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                קרא עוד עלינו
-              </motion.button>
-            </motion.div>
           </motion.div>
         </div>
       </div>
