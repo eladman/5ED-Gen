@@ -1,8 +1,8 @@
 "use client";
 
-import Navbar from '../../components/Navbar';
-import VideosSection from '../../components/VideosSection';
-import AcademyNav from '../../components/AcademyNav';
+import Navbar from '@/components/Navbar';
+import VideosSection from '@/components/VideosSection';
+import AcademyNav from '@/components/AcademyNav';
 
 export default function VideosPage() {
   return (

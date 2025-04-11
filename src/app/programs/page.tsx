@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { getProfile } from '@/lib/firebase/profileUtils';
-import SavedWorkouts from '../components/SavedWorkouts';
-import Navbar from '../components/Navbar';
+import SavedWorkouts from '@/components/SavedWorkouts';
+import Navbar from '@/components/Navbar';
 import { redirect, useRouter } from 'next/navigation';
 import { FaPlus } from 'react-icons/fa';
 
