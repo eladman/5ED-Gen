@@ -4,9 +4,12 @@ import { NextResponse } from 'next/server';
 // For build purposes, use a placeholder API key if the environment variable is missing
 const apiKey = process.env.OPENAI_API_KEY || 'sk-placeholder-for-build-purposes-only';
 
-const openai = new OpenAI({
-  apiKey: apiKey,
-});
+// Initialize OpenAI client only when needed, not at module level
+const getOpenAIClient = () => {
+  return new OpenAI({
+    apiKey: apiKey,
+  });
+};
 
 // Default enhancement templates for fallback
 const defaultEnhancements = {
@@ -254,6 +257,9 @@ export async function POST(req: Request) {
       }
       
       VERY IMPORTANT: ALL CONTENT MUST BE IN HEBREW (עברית) ONLY.`;
+      
+      // Initialize OpenAI client only when needed
+      const openai = getOpenAIClient();
       
       const completion = await openai.chat.completions.create({
         model: "gpt-4o", // Using GPT-4o for better exercise enhancement
