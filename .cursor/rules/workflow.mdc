@@ -7,6 +7,7 @@ alwaysApply: true
 
 1.  **Merging:** Before merging a branch you are working on, always pull the latest changes from the `dev` branch first to check for and resolve any potential conflicts.
 2.  **Branch Scope:** When working on a specific feature or bugfix branch, ensure that your changes are strictly related to that branch's purpose. Avoid introducing unrelated changes from other branches.
+3. Before pushing to any branch, run the tests to make sure everything works.
 
 ## Design System
 
