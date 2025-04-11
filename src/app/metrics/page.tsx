@@ -3,15 +3,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import Navbar from "@/components/Navbar";
 import { FaRunning, FaDumbbell, FaStopwatch, FaPlus, FaTrash, FaUsers, FaChartBar, FaPencilAlt } from "react-icons/fa";
 import { GiSittingDog } from "react-icons/gi";
 import toast, { Toaster } from "react-hot-toast";
 import { addDocument, getDocuments, deleteDocument, updateDocument } from "@/lib/firebase/firebaseUtils";
 import MetricsFifaCard from "@/components/MetricsFifaCard";
 import MetricsComparison, { MetricsComparisonProps } from "@/components/MetricsComparison";
-import StartYearMetrics from "@/components/StartYearMetrics";
-import YearStartDialog from "@/components/YearStartDialog";
-import YearStartMetricsForm from "@/components/YearStartMetricsForm";
 import { getProfile } from "@/lib/firebase/profileUtils";
 import { getTeamNameById } from '@/lib/teamUtils';
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
@@ -29,8 +27,8 @@ export interface Metrics extends MetricsForm {
   id: string;
   userId: string;
   createdAt: string;
-  isYearStart?: boolean;
 }
+
 
 export default function MetricsPage() {
   const { user } = useAuth();
@@ -39,8 +37,6 @@ export default function MetricsPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'personal' | 'social'>('personal');
-  const [showYearStartDialog, setShowYearStartDialog] = useState(false);
-  const [isEnteringYearStartMetrics, setIsEnteringYearStartMetrics] = useState(false);
   const [metrics, setMetrics] = useState<MetricsForm>({
     run3000m: "",
     pullUps: "",
@@ -406,7 +402,7 @@ export default function MetricsPage() {
     }
   };
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
     if (name === 'pullUps' || name === 'pushUps' || name === 'sitUps2min') {
@@ -421,9 +417,9 @@ export default function MetricsPage() {
         [name]: value
       }));
     }
-  }, [setMetrics]); // Dependency: setMetrics
+  };
 
-  const handleTimeChange = useCallback((metricName: 'run3000m' | 'run400m', field: 'minutes' | 'seconds', value: string) => {
+  const handleTimeChange = (metricName: 'run3000m' | 'run400m', field: 'minutes' | 'seconds', value: string) => {
     if (value !== '' && !/^\d+$/.test(value)) return;
     
     if (field === 'minutes' && value !== '' && parseInt(value) > 99) return;
@@ -436,7 +432,7 @@ export default function MetricsPage() {
         [field]: value
       }
     }));
-  }, [setTimeInputs]); // Dependency: setTimeInputs
+  };
 
   const parseTimeToInputs = (timeString: string) => {
     if (!timeString || !timeString.includes(':')) return { minutes: '', seconds: '' };
@@ -575,125 +571,17 @@ export default function MetricsPage() {
     setMetrics(prev => ({ ...prev, [name]: value }));
   }, []);
 
-  // Handle year start metrics time inputs
-  const handleYearStartTimeChange = useCallback((metricName: 'run3000m' | 'run400m', field: 'minutes' | 'seconds', value: string) => {
-    if (value !== '' && !/^\d+$/.test(value)) return;
-    
-    if (field === 'minutes' && value !== '' && parseInt(value) > 99) return;
-    if (field === 'seconds' && value !== '' && parseInt(value) > 59) return;
-    
-    setTimeInputs(prev => ({
-      ...prev,
-      [metricName]: {
-        ...prev[metricName],
-        [field]: value
-      }
-    }));
-  }, [setTimeInputs]); // Dependency: setTimeInputs
-
-  // Handle year start metrics input change
-  const handleYearStartChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    
-    if (name === 'pullUps' || name === 'pushUps' || name === 'sitUps2min') {
-      const numValue = value === '' ? '' : Math.max(0, parseInt(value)).toString();
-      setMetrics(prev => ({
-        ...prev,
-        [name]: numValue
-      }));
-    } else {
-      setMetrics(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  }, [setMetrics]); // Dependency: setMetrics
-
-  // Function to save year start metrics
-  const saveYearStartMetrics = useCallback(async (submittedData: MetricsForm): Promise<boolean> => {
-    const yearStartDate = new Date(new Date().getFullYear(), 0, 1).toISOString(); // January 1st of current year
-    
-    const metricsToSave = {
-      ...submittedData,
-      userId: user?.uid || '',
-      createdAt: yearStartDate,
-      isYearStart: true
-    };
-
-    const loadingToast = toast.loading('שומר מדדים תחילת שנה...') as string;
-
-    try {
-      // Save to Firestore
-      const savedMetric = await addDocument('metrics', metricsToSave);
-      
-      // Create a complete metrics object
-      const completeMetric: Metrics = {
-        ...metricsToSave,
-        id: savedMetric.id,
-        userId: user?.uid || '' 
-      };
-      
-      // Update local state to include the year start metrics
-      setPreviousMetrics(prev => [...prev, completeMetric].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-      
-      toast.success('מדדים תחילת שנה נשמרו בהצלחה!', { id: loadingToast });
-      return true; // Indicate success
-    } catch (error) {
-      console.error('Error saving year start metrics:', error);
-      toast.error('אירעה שגיאה בשמירת מדדים תחילת שנה', { id: loadingToast });
-      return false; // Indicate failure
-    }
-  }, [user, setPreviousMetrics]); // Dependencies: user, setPreviousMetrics
-
-  // Handle start of the metrics creation workflow
-  const startMetricsWorkflow = useCallback(() => {
-    setShowYearStartDialog(true);
-  }, []);
-
-  // Handlers for the YearStartDialog
-  const handleConfirmYearStart = useCallback(() => {
-    setShowYearStartDialog(false);
-    setIsEnteringYearStartMetrics(true);
-  }, []);
-
-  const handleRejectYearStart = useCallback(() => {
-    setShowYearStartDialog(false);
-    setShowForm(true); // Go directly to current metrics form
-  }, []);
-
-  // Handler for YearStartMetricsForm submission
-  const handleYearStartFormSubmit = useCallback(async (data: MetricsForm) => {
-    const success = await saveYearStartMetrics(data);
-    if (success) {
-      setIsEnteringYearStartMetrics(false);
-      setShowForm(true); // Proceed to current metrics form
-    }
-    return success; // Return success status
-  }, [saveYearStartMetrics]);
-
-  // Handler for YearStartMetricsForm cancellation
-  const handleYearStartFormCancel = useCallback(() => {
-    setIsEnteringYearStartMetrics(false);
-    setShowYearStartDialog(true); // Go back to the dialog
-  }, []);
-
   if (!user || isCheckingProfile) {
     return null;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <Navbar isLoading={isLoading} />
       <Toaster position="bottom-center" />
+      
       <div className="container mx-auto px-4 pt-20 pb-8">
         <div className="flex flex-col gap-4">
-          {/* Year Start Dialog */} 
-          {showYearStartDialog && (
-            <YearStartDialog 
-              onConfirm={handleConfirmYearStart}
-              onReject={handleRejectYearStart} 
-            />
-          )}
-          
           {/* Tab Navigation - Enhanced with pill style */}
           <div className="flex justify-center mb-8 mt-4">
             <div className="bg-gray-100 p-1.5 rounded-full inline-flex shadow-md">
@@ -724,21 +612,19 @@ export default function MetricsPage() {
 
           {activeTab === 'personal' ? (
             <div className="animate-fadeIn">
-              {/* Personal Metrics Tab Content */} 
-              {/* Year Start Metrics Form - Render the imported component */}
-              {isEnteringYearStartMetrics && (
-                <YearStartMetricsForm 
-                  onSubmit={handleYearStartFormSubmit}
-                  onCancel={handleYearStartFormCancel} 
-                />
-              )}
-              
+              {/* Personal Metrics Tab Content */}
               {/* Add New Metrics Button - Only show if no metrics exist */}
               {previousMetrics.length === 0 && (
                 <div className="fixed bottom-6 right-6 z-10">
                   <button
-                    onClick={startMetricsWorkflow} // Use the workflow starter
-                    className={`flex items-center justify-center w-14 h-14 rounded-full bg-[#ff8714] text-white shadow-lg hover:bg-[#e67200] transition-all duration-200 ${showForm ? 'rotate-45' : ''}`}
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditingMetric(null);
+                      setShowForm(!showForm);
+                    }}
+                    className={`flex items-center justify-center w-14 h-14 rounded-full bg-[#ff8714] text-white shadow-lg hover:bg-[#e67200] transition-all duration-200 ${
+                      showForm ? 'rotate-45' : ''
+                    }`}
                     aria-label={showForm ? "Close form" : "Add new metrics"}
                   >
                     <FaPlus className="w-5 h-5" />
@@ -747,7 +633,7 @@ export default function MetricsPage() {
               )}
               
               {/* Edit button when user has metrics but form is not open */}
-              {previousMetrics.length > 0 && !showForm && !isEnteringYearStartMetrics && (
+              {previousMetrics.length > 0 && !showForm && (
                 <div className="fixed bottom-6 right-6 z-10">
                   <button
                     onClick={() => handleEdit(previousMetrics[0])}
@@ -760,17 +646,13 @@ export default function MetricsPage() {
               )}
 
               {/* Close button when editing metrics */}
-              {showForm && !isEnteringYearStartMetrics && (
+              {showForm && (
                 <div className="fixed bottom-6 right-6 z-10">
                   <button
                     onClick={() => {
                       setShowForm(false);
                       setIsEditing(false);
                       setEditingMetric(null);
-                      // Reset form state for current metrics
-                      setMetrics({ run3000m: "", pullUps: "", pushUps: "", run400m: "", sitUps2min: "" });
-                      setTimeInputs({ run3000m: { minutes: "", seconds: "" }, run400m: { minutes: "", seconds: "" }});
-                      setCurrentStep(1);
                     }}
                     className="flex items-center justify-center w-14 h-14 rounded-full bg-gray-400 text-white shadow-lg hover:bg-gray-500 transition-all duration-200 rotate-45"
                     aria-label="Close form"
@@ -781,7 +663,7 @@ export default function MetricsPage() {
               )}
             
               {/* Metrics Form - Showing with animation */}
-              {showForm && !isEnteringYearStartMetrics && (
+              {showForm && (
                 <div className="bg-white rounded-xl p-6 mb-8 shadow-xl border border-gray-200 animate-slideUp">
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-bold">{isEditing ? 'עריכת מדדים' : 'הזנת מדדים חדשים'}</h2>
@@ -806,7 +688,7 @@ export default function MetricsPage() {
                   </div>
                   
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Step 1 - Aerobic */} 
+                    {/* Step 1 - Aerobic */}
                     {currentStep === 1 && (
                       <div className="space-y-6 animate-fadeIn">
                         <div className="text-center mb-4">
@@ -853,7 +735,7 @@ export default function MetricsPage() {
                       </div>
                     )}
                     
-                    {/* Step 2 - Anaerobic */} 
+                    {/* Step 2 - Anaerobic */}
                     {currentStep === 2 && (
                       <div className="space-y-6 animate-fadeIn">
                         <div className="text-center mb-4">
@@ -900,7 +782,7 @@ export default function MetricsPage() {
                       </div>
                     )}
                     
-                    {/* Step 3 - Strength */} 
+                    {/* Step 3 - Strength */}
                     {currentStep === 3 && (
                       <div className="space-y-6 animate-fadeIn">
                         <div className="text-center mb-4">
@@ -1089,7 +971,7 @@ export default function MetricsPage() {
               )}
                 
               {/* Previous Metrics - Enhanced with better cards */}
-              {previousMetrics.length > 0 && !showForm && !isEnteringYearStartMetrics ? (
+              {previousMetrics.length > 0 ? (
                 <div className="space-y-6">
                   <h2 className="text-xl font-bold flex items-center gap-2">
                     <span className="w-1 h-6 bg-[#ff8714] rounded-full"></span>
@@ -1158,22 +1040,8 @@ export default function MetricsPage() {
                     </div>
                   </div>
                   
-                  {/* Beginning of Year Metrics as a separate section - only show if year start metrics exist */}
-                  {previousMetrics.some(metric => metric.isYearStart) && (
-                    <div className="mt-8 mb-8">
-                      <h3 className="text-lg font-medium flex items-center gap-2 mb-4">
-                        <span className="w-1 h-5 bg-[#ff8714] rounded-full"></span>
-                        מדדים תחילת שנה
-                      </h3>
-                      <StartYearMetrics 
-                        userGender={userGender}
-                        yearStartMetrics={previousMetrics.find(metric => metric.isYearStart)}
-                      />
-                    </div>
-                  )}
-                  
                   {/* Previous Metrics History */}
-                  {previousMetrics.filter(m => !m.isYearStart).length > 1 && (
+                  {previousMetrics.length > 1 && (
                     <>
                       <h3 className="text-lg font-medium flex items-center gap-2 mb-4">
                         <span className="w-1 h-5 bg-gray-300 rounded-full"></span>
@@ -1181,7 +1049,7 @@ export default function MetricsPage() {
                       </h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {previousMetrics.filter(m => !m.isYearStart).slice(1).map((metric) => (
+                        {previousMetrics.slice(1).map((metric) => (
                           <div key={metric.id} className="bg-white rounded-xl p-4 shadow border border-gray-200 relative hover:shadow-md transition-shadow group">
                             <div className="absolute top-3 left-3 flex items-center">
                               <button 
@@ -1243,22 +1111,23 @@ export default function MetricsPage() {
                   )}
                 </div>
               ) : (
-                // Show empty state only if not entering year start metrics
-                !isEnteringYearStartMetrics && (
-                  <div className="text-center py-16 bg-gray-50 rounded-xl border border-gray-200">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#ff8714]/10 mb-4">
-                      <FaRunning className="text-[#ff8714] w-8 h-8" />
-                    </div>
-                    <h3 className="text-xl font-medium mb-2">אין לך עדיין מדדים</h3>
-                    <p className="text-gray-500 mb-6">הוסף מדדים חדשים כדי לראות את הנתונים שלך</p>
-                    <button
-                      onClick={startMetricsWorkflow}
-                      className="px-6 py-3 bg-[#ff8714] text-white rounded-full font-medium hover:bg-[#e67200] transition-colors inline-flex items-center gap-2"
-                    >
-                      <FaPlus /> הזן מדדים חדשים
-                    </button>
+                <div className="text-center py-16 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#ff8714]/10 mb-4">
+                    <FaRunning className="text-[#ff8714] w-8 h-8" />
                   </div>
-                )
+                  <h3 className="text-xl font-medium mb-2">אין לך עדיין מדדים</h3>
+                  <p className="text-gray-500 mb-6">הוסף מדדים חדשים כדי לראות את הנתונים שלך</p>
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditingMetric(null);
+                      setShowForm(true);
+                    }}
+                    className="px-6 py-3 bg-[#ff8714] text-white rounded-full font-medium hover:bg-[#e67200] transition-colors inline-flex items-center gap-2"
+                  >
+                    <FaPlus /> הזן מדדים חדשים
+                  </button>
+                </div>
               )}
             </div>
           ) : (
@@ -1283,8 +1152,9 @@ export default function MetricsPage() {
                     <button
                       onClick={() => {
                         setActiveTab('personal');
-                        // Start the workflow if going back to personal tab to add metrics
-                        startMetricsWorkflow(); 
+                        setIsEditing(false);
+                        setEditingMetric(null);
+                        setShowForm(true);
                       }}
                       className="px-6 py-3 bg-[#ff8714] text-white rounded-full font-medium hover:bg-[#e67200] transition-colors inline-flex items-center gap-2"
                     >
