@@ -36,26 +36,34 @@ jest.mock('next/navigation', () => ({
 }));
 
 // Mock Firebase for testing
-jest.mock('firebase/app', () => {
-  return {
-    initializeApp: jest.fn().mockReturnValue({
-      name: "[DEFAULT]",
-      options: {},
-    }),
-    getApps: jest.fn().mockReturnValue([]),
-    getApp: jest.fn(),
-  };
-});
+jest.mock('firebase/app', () => ({
+  initializeApp: jest.fn().mockReturnValue({
+    name: "[DEFAULT]",
+    options: {},
+  }),
+  getApps: jest.fn().mockReturnValue([]),
+  getApp: jest.fn(),
+}));
 
-jest.mock('firebase/auth', () => {
-  return {
-    getAuth: jest.fn().mockReturnValue({}),
-    signInWithPopup: jest.fn(),
-    signOut: jest.fn(),
-    GoogleAuthProvider: jest.fn().mockImplementation(() => ({})),
-    onAuthStateChanged: jest.fn(),
-  };
-});
+jest.mock('firebase/auth', () => ({
+  getAuth: jest.fn().mockReturnValue({}),
+  signInWithPopup: jest.fn(),
+  signOut: jest.fn(),
+  GoogleAuthProvider: jest.fn().mockImplementation(() => ({})),
+  onAuthStateChanged: jest.fn(),
+}));
+
+jest.mock('firebase/firestore', () => ({
+  getFirestore: jest.fn(() => ({})),
+  // Add mocks for other Firestore functions used if necessary
+  // e.g., collection: jest.fn(), doc: jest.fn(), getDoc: jest.fn(), setDoc: jest.fn(), etc.
+}));
+
+jest.mock('firebase/storage', () => ({
+  getStorage: jest.fn(() => ({})),
+  // Add mocks for other Storage functions used if necessary
+  // e.g., ref: jest.fn(), uploadBytes: jest.fn(), getDownloadURL: jest.fn(), etc.
+}));
 
 // Mock sessionStorage for tests
 Object.defineProperty(window, 'sessionStorage', {
