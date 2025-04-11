@@ -1,18 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Hero from './components/Hero'
-import Features from './components/Features'
-import TeamSection from './components/TeamSection'
-import PurposeSection from './components/PurposeSection'
-import Dashboard from './components/Dashboard'
+import React, { useEffect, useState } from 'react';
+import Hero from '@/components/Hero'
+import Features from '@/components/Features'
+import TeamSection from '@/components/TeamSection'
+import PurposeSection from '@/components/PurposeSection'
+import Dashboard from '@/components/Dashboard'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useProfile } from '@/lib/contexts/ProfileContext';
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
-export default function Home(): JSX.Element {
+export default function Home() {
   const { user, loading } = useAuth();
   const { hasCompleteProfile, isLoading: profileLoading } = useProfile();
   const [mounted, setMounted] = useState(false);

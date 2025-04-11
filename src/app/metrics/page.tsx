@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import Navbar from "@/app/components/Navbar";
+import Navbar from "@/components/Navbar";
 import { FaRunning, FaDumbbell, FaStopwatch, FaPlus, FaTrash, FaUsers, FaChartBar, FaPencilAlt } from "react-icons/fa";
 import { GiSittingDog } from "react-icons/gi";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { addDocument, getDocuments, deleteDocument, updateDocument } from "@/lib/firebase/firebaseUtils";
-import MetricsFifaCard from "@/app/components/MetricsFifaCard";
-import MetricsComparison, { MetricsComparisonProps } from "@/app/components/MetricsComparison";
+import MetricsFifaCard from "@/components/MetricsFifaCard";
+import MetricsComparison, { MetricsComparisonProps } from "@/components/MetricsComparison";
 import { getProfile } from "@/lib/firebase/profileUtils";
 import { getTeamNameById } from '@/lib/teamUtils';
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
@@ -557,13 +557,28 @@ export default function MetricsPage() {
     setCurrentStep(1);
   };
 
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    // Basic validation for time format MM:SS or numbers
+    if ((name === 'run3000m' || name === 'run400m') && !/^(\d{1,2}:)?\d{1,2}$/.test(value) && value !== '') {
+      toast.error("זמן ריצה צריך להיות בפורמט MM:SS או מספר שניות");
+      return;
+    }
+    if ((name === 'pullUps' || name === 'pushUps' || name === 'sitUps2min') && !/^\d*$/.test(value)) {
+      toast.error("מספר חזרות חייב להיות מספר שלם");
+      return;
+    }
+    setMetrics(prev => ({ ...prev, [name]: value }));
+  }, []);
+
   if (!user || isCheckingProfile) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-white text-black pb-16">
-      <Navbar />
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <Navbar isLoading={isLoading} />
+      <Toaster position="bottom-center" />
       
       <div className="container mx-auto px-4 pt-20 pb-8">
         <div className="flex flex-col gap-4">

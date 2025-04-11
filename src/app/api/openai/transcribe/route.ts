@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
+// For build purposes, use a placeholder API key if the environment variable is missing
+const apiKey = process.env.OPENAI_API_KEY || 'sk-placeholder-for-build-purposes-only';
+
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: apiKey,
 });
 
 export async function POST(req: Request) {

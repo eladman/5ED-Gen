@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { saveProfile, getProfile, processProfileImage } from '@/lib/firebase/profileUtils';
-import Navbar from '@/app/components/Navbar';
+import Navbar from '@/components/Navbar';
 import TeamSelector from '@/components/TeamSelector';
 import { getTeamById, getTeamAge } from '@/lib/teamUtils';
+import ImageUpload from '@/components/ImageUpload';
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -60,7 +61,7 @@ export default function ProfilePage() {
     fetchProfile();
   }, [user, router]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === 'phone' && !/^\d*$/.test(value)) return;
     
@@ -81,13 +82,13 @@ export default function ProfilePage() {
       return newData;
     });
     setSaveStatus('idle');
-  };
+  }, []);
 
-  const handleTeamChange = (teamId: string) => {
+  const handleTeamChange = useCallback((teamId: string) => {
     const teamAge = getTeamAge(teamId);
     setFormData(prev => ({ ...prev, team: teamId, teamType: teamAge }));
     setSaveStatus('idle');
-  };
+  }, []);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
