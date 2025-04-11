@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Git Workflow
+
+1.  **Merging:** Before merging a branch you are working on, always pull the latest changes from the `dev` branch first to check for and resolve any potential conflicts.
+2.  **Branch Scope:** When working on a specific feature or bugfix branch, ensure that your changes are strictly related to that branch's purpose. Avoid introducing unrelated changes from other branches.
+
+## Design System
+
+*   **Primary Color:** `#ff8714`
+*   **Background Color:** `#ffffff`
