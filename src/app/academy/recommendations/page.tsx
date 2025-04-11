@@ -2,9 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
-import Navbar from '@/components/Navbar';
-import AcademyNav from '@/components/AcademyNav';
-import BookCard from '@/components/BookCard';
+import { Navbar, AcademyNav, BookCard } from '@/components';
 import { isInFavorites } from '@/lib/firebase/firebaseUtils';
 import { FaPlay, FaMicrophone } from 'react-icons/fa';
 

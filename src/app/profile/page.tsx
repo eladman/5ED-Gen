@@ -5,10 +5,8 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { saveProfile, getProfile, processProfileImage } from '@/lib/firebase/profileUtils';
-import Navbar from '@/components/Navbar';
-import TeamSelector from '@/components/TeamSelector';
+import { Navbar, TeamSelector, ImageUpload } from '@/components';
 import { getTeamById, getTeamAge } from '@/lib/teamUtils';
-import ImageUpload from '@/components/ImageUpload';
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();

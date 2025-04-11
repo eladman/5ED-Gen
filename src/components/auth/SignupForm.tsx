@@ -6,7 +6,7 @@ import { useProfile } from '@/lib/contexts/ProfileContext';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { saveProfile } from '@/lib/firebase/profileUtils';
-import TeamSelector from '@/components/TeamSelector';
+import { TeamSelector } from '@/components';
 import { getTeamAge } from '@/lib/teamUtils';
 
 export default function SignupForm() {
