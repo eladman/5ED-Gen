@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from 'react';
-import Navbar from '@/app/components/Navbar';
-import AcademyNav from '@/app/components/AcademyNav';
-import BookCard from '@/app/components/BookCard';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/hooks/useAuth';
+import Navbar from '@/components/Navbar';
+import AcademyNav from '@/components/AcademyNav';
+import BookCard from '@/components/BookCard';
+import { isInFavorites } from '@/lib/firebase/firebaseUtils';
 import { FaPlay, FaMicrophone } from 'react-icons/fa';
 
 // מידע לדוגמה של המלצות הצוות
@@ -48,6 +50,20 @@ const recommendations = {
 };
 
 export default function RecommendationsPage() {
+  const { user } = useAuth();
+  const [favoriteBooks, setFavoriteBooks] = useState<string[]>([]);
+  const [favoritePodcasts, setFavoritePodcasts] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      isInFavorites(user.uid).then(favs => {
+        // Filter favorites based on their prefix (e.g., "book-", "podcast-")
+        setFavoriteBooks(favs.filter((fav: string) => fav.startsWith('book-')).map((fav: string) => fav.substring(5))); // Remove prefix
+        setFavoritePodcasts(favs.filter((fav: string) => fav.startsWith('podcast-')).map((fav: string) => fav.substring(8))); // Remove prefix
+      });
+    }
+  }, [user]);
+
   return (
     <main className="min-h-screen">
       <Navbar />

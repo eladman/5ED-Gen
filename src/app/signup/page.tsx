@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useProfile } from '@/lib/contexts/ProfileContext';
-import SignupForm from '@/app/components/SignupForm';
+import Navbar from '@/components/Navbar';
+import { FaGoogle, FaEnvelope } from 'react-icons/fa';
+import SignupForm from '@/components/SignupForm';
 
 export default function SignupPage() {
   const { user, loading } = useAuth();

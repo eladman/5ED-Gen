@@ -3,16 +3,15 @@ import type { Metadata } from 'next'
 import { Heebo } from 'next/font/google'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
 import { ProfileProvider } from '@/lib/contexts/ProfileContext'
-import { DeepgramProvider } from '@/lib/contexts/DeepgramContext'
 import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
-import Navbar from './components/Navbar'
+import Navbar from '@/components/Navbar'
 import dynamic from 'next/dynamic'
 
 // Import PWA components with no SSR to prevent hydration issues
 const PWAUpdateNotification = dynamic(
-  () => import('./components/PWAUpdateNotification'),
+  () => import('@/components/PWAUpdateNotification'),
   { ssr: false }
 )
 
@@ -67,21 +66,19 @@ export default function RootLayout({
       <body className={`${heebo.className} bg-white min-h-screen`}>
         <AuthProvider>
           <ProfileProvider>
-            <DeepgramProvider>
-              <Navbar />
-              {children}
-              <Toaster position="top-center" toastOptions={{
-                duration: 3000,
-                style: {
-                  background: '#333',
-                  color: '#fff',
-                  direction: 'rtl'
-                },
-              }} />
-              <PWAUpdateNotification />
-              <Analytics />
-              <SpeedInsights />
-            </DeepgramProvider>
+            <Navbar />
+            {children}
+            <Toaster position="top-center" toastOptions={{
+              duration: 3000,
+              style: {
+                background: '#333',
+                color: '#fff',
+                direction: 'rtl'
+              },
+            }} />
+            <PWAUpdateNotification />
+            <Analytics />
+            <SpeedInsights />
           </ProfileProvider>
         </AuthProvider>
       </body>

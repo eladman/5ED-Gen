@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useEffect, useState } from "react";
-import { signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut, User } from "firebase/auth";
-import { auth } from "../firebase/firebase";
+import { signInWithPopup, GoogleAuthProvider, User, onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
+import { auth } from "@/lib/firebase/firebase";
 
 interface AuthContextType {
   user: User | null;
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     console.log("Setting up auth state listener");
     try {
-      const unsubscribe = auth.onAuthStateChanged((user) => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
         console.log("Auth state changed:", user ? `User logged in: ${user.uid}` : "No user");
         setUser(user);
         setLoading(false);

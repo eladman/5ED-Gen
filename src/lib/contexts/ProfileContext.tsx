@@ -16,7 +16,7 @@ const ProfileContext = createContext<ProfileContextType>({
   refreshProfile: async () => {},
 });
 
-export function ProfileProvider({ children }: { children: React.ReactNode }): JSX.Element {
+export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [hasCompleteProfile, setHasCompleteProfile] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);

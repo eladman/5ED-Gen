@@ -1,8 +1,8 @@
 "use client";
 
-import Navbar from '@/app/components/Navbar';
-import BooksSection from '@/app/components/BooksSection';
-import AcademyNav from '@/app/components/AcademyNav';
+import Navbar from '@/components/Navbar';
+import BooksSection from '@/components/BooksSection';
+import AcademyNav from '@/components/AcademyNav';
 
 export default function BooksPage() {
   return (

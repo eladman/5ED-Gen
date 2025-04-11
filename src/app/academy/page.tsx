@@ -1,19 +1,24 @@
 "use client";
 
 import { FaPlay, FaBook, FaMicrophone, FaChevronLeft, FaChevronRight, FaHeart } from 'react-icons/fa';
-import Navbar from '../components/Navbar';
-import CategorySection from '../components/CategorySection';
+import Navbar from '@/components/Navbar';
+import CategorySection from '@/components/CategorySection';
 import Link from 'next/link';
 import Image from 'next/image';
-import ContentModal from '../components/ContentModal';
+import ContentModal from '@/components/ContentModal';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { addToFavorites, removeFromFavorites, isInFavorites } from '@/lib/firebase/firebaseUtils';
+import { IconType } from 'react-icons';
+import { FaPodcast, FaVideo, FaRegStar } from 'react-icons/fa';
 
 // Dynamically import SplashScreen with no SSR
-const SplashScreen = dynamic(() => import('../components/SplashScreen'), { ssr: false });
+const SplashScreen = dynamic(
+  () => import('@/components/SplashScreen'),
+  { ssr: false }
+);
 
 const SPOTIFY_CLIENT_ID = '86096c3b744045a898cbdf7731f63525';
 const SPOTIFY_CLIENT_SECRET = '4d5f8ceee0044b2fb58bdcea0c81f555';
@@ -206,6 +211,7 @@ function AcademyContent({
                           <button
                             onClick={(e) => handleFavoriteClick(e, item)}
                             className="absolute bottom-2 left-2 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+                            aria-label={favoriteItems.includes(item.id) ? "Remove from favorites" : "Add to favorites"}
                           >
                             <FaHeart
                               className={`w-4 h-4 ${
