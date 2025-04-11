@@ -1,6 +1,6 @@
 export default function CTA() {
   return (
-    <section className="section-padding bg-[#ff8714]">
+    <section className="section-padding bg-[#ff8714]" data-testid="cta-section">
       <div className="container-custom">
         <div className="max-w-4xl mx-auto text-center text-gray-900">
           <h2 className="heading-2 mb-6">

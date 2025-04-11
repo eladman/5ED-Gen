@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { FaMale, FaFemale, FaRunning, FaStopwatch, FaMedal, FaDumbbell } from 'react-icons/fa';
 import { IoPeople } from 'react-icons/io5';
 import { GiMuscleUp, GiHelmet, GiHeartBeats, GiWeightLiftingUp, GiStairsGoal, GiMilitaryAmbulance } from 'react-icons/gi';
-import WeeklyWorkoutTemplate from './WeeklyWorkoutTemplate';
+import { WeeklyWorkoutTemplate } from '@/components';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { addDocument } from '@/lib/firebase/firebaseUtils';
 import toast from 'react-hot-toast';

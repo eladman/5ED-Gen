@@ -6,12 +6,12 @@ import { ProfileProvider } from '@/lib/contexts/ProfileContext'
 import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
-import Navbar from '@/components/Navbar'
+import { Navbar } from '@/components'
 import dynamic from 'next/dynamic'
 
 // Import PWA components with no SSR to prevent hydration issues
 const PWAUpdateNotification = dynamic(
-  () => import('@/components/PWAUpdateNotification'),
+  () => import('@/components/ui/PWAUpdateNotification'),
   { ssr: false }
 )
 

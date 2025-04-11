@@ -1,6 +1,6 @@
 "use client";
 
-import LoginButton from "./LoginButton";
+import { LoginButton } from '@/components';
 import { useAuth } from "@/lib/hooks/useAuth";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -8,8 +8,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 
 // Import PWA button with no SSR to prevent hydration issues
-const InstallPWAButton = dynamic(
-  () => import("./InstallPWAButton"),
+const DynamicInstallPWAButton = dynamic(
+  () => import('@/components/ui/InstallPWAButton'),
   { ssr: false }
 );
 
@@ -77,7 +77,7 @@ export default function Navbar({ isAcademy = false, isLoading = false }: NavbarP
           
           <div className="flex items-center space-x-4 space-x-reverse">
             {/* PWA Install Button - Only show when user is signed in and client-side */}
-            {user && isMounted && <InstallPWAButton />}
+            {user && isMounted && <DynamicInstallPWAButton />}
             <LoginButton isAcademy={isAcademy || isLoading} />
           </div>
         </div>

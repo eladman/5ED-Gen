@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import { Metrics } from '@/app/metrics/page';
 import Image from 'next/image';

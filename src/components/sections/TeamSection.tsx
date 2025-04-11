@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import ImageGallery from './ImageGallery';
+import { ImageGallery } from '@/components';
 
 export default function TeamSection() {
   const container = {

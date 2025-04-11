@@ -4,9 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useProfile } from '@/lib/contexts/ProfileContext';
-import Navbar from '@/components/Navbar';
+import { Navbar, SignupForm } from '@/components';
 import { FaGoogle, FaEnvelope } from 'react-icons/fa';
-import SignupForm from '@/components/SignupForm';
 
 export default function SignupPage() {
   const { user, loading } = useAuth();
