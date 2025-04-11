@@ -55,14 +55,26 @@ jest.mock('firebase/auth', () => ({
 
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
-  // Add mocks for other Firestore functions used if necessary
-  // e.g., collection: jest.fn(), doc: jest.fn(), getDoc: jest.fn(), setDoc: jest.fn(), etc.
+  collection: jest.fn(),
+  doc: jest.fn(),
+  getDoc: jest.fn(),
+  setDoc: jest.fn(),
+  addDoc: jest.fn(),
+  updateDoc: jest.fn(),
+  deleteDoc: jest.fn(),
+  query: jest.fn(),
+  where: jest.fn(),
+  getDocs: jest.fn(),
+  // Add other Firestore functions if needed by your initialization or specific tests
 }));
 
 jest.mock('firebase/storage', () => ({
   getStorage: jest.fn(() => ({})),
-  // Add mocks for other Storage functions used if necessary
-  // e.g., ref: jest.fn(), uploadBytes: jest.fn(), getDownloadURL: jest.fn(), etc.
+  ref: jest.fn(),
+  uploadBytes: jest.fn(),
+  getDownloadURL: jest.fn(),
+  deleteObject: jest.fn(),
+  // Add other Storage functions if needed
 }));
 
 // Mock sessionStorage for tests
