@@ -1,0 +1,46 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Cursor Rules & Project Context
+
+## Git Workflow
+
+1.  **Merging:** Before merging a branch you are working on, always pull the latest changes from the `dev` branch first to check for and resolve any potential conflicts.
+2.  **Branch Scope:** When working on a specific feature or bugfix branch, ensure that your changes are strictly related to that branch's purpose. Avoid introducing unrelated changes from other branches.
+
+## Design System
+
+*   **Primary Color:** `#ff8714`
+*   **Background Color:** `#ffffff`
+
+## About "Five Fingers"
+
+Five Fingers is a youth movement and development methodology focused on helping individuals reach their full potential—physically, mentally, and socially. The approach combines structured training, meaningful mentorship, and strong group dynamics to create a deep, transformative experience for each participant.
+
+### Core Identity Traits
+
+At the core of Five Fingers are five identity traits that we aim to nurture, measure, and track through the app:
+
+1.  **Five Fingers – Professionalism and structure (Be Better)**
+2.  **Capability – Flexibility and adaptability (Comfortably Hard)**
+3.  **Hunger – Passion and perseverance (Grit)**
+4.  **Responsibility – Initiative and proactiveness (Proactive)**
+5.  **Belonging – Faith and loyalty (Together)**
+
+### Three Pillars
+
+Every experience in the Five Fingers method is built on three pillars:
+
+1.  **Experience –** A powerful and challenging journey for the trainee that drives personal growth
+2.  **Coach –** A guide and role model who sets direction and meaning
+3.  **Team –** A supportive team that pushes each individual forward
+
+## The App
+
+The app is designed to reflect the "Five Fingers" philosophy by providing measurable, engaging tools to track personal development, empower coaches, and strengthen group cohesion. We aim to harness the power of artificial intelligence to personalize the experience and amplify each user's growth journey, offering smart insights, adaptive content, and meaningful feedback.
+
+### Target Users
+
+The primary users of the app are **students (trainees)** and **coaches** within the Five Fingers movement. In the near future, the platform will also support **external youth (ages 12–18)** who are not part of the movement but seek personal growth and want to develop through the values and methodology of Five Fingers. 
