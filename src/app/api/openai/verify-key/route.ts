@@ -24,10 +24,13 @@ export async function GET() {
       });
     }
     
+    // For build purposes, use a placeholder API key if the environment variable is missing
+    const apiKey = process.env.OPENAI_API_KEY || 'sk-placeholder-for-build-purposes-only';
+    
     // Test the API key with a simple request
     try {
       const openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: apiKey,
       });
       
       // Use a simple models list request to verify the key
