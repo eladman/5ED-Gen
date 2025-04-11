@@ -4,8 +4,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { addDocument } from '@/lib/firebase/firebaseUtils';
-import TrainingProgramForm from '@/components/TrainingProgramForm';
-import Navbar from '@/components/Navbar';
+import { TrainingProgramForm, Navbar } from '@/components';
 import { getProfile } from "@/lib/firebase/profileUtils";
 
 export default function CreateProgram() {

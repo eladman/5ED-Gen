@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Hero from '@/components/Hero'
-import Features from '@/components/Features'
-import TeamSection from '@/components/TeamSection'
-import PurposeSection from '@/components/PurposeSection'
-import Dashboard from '@/components/Dashboard'
+import Link from 'next/link'
+import { Hero, Features, TeamSection, PurposeSection } from '@/components'
+import { Dashboard } from '@/components'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useProfile } from '@/lib/contexts/ProfileContext';
 import { motion } from 'framer-motion'

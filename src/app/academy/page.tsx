@@ -1,12 +1,10 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { FaPlay, FaBook, FaMicrophone, FaChevronLeft, FaChevronRight, FaHeart } from 'react-icons/fa';
-import Navbar from '@/components/Navbar';
-import CategorySection from '@/components/CategorySection';
+import { Navbar, CategorySection, ContentModal } from '@/components';
 import Link from 'next/link';
 import Image from 'next/image';
-import ContentModal from '@/components/ContentModal';
-import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -14,9 +12,9 @@ import { addToFavorites, removeFromFavorites, isInFavorites } from '@/lib/fireba
 import { IconType } from 'react-icons';
 import { FaPodcast, FaVideo, FaRegStar } from 'react-icons/fa';
 
-// Dynamically import SplashScreen with no SSR
+// Update the SplashScreen dynamic import
 const SplashScreen = dynamic(
-  () => import('@/components/SplashScreen'),
+  () => import('@/components/ui/SplashScreen'),
   { ssr: false }
 );
 

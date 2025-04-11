@@ -1,3 +1,5 @@
+'use client';
+
 import { FaRunning, FaDumbbell, FaSave, FaBullseye } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { addDocument } from '@/lib/firebase/firebaseUtils';

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { getDocuments, deleteDocument } from '@/lib/firebase/firebaseUtils';
-import { FaCalendarAlt, FaRunning, FaDumbbell, FaTrash, FaBullseye } from 'react-icons/fa';
+import { FaRunning, FaDumbbell, FaTrash, FaBullseye } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 interface WorkoutDay {

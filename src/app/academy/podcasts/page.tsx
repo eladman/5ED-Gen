@@ -1,8 +1,6 @@
 "use client";
 
-import Navbar from '@/components/Navbar';
-import PodcastsSection from '@/components/PodcastsSection';
-import AcademyNav from '@/components/AcademyNav';
+import { Navbar, PodcastsSection, AcademyNav } from '@/components';
 
 export default function PodcastsPage() {
   return (

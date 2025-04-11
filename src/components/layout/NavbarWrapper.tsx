@@ -2,8 +2,7 @@
 
 import { useProfile } from '@/lib/contexts/ProfileContext';
 import { useAuth } from '@/lib/hooks/useAuth';
-import Navbar from './Navbar';
-import LoginButton from './LoginButton';
+import { Navbar, LoginButton } from '@/components';
 
 export default function NavbarWrapper() {
   const { user, loading } = useAuth();

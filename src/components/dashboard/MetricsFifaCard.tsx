@@ -1,3 +1,5 @@
+'use client';
+
 import { Metrics } from '@/app/metrics/page';
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useEffect, useState } from "react";

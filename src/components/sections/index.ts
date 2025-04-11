@@ -1,0 +1,10 @@
+export { default as TeamSection } from './TeamSection';
+export { default as PurposeSection } from './PurposeSection';
+export { default as PodcastsSection } from './PodcastsSection';
+export { default as BooksSection } from './BooksSection';
+export { default as VideosSection } from './VideosSection';
+export { default as TeamRecommendations } from './TeamRecommendations';
+export { default as CategorySection } from './CategorySection';
+export { default as Features } from './Features';
+export { default as Hero } from './Hero';
+export { default as TeamSelector } from './TeamSelector'; 

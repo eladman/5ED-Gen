@@ -3,13 +3,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import Navbar from "@/components/Navbar";
+import { Navbar, MetricsFifaCard, MetricsComparison } from '@/components';
+import type { MetricsComparisonProps } from '@/components/dashboard/MetricsComparison';
 import { FaRunning, FaDumbbell, FaStopwatch, FaPlus, FaTrash, FaUsers, FaChartBar, FaPencilAlt } from "react-icons/fa";
 import { GiSittingDog } from "react-icons/gi";
 import toast, { Toaster } from "react-hot-toast";
 import { addDocument, getDocuments, deleteDocument, updateDocument } from "@/lib/firebase/firebaseUtils";
-import MetricsFifaCard from "@/components/MetricsFifaCard";
-import MetricsComparison, { MetricsComparisonProps } from "@/components/MetricsComparison";
 import { getProfile } from "@/lib/firebase/profileUtils";
 import { getTeamNameById } from '@/lib/teamUtils';
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
