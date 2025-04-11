@@ -52,4 +52,5 @@ jobs:
           if [ "${{ job.status }}" = "success" ]; then
             echo "✅ All tests have passed successfully!" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Some tests have failed. Please check the logs for details." >> $GITHUB_STEP_SUMMARY 
+            echo "❌ Some tests have failed. Please check the logs for details." >> $GITHUB_STEP_SUMMARY
+          fi 
